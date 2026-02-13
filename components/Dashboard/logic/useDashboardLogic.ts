@@ -7,69 +7,73 @@ import { SUPER_ADMIN_EMAIL } from '../constants';
 export type TabView = 'home' | 'gallery' | 'make' | 'admin' | 'system' | 'documentation';
 
 export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolean>) => {
-    // Persist active tab
+    const [userEmail, setUserEmail] = useState('');
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [isStudent, setIsStudent] = useState(false);
+
     const [activeTab, setActiveTabState] = useState<TabView>(() => {
-        return (localStorage.getItem('cb_teacher_tab') as TabView) || 'home';
+        const key = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
+        return (localStorage.getItem(key) as TabView) || (isStudent ? 'home' : 'recents');
     });
 
     const setActiveTab = (tab: TabView) => {
+        const key = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
         setActiveTabState(tab);
-        localStorage.setItem('cb_teacher_tab', tab);
+        localStorage.setItem(key, tab);
     };
 
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [showSetupModal, setShowSetupModal] = useState(false);
     
-    // Join State
     const [joinCode, setJoinCode] = useState('');
     const [joinError, setJoinError] = useState('');
     const [isJoining, setIsJoining] = useState(false);
     
-    // User State
-    const [userEmail, setUserEmail] = useState('');
-    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-    
-    // Class Filter State
     const [selectedClass, setSelectedClass] = useState<string>('All Classes');
     const [classList, setClassList] = useState<string[]>(['All Classes']);
     const [showClassMenu, setShowClassMenu] = useState(false);
 
-    // Menu State
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
 
-    // Initial Data Fetch
     useEffect(() => {
-        // 1. Get User Email
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user?.email) {
-                setUserEmail(user.email);
-                // Case insensitive check
-                if (user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase()) {
-                    setIsSuperAdmin(true);
+        const fetchUserAndClasses = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                if (user.email) {
+                    setUserEmail(user.email);
+                    if (user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase()) {
+                        setIsSuperAdmin(true);
+                    }
                 }
-            }
-        });
+                const studentStatus = user.user_metadata.is_student ?? false;
+                setIsStudent(studentStatus);
 
-        // 2. Fetch Classes
-        const fetchClasses = async () => {
-            try {
-                const data = await classService.getClasses();
-                if (data && data.length > 0) {
-                    const names = data.map(c => c.name);
-                    const uniqueNames = Array.from(new Set(names));
-                    setClassList(['All Classes', ...uniqueNames]);
-                } else {
-                    setClassList(['All Classes']);
+                // Set initial tab based on role
+                const key = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
+                const storedTab = localStorage.getItem(key) as TabView;
+                setActiveTabState(storedTab || (studentStatus ? 'home' : 'home'));
+
+                if (!studentStatus) {
+                    try {
+                        const data = await classService.getClasses();
+                        if (data && data.length > 0) {
+                            const names = data.map(c => c.name);
+                            const uniqueNames = Array.from(new Set(names));
+                            setClassList(['All Classes', ...uniqueNames]);
+                        } else {
+                            setClassList(['All Classes']);
+                        }
+                    } catch (e) {
+                        console.error("Failed to load classes", e);
+                    }
                 }
-            } catch (e) {
-                console.error("Failed to load classes", e);
             }
         };
-        fetchClasses();
-    }, [activeTab]);
 
-    // Click Outside Handler
+        fetchUserAndClasses();
+    }, []);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -80,7 +84,6 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Actions
     const handleJoinSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setJoinError('');
@@ -104,31 +107,16 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
 
     const handleLogout = async () => {
         localStorage.removeItem('cb_teacher_tab');
+        localStorage.removeItem('cb_student_tab');
         await supabase.auth.signOut();
     };
 
     return {
-        activeTab,
-        setActiveTab,
-        showJoinModal,
-        setShowJoinModal,
-        showSetupModal,
-        setShowSetupModal,
-        joinCode,
-        setJoinCode,
-        joinError,
-        isJoining,
-        handleJoinSubmit,
-        userEmail,
-        isSuperAdmin,
-        selectedClass,
-        setSelectedClass,
-        classList,
-        showClassMenu,
-        setShowClassMenu,
-        showProfileMenu,
-        setShowProfileMenu,
-        profileMenuRef,
-        handleLogout
+        activeTab, setActiveTab, showJoinModal, setShowJoinModal,
+        showSetupModal, setShowSetupModal, joinCode, setJoinCode, joinError,
+        isJoining, handleJoinSubmit, userEmail, isSuperAdmin, isStudent, 
+        selectedClass, setSelectedClass, classList,
+        showClassMenu, setShowClassMenu, showProfileMenu, setShowProfileMenu,
+        profileMenuRef, handleLogout
     };
 };
