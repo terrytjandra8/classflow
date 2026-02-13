@@ -305,7 +305,7 @@ function AppContent() {
               setActiveBoardId(board.id);
 
               const isPublic = board.is_public;
-              const isLive =.is_published;
+              const isLive = board.is_published;
               const settings = board.settings as any;
               const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
               const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
