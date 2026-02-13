@@ -36,7 +36,7 @@ interface NoteCardProps {
   canDrag?: boolean;
 }
 
-const isHexColor = (color: string) => color && color.startsWith('#');
+const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
 
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
@@ -114,7 +114,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   // --- Styles ---
   const widthClass = isTransparent ? 'w-auto max-w-[600px] min-w-[150px]' : 'w-[300px]';
   
-  const containerClasses = `
+  const containerClasses = useMemo(() => `
     ${isCanvasModeBool ? `absolute ${widthClass} cursor-grab active:cursor-grabbing select-none` : 'break-inside-avoid mb-4 relative'}
     ${!isTransparent ? 'transition-all duration-500' : ''}
     ${!isTransparent && !isStickyNote ? 'shadow-sm hover:shadow-lg rounded-2xl' : ''}
@@ -125,14 +125,14 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     ${!canCopy ? 'select-none' : ''}
     ${isHighlighted ? 'ring-4 ring-yellow-400 z-50 shadow-[0_0_30px_rgba(250,204,21,0.5)] !opacity-100' : ''}
     ${isDimmed ? 'opacity-20 grayscale blur-[2px] scale-95 pointer-events-none' : 'opacity-100'}
-  `;
+  `, [isCanvasModeBool, widthClass, isTransparent, isStickyNote, note.color, note.type, isSelectedForConnection, canCopy, isHighlighted, isDimmed, isCustomColor]);
 
-  const style: React.CSSProperties = {
+  const style: React.CSSProperties = useMemo(() => ({
       backgroundColor: isCustomColor ? note.color : undefined,
       ...(isCanvasModeBool ? { left: note.x, top: note.y, width: isStickyNote && note.width ? note.width : undefined, height: isStickyNote && note.height ? note.height : undefined } : {}),
       ...(isStickyNote ? { boxShadow: '0 1px 4px rgba(0,0,0,0.2), 0 0 40px rgba(0,0,0,0.1) inset' } : {}),
       ...(!canCopy ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
-  };
+  }), [isCustomColor, note.color, isCanvasModeBool, note.x, note.y, note.width, note.height, isStickyNote, canCopy]);
 
   const ConnectionHandle = ({ position, onClick }: { position: string, onClick: (e: React.MouseEvent) => void }) => (
       <div onClick={onClick} className={`absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full cursor-crosshair z-50 hover:scale-125 transition-transform ${position} shadow-sm`} />
@@ -244,4 +244,4 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   );
 };
 
-export default NoteCardComponent;
+export default memo(NoteCardComponent);

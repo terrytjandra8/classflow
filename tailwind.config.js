@@ -7,6 +7,14 @@ export default {
     "./components/**/*.{js,ts,jsx,tsx}",
     "./App.tsx",
   ],
+  safelist: [
+    {
+      pattern: /bg-(red|rose|pink|fuchsia|purple|violet|indigo|blue|sky|cyan|teal|emerald|green|lime|yellow|amber|orange|gray|slate|zinc|neutral|stone)-(100|200)/,
+    },
+    {
+      pattern: /border-(red|rose|pink|fuchsia|purple|violet|indigo|blue|sky|cyan|teal|emerald|green|lime|yellow|amber|orange|gray|slate|zinc|neutral|stone)-(100|200|300|400|500)/,
+    }
+  ],
   darkMode: 'class',
   theme: {
     extend: {

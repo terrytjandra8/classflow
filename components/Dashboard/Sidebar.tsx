@@ -3,7 +3,7 @@ import React from 'react';
 import { Search, Hash, Clock, User, Trash2, Heart, Database, Quote, Folder, GripVertical, Globe, ShieldCheck } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { ClassGroup } from '../../types';
-import { useSortableList } from '../../logic/dnd/useSortableList';
+import { useSortableList } from '../../src/logic/dnd/useSortableList';
 import { classService } from '../../services/classService';
 
 interface SidebarProps {
@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // Hook implementation
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem } = useSortableList({
         items: classes,
-        onReorder: (newItems) => {
+        onReorder: (newItems: any) => {
             setClasses(newItems);
         }
     });

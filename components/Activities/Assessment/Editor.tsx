@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AssessmentQuestion, Board } from '../../../types';
 import { Plus, Trash2, CheckCircle, Type, List, Save, X, Layout, GripVertical, AlignLeft, Bold, Italic, List as ListIcon, Calculator, AlertCircle, PenTool, Image } from 'lucide-react';
-import { useSortableList } from '../../../logic/dnd/useSortableList';
+import { useSortableList } from '../../../src/logic/dnd/useSortableList';
 import { RichTextEditor } from '../../RichTextEditor';
 import { DebouncedInput } from '../../ui/DebouncedInput';
 import { parseMath } from '../../../utils/mappers';
@@ -78,7 +78,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     // Drag and Drop Logic
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
-        onReorder: (newItems) => {
+        onReorder: (newItems: any) => {
             onUpdateBoard({ assessmentQuestions: newItems });
         }
     });

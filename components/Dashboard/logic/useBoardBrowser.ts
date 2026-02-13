@@ -98,15 +98,18 @@ export const useBoardBrowser = (
 
     const filteredBoards = useMemo(() => {
         let result = boards;
-        
+
         if (isStudent) {
-             // Student View: filter by their enrolled classes
-             const viewableClasses = selectedClass === 'All My Classes' ? studentClasses : [selectedClass];
-             result = boards.filter(b => 
+            // Student View: Filter by their enrolled classes
+            const viewableClasses = selectedClass === 'All My Classes' ? studentClasses : [selectedClass];
+            result = boards.filter(b => 
                 !b.isTrashed && 
-                b.isPublished && 
-                (b.targetGrade && viewableClasses.includes(b.targetGrade))
-             );
+                b.isPublished &&
+                // Condition 1: Board is not assigned to any class (meant for everyone)
+                (!b.targetGrade || b.targetGrade.trim() === '' || 
+                // Condition 2: Board is assigned to a class the student is in
+                viewableClasses.includes(b.targetGrade))
+            );
         } else {
             // Teacher/Admin View
             if (sidebarFilter === 'trashed') {

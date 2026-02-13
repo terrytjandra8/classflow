@@ -9,7 +9,7 @@ import { resolveBackgroundStyle } from '../utils/theme';
 import { classService } from '../services/classService';
 import { profileService } from '../services/profileService';
 import { Avatar } from './ui/Avatar';
-import { useSortableList } from '../logic/dnd/useSortableList';
+import { useSortableList } from '../src/logic/dnd/useSortableList';
 import { Documentation } from './Documentation';
 import { StudentGrades } from './StudentGrades';
 
@@ -226,7 +226,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   // --- DND Hook for Sidebar ---
   const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem } = useSortableList({
       items: localClasses,
-      onReorder: (newItems) => {
+      onReorder: (newItems: any) => {
           setLocalClasses(newItems);
       }
   });
