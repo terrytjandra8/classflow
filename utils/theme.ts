@@ -79,22 +79,26 @@ export const FONTS: Record<string, string> = {
 };
 
 export const resolveBackgroundStyle = (wallpaper: string, theme: 'light' | 'dark' = 'dark') => {
-    const resolved = WALLPAPERS_MAP[wallpaper] || wallpaper || '#222';
+    if (!wallpaper) {
+        // Default fallback for undefined wallpaper
+        return {
+            backgroundColor: theme === 'light' ? '#f1f5f9' : '#1e293b', // slate-200 / slate-800
+            backgroundImage: 'none',
+        };
+    }
+
+    const resolved = WALLPAPERS_MAP[wallpaper] || wallpaper;
     const isTexture = resolved.includes('transparenttextures.com');
     const isUrl = resolved.includes('url(') || resolved.includes('gradient');
     
-    // Determine fallback background color
     let backgroundColor: string | undefined;
     
     if (!isUrl) {
-        // It's a hex code
         backgroundColor = resolved;
     } else if (isTexture) {
-        // Use specific background map, or default based on theme
         backgroundColor = TEXTURE_BACKGROUNDS[wallpaper] || (theme === 'light' ? '#f8fafc' : '#111');
     } else {
-        // For images, provide a dark fallback so it's not transparent while loading
-        backgroundColor = '#111';
+        backgroundColor = '#111'; // Fallback for images
     }
 
     return {
@@ -105,6 +109,7 @@ export const resolveBackgroundStyle = (wallpaper: string, theme: 'light' | 'dark
         backgroundPosition: 'center'
     };
 };
+
 
 export const getNoteColorClasses = (color: NoteColor) => {
     switch (color) {
