@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Loader2, Heart, Sparkles, Layout, School, ShieldCheck, User, ArrowRight, X } from 'lucide-react';
@@ -103,18 +102,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
   const [theme] = useState(() => THEMES[Math.floor(Math.random() * THEMES.length)]);
 
   useEffect(() => {
-    if (initialError) setError(initialError);
-
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        onLoginSuccess();
-      }
-    };
-
-    checkSession();
-  }, [initialError, onLoginSuccess]);
-
+      if (initialError) setError(initialError);
+  }, [initialError]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
