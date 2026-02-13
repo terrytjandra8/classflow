@@ -132,8 +132,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
       setError(null);
 
       try {
-          // 1. Find board by code
-          // Fetch format and is_published to check access
           const { data: board, error } = await supabase
               .from('boards')
               .select('id, settings, is_public, format, is_published')
@@ -146,21 +144,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
               return;
           }
 
-          // 2. Check if Public, Published (Live), or Active Quiz
           const isPublic = board.is_public === true || (board.settings as any)?.isPublic === true;
           const isPublished = board.is_published === true;
           
-          // Check if Quiz Lobby is active in settings (Backup check)
           const settings = board.settings as any;
           const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
 
           if (isPublic || isPublished || isQuizActive) {
-              // Success: Redirect to board in guest mode
               window.location.href = `/?board=${board.id}`;
           } else {
-              // Failure: Show warning animation
               setShowAccessDenied(true);
-              setTimeout(() => setShowAccessDenied(false), 4000); // Hide after 4s
           }
 
       } catch (err: any) {
@@ -178,7 +171,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
           <div className={`absolute top-[-10%] left-[-10%] w-96 h-96 ${theme.blob1} rounded-full mix-blend-screen filter blur-[100px] opacity-30 animate-blob`}></div>
           <div className={`absolute top-[-10%] right-[-10%] w-96 h-96 ${theme.blob2} rounded-full mix-blend-screen filter blur-[100px] opacity-30 animate-blob animation-delay-2000`}></div>
           <div className={`absolute -bottom-32 left-20 w-96 h-96 ${theme.blob3} rounded-full mix-blend-screen filter blur-[100px] opacity-30 animate-blob animation-delay-4000`}></div>
-          {/* Subtle Grid Texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05]"></div>
       </div>
 
@@ -187,7 +179,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
         {/* Logo Section */}
         <div className="text-center mb-10 transform hover:scale-105 transition-transform duration-500">
           <div className="relative inline-block mb-4">
-             {/* Custom CSS Logo Composition */}
              <div className="w-20 h-20 relative mx-auto">
                 <div className="absolute top-0 left-0 w-16 h-16 bg-yellow-400 rounded-xl transform -rotate-12 shadow-lg border border-white/10"></div>
                 <div className="absolute top-2 left-4 w-16 h-16 bg-blue-500 rounded-xl transform rotate-6 shadow-lg border border-white/10"></div>
