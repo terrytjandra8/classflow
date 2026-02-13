@@ -10,6 +10,11 @@ interface PresentationModeProps {
 
 export const PresentationMode: React.FC<PresentationModeProps> = ({ board, onClose }) => {
     const [mounted, setMounted] = useState(false);
+
+    // Return null if the essential board or classCode is missing to prevent crashes.
+    if (!board || !board.classCode) {
+        return null;
+    }
     
     const displayUrl = `${window.location.origin}/?code=${board.classCode}`;
     const domain = window.location.host;

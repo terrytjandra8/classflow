@@ -41,35 +41,41 @@ interface NoteCardProps {
 
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
-    commentsEnabled = true, reactionsEnabled = true, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote, canDrag
+    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote, canDrag
 }) => {
   const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, username, highlightedUserId } = useBoard();
   
-  // Use prop userId if available (e.g. from parent mapping), otherwise fallback to context
   const effectiveUserId = userId || contextUserId;
-
-  // State
   const [showMenu, setShowMenu] = useState(false);
   const localRef = useRef<HTMLDivElement | null>(null);
 
+  // --- Safe Booleans ---
+  // Convert all optional boolean props and values to definite booleans to prevent type errors.
+  const isCanvasModeBool = !!isCanvasMode;
+  const isStudentBool = !!isStudent;
+  const isLockedBool = !!isLocked;
+  const isSectionAnonymousBool = isSectionAnonymous ?? false;
+  const isContentBlurredBool = isContentBlurred ?? false;
+  const isPresentationModeBool = !!isPresentationMode;
+  const commentsEnabledBool = commentsEnabled ?? true;
+  const reactionsEnabledBool = reactionsEnabled ?? true;
+  const disablePasteBool = !!board.disablePaste;
+  const repliesEnabledBool = !!board.repliesEnabled;
+
   // --- Logic & Permissions (Engine) ---
-  const canEdit = BoardRules.canEditNote(note, effectiveUserId, !!isStudent, !!isLocked);
-  const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, !!isStudent, !!isLocked);
-  const canCopy = BoardRules.canCopyContent(board, note.sectionId, !!isStudent);
+  const canEdit = BoardRules.canEditNote(note, effectiveUserId, isStudentBool, isLockedBool);
+  const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, isStudentBool, isLockedBool);
+  const canCopy = BoardRules.canCopyContent(board, note.sectionId, isStudentBool);
   
   const isTransparent = note.color === NoteColor.TRANSPARENT;
-  const isStickyNote = isCanvasMode && note.type === 'text' && !isTransparent;
+  const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
 
   // --- Board Rules ---
-  const isBlurActive = BoardRules.shouldBlurContent(board, isContentBlurred, note, effectiveUserId, !!isStudent, !!isPresentationMode);
-  
-  // Determine if comments should be read-only (Board is Read Only AND user is not teacher)
+  const isBlurActive = BoardRules.shouldBlurContent(board, isContentBlurredBool, note, effectiveUserId, isStudentBool, isPresentationModeBool);
   const isReadOnly = (board.lockMode === 'readonly' && !canManageBoard);
 
-  // Highlighting Logic (Teacher Focused)
-  // Check if note author matches the highlighted ID
+  // Highlighting Logic
   const isHighlighted = highlightedUserId && note.author_id === highlightedUserId;
-  // Check if ANYONE is highlighted but NOT this author (dim mode)
   const isDimmed = highlightedUserId && note.author_id !== highlightedUserId;
 
   // --- Handlers ---
@@ -103,24 +109,14 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
       }
   };
   
-  // Prevent context menu and copy if disabled
-  const handleContextMenu = (e: React.MouseEvent) => {
-      if (!canCopy) {
-          e.preventDefault();
-      }
-  };
-
-  const handleCopy = (e: React.ClipboardEvent) => {
-      if (!canCopy) {
-          e.preventDefault();
-      }
-  };
+  const handleContextMenu = (e: React.MouseEvent) => { if (!canCopy) e.preventDefault(); };
+  const handleCopy = (e: React.ClipboardEvent) => { if (!canCopy) e.preventDefault(); };
 
   // --- Styles ---
   const widthClass = isTransparent ? 'w-auto max-w-[600px] min-w-[150px]' : 'w-[300px]';
   
   const containerClasses = `
-    ${isCanvasMode ? `absolute ${widthClass} cursor-grab active:cursor-grabbing select-none` : 'break-inside-avoid mb-4 relative'}
+    ${isCanvasModeBool ? `absolute ${widthClass} cursor-grab active:cursor-grabbing select-none` : 'break-inside-avoid mb-4 relative'}
     ${!isTransparent ? 'transition-all duration-500' : ''}
     ${!isTransparent && !isStickyNote ? 'shadow-sm hover:shadow-lg rounded-2xl' : ''}
     ${note.color} flex flex-col group animate-fade-in note-card overflow-hidden
@@ -132,9 +128,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     ${isDimmed ? 'opacity-20 grayscale blur-[2px] scale-95 pointer-events-none' : 'opacity-100'}
   `;
 
-  // Merge style with user-select enforcement
   const style: React.CSSProperties = {
-      ...(isCanvasMode ? { left: note.x, top: note.y, width: isStickyNote && note.width ? note.width : undefined, height: isStickyNote && note.height ? note.height : undefined } : {}),
+      ...(isCanvasModeBool ? { left: note.x, top: note.y, width: isStickyNote && note.width ? note.width : undefined, height: isStickyNote && note.height ? note.height : undefined } : {}),
       ...(isStickyNote ? { boxShadow: '0 1px 4px rgba(0,0,0,0.2), 0 0 40px rgba(0,0,0,0.1) inset' } : {}),
       ...(!canCopy ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
   };
@@ -154,7 +149,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
         data-author-id={note.author_id}
         className={containerClasses} 
         style={style}
-        onMouseDown={(e) => isCanvasMode && onMouseDown && onMouseDown(e, note.id)}
+        onMouseDown={(e) => isCanvasModeBool && onMouseDown && onMouseDown(e, note.id)}
         onMouseUp={handleMouseUp}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
@@ -187,7 +182,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                 onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined}
                 isStickyNote={isStickyNote}
                 isTransparent={isTransparent}
-                isSectionAnonymous={isSectionAnonymous}
+                isSectionAnonymous={isSectionAnonymousBool}
                 showMenu={showMenu}
                 setShowMenu={setShowMenu}
             />
@@ -223,23 +218,23 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                   note={note}
                   userId={effectiveUserId}
                   onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }}
-                  commentsEnabled={commentsEnabled}
-                  reactionsEnabled={reactionsEnabled}
+                  commentsEnabled={commentsEnabledBool}
+                  reactionsEnabled={reactionsEnabledBool}
               />
               
-              {commentsEnabled && !isBlurActive && (
+              {commentsEnabledBool && !isBlurActive && (
                   <CommentSection 
                       comments={note.comments || []}
                       noteId={note.id}
                       userId={effectiveUserId}
                       onAddComment={onAddComment}
                       onUpdateNote={onUpdate}
-                      reactionsEnabled={reactionsEnabled}
+                      reactionsEnabled={reactionsEnabledBool}
                       noteColor={note.color}
-                      isStudent={isStudent}
-                      disablePaste={board.disablePaste}
-                      repliesEnabled={board.repliesEnabled}
-                      isSectionAnonymous={isSectionAnonymous}
+                      isStudent={isStudentBool}
+                      disablePaste={disablePasteBool}
+                      repliesEnabled={repliesEnabledBool}
+                      isSectionAnonymous={isSectionAnonymousBool}
                       isReadOnly={isReadOnly}
                   />
               )}

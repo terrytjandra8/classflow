@@ -314,7 +314,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 allowInteractions={allowInteractions}
                                 setActiveDrawingQId={setActiveDrawingQId}
                                 questionNumber={questionNumber}
-                                isReadOnly={isQuestionReadOnly}
+                                isReadOnly={isQuestionReadOnly ?? false}
                             />
                         );
                     })}
