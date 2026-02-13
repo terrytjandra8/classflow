@@ -16,14 +16,12 @@ interface NoteCardProps {
   onLike?: (id: string) => void;
   onAddComment?: (id: string, text: string, attachment?: CommentAttachment) => void;
   onUpdate?: (id: string, updates: Partial<Note>) => void;
-  // Canvas Props
   isCanvasMode?: boolean;
   isConnectMode?: boolean; 
   onConnectStart?: (id: string) => void;
   isSelectedForConnection?: boolean;
   onMouseDown?: (e: React.MouseEvent, id: string) => void;
   domRef?: (instance: HTMLDivElement | null) => void;
-  // Permissions & Settings
   userId?: string;
   isStudent?: boolean;
   isLocked?: boolean; 
@@ -32,12 +30,13 @@ interface NoteCardProps {
   contentTextColor?: string; 
   isSectionAnonymous?: boolean;
   isContentBlurred?: boolean;
-  // Layout Props
   onAddBefore?: () => void;
   onAddAfter?: () => void;
   onMoveNote?: (id: string, direction: 'up' | 'down') => void;
   canDrag?: boolean;
 }
+
+const isHexColor = (color: string) => color && color.startsWith('#');
 
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
@@ -50,7 +49,6 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const localRef = useRef<HTMLDivElement | null>(null);
 
   // --- Safe Booleans ---
-  // Convert all optional boolean props and values to definite booleans to prevent type errors.
   const isCanvasModeBool = !!isCanvasMode;
   const isStudentBool = !!isStudent;
   const isLockedBool = !!isLocked;
@@ -69,6 +67,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   
   const isTransparent = note.color === NoteColor.TRANSPARENT;
   const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
+  const isCustomColor = isHexColor(note.color);
 
   // --- Board Rules ---
   const isBlurActive = BoardRules.shouldBlurContent(board, isContentBlurredBool, note, effectiveUserId, isStudentBool, isPresentationModeBool);
@@ -119,7 +118,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     ${isCanvasModeBool ? `absolute ${widthClass} cursor-grab active:cursor-grabbing select-none` : 'break-inside-avoid mb-4 relative'}
     ${!isTransparent ? 'transition-all duration-500' : ''}
     ${!isTransparent && !isStickyNote ? 'shadow-sm hover:shadow-lg rounded-2xl' : ''}
-    ${note.color} flex flex-col group animate-fade-in note-card overflow-hidden
+    ${!isCustomColor ? note.color : ''} flex flex-col group animate-fade-in note-card overflow-hidden
     ${isSelectedForConnection ? 'ring-4 ring-blue-500 ring-offset-2' : ''}
     ${note.type === 'exit_ticket' ? 'border-l-8 border-slate-800' : ''}
     ${isStickyNote ? 'overflow-hidden resize-both min-h-[200px] rounded-none' : 'overflow-visible'}
@@ -129,6 +128,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   `;
 
   const style: React.CSSProperties = {
+      backgroundColor: isCustomColor ? note.color : undefined,
       ...(isCanvasModeBool ? { left: note.x, top: note.y, width: isStickyNote && note.width ? note.width : undefined, height: isStickyNote && note.height ? note.height : undefined } : {}),
       ...(isStickyNote ? { boxShadow: '0 1px 4px rgba(0,0,0,0.2), 0 0 40px rgba(0,0,0,0.1) inset' } : {}),
       ...(!canCopy ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})

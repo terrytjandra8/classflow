@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Sun, Moon, X, ShieldCheck, Users, ChevronDown, Filter, Layout, LogOut, Home as HomeIcon, PlusSquare, Image as ImageIcon, Activity, Hash, BookOpen, Bell, Check } from 'lucide-react';
+import { Sun, Moon, X, ShieldCheck, Users, ChevronDown, Filter, Layout, LogOut, Home as HomeIcon, PlusSquare, Image as ImageIcon, Activity, Hash, BookOpen, Bell, Check, GraduationCap } from 'lucide-react';
 import { Board, BoardFormat, Note } from '../../types';
 import { Home } from './Home';
 import { Make } from './Make';
@@ -46,7 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       handleJoinSubmit,
       userEmail, isSuperAdmin, isStudent,
       selectedClass, setSelectedClass,
-      classList,
+      classList, studentClasses,
       showClassMenu, setShowClassMenu,
       showProfileMenu, setShowProfileMenu,
       profileMenuRef,
@@ -112,7 +112,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     onClick={() => setShowClassMenu(!showClassMenu)}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border max-w-[140px] sm:max-w-none ${theme === 'light' ? 'bg-slate-100 hover:bg-slate-200 border-slate-200' : 'bg-white/5 hover:bg-white/10 border-white/10'}`}
                 >
-                    <Filter size={12} className="shrink-0" />
+                    {isStudent ? <GraduationCap size={12} className="shrink-0" /> : <Filter size={12} className="shrink-0" />}
                     <span className="truncate">{selectedClass}</span>
                     <ChevronDown size={12} className="opacity-50 shrink-0" />
                 </button>
@@ -122,7 +122,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div className="fixed inset-0 z-40" onClick={() => setShowClassMenu(false)}></div>
                     <div className="absolute top-full left-0 mt-2 w-48 z-50 animate-in fade-in slide-in-from-top-2">
                         <div className="bg-white dark:bg-[#222] rounded-xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
-                            <div className="p-2 border-b border-gray-100 dark:border-white/5 text-[10px] font-bold text-gray-500 uppercase">Select Class</div>
+                            <div className="p-2 border-b border-gray-100 dark:border-white/5 text-[10px] font-bold text-gray-500 uppercase">{isStudent ? 'My Classes' : 'Select Class'}</div>
                             {classList.map((cls) => (
                                 <button
                                     key={cls}
@@ -151,7 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </nav>
             )}
             
-            <div className="h-6 w-px bg-gray-200 dark:bg-white/10 hidden md:block"></div>
+            {!isStudent && <div className="h-6 w-px bg-gray-200 dark:bg-white/10 hidden md:block"></div>}
             
             <Tooltip content="Documentation & Guide">
                 <button 
@@ -210,7 +210,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                             </div>
                                         ))
                                     )}
-                                </div>
+                                d</div>
                             </div>
                         </>
                     )}
@@ -298,6 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 isSuperAdmin={isSuperAdmin}
                 isStudent={isStudent}
                 selectedClass={selectedClass}
+                studentClasses={studentClasses}
              />
           )}
           

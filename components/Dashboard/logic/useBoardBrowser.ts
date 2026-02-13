@@ -49,7 +49,8 @@ export const useBoardBrowser = (
     onSelectBoard: (id: string) => void,
     onDuplicateBoard: (id: string) => void,
     onToggleFavorite: (id: string) => void,
-    isStudent: boolean
+    isStudent: boolean,
+    studentClasses: string[] = [] // Default to empty array
 ) => {
     const [sidebarFilter, setSidebarFilterState] = useState<string>(() => {
         const key = isStudent ? 'cb_student_sidebar_filter' : 'cb_teacher_sidebar_filter';
@@ -99,8 +100,15 @@ export const useBoardBrowser = (
         let result = boards;
         
         if (isStudent) {
-             result = boards.filter(b => !b.isTrashed && b.isPublished && (b.targetGrade || 'General') === selectedClass);
+             // Student View: filter by their enrolled classes
+             const viewableClasses = selectedClass === 'All My Classes' ? studentClasses : [selectedClass];
+             result = boards.filter(b => 
+                !b.isTrashed && 
+                b.isPublished && 
+                (b.targetGrade && viewableClasses.includes(b.targetGrade))
+             );
         } else {
+            // Teacher/Admin View
             if (sidebarFilter === 'trashed') {
                 result = result.filter(b => b.isTrashed && b.owner_id === userId);
             } else if (sidebarFilter === 'global_trash') {
@@ -131,17 +139,17 @@ export const useBoardBrowser = (
             const timeB = sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
             return timeB - timeA;
         });
-    }, [boards, filter, sidebarFilter, userId, sortBy, selectedClass, isStudent]);
+    }, [boards, filter, sidebarFilter, userId, sortBy, selectedClass, isStudent, studentClasses]);
 
     const groupedBoards = useMemo(() => {
-        if (filter.trim() || ['trashed', 'global_trash', 'all_boards'].includes(sidebarFilter)) return null;
+        if (filter.trim() || ['trashed', 'global_trash', 'all_boards'].includes(sidebarFilter) || isStudent) return null;
         const getTimestamp = (b: Board) => sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
         const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
         return categories.map(category => ({
             title: category,
             items: filteredBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
         }));
-    }, [filteredBoards, filter, sidebarFilter, sortBy]);
+    }, [filteredBoards, filter, sidebarFilter, sortBy, isStudent]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

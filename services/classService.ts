@@ -8,10 +8,6 @@ export const classService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
-        // Fetch classes
-        // 1. Classes OWNED by the user
-        // 2. OR Classes with NO OWNER (Legacy/Global classes created before ownership update)
-        // This ensures the sidebar shows the "missing" classes the user is worried about.
         const { data, error } = await supabase
             .from('classes')
             .select('id, name, description, position, owner_id, auto_enroll')
@@ -22,12 +18,28 @@ export const classService = {
         if (!error && data && data.length > 0) {
             return data.map((d: any) => ({
                 ...d,
-                autoEnroll: d.auto_enroll // Map DB column to frontend prop
+                autoEnroll: d.auto_enroll
             })) as ClassGroup[];
         }
 
-        // Fallback for legacy boards if no classes defined
         return await this.syncClassesFromBoards();
+    },
+
+    async getStudentClasses(): Promise<string[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('student_classes')
+            .select('class_name')
+            .eq('student_id', user.id);
+
+        if (error || !data) {
+            console.error("Error fetching student classes:", error);
+            return [];
+        }
+
+        return data.map(item => item.class_name);
     },
 
     async getClassByName(name: string): Promise<ClassGroup | null> {
@@ -93,7 +105,7 @@ export const classService = {
             name: String(name),
             position: index,
             owner_id: user.id,
-            auto_enroll: true // Default true for auto-synced classes
+            auto_enroll: true
         }));
 
         const { data, error } = await supabase

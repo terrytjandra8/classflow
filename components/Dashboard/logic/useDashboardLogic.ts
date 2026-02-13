@@ -11,16 +11,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [isStudent, setIsStudent] = useState(false);
 
-    const [activeTab, setActiveTabState] = useState<TabView>(() => {
-        const key = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
-        return (localStorage.getItem(key) as TabView) || (isStudent ? 'home' : 'recents');
-    });
-
-    const setActiveTab = (tab: TabView) => {
-        const key = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
-        setActiveTabState(tab);
-        localStorage.setItem(key, tab);
-    };
+    const [activeTab, setActiveTabState] = useState<TabView>('home');
 
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [showSetupModal, setShowSetupModal] = useState(false);
@@ -29,12 +20,25 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     const [joinError, setJoinError] = useState('');
     const [isJoining, setIsJoining] = useState(false);
     
-    const [selectedClass, setSelectedClass] = useState<string>('All Classes');
-    const [classList, setClassList] = useState<string[]>(['All Classes']);
-    const [showClassMenu, setShowClassMenu] = useState(false);
+    const [selectedClass, setSelectedClassState] = useState<string>('');
+    const [classList, setClassList] = useState<string[]>([]);
+    const [studentClasses, setStudentClasses] = useState<string[]>([]);
 
+    const [showClassMenu, setShowClassMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
+
+    const setActiveTab = (tab: TabView) => {
+        const key = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
+        setActiveTabState(tab);
+        localStorage.setItem(key, tab);
+    };
+
+    const setSelectedClass = (className: string) => {
+        setSelectedClassState(className);
+        const key = isStudent ? 'cb_student_selected_class' : 'cb_teacher_selected_class';
+        localStorage.setItem(key, className);
+    };
 
     useEffect(() => {
         const fetchUserAndClasses = async () => {
@@ -49,23 +53,46 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
                 const studentStatus = user.user_metadata.is_student ?? false;
                 setIsStudent(studentStatus);
 
-                // Set initial tab based on role
-                const key = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
-                const storedTab = localStorage.getItem(key) as TabView;
+                const tabKey = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
+                const storedTab = localStorage.getItem(tabKey) as TabView;
                 setActiveTabState(storedTab || (studentStatus ? 'home' : 'home'));
+                
+                const classKey = studentStatus ? 'cb_student_selected_class' : 'cb_teacher_selected_class';
+                const storedClass = localStorage.getItem(classKey);
 
-                if (!studentStatus) {
+                if (studentStatus) {
+                    try {
+                        const fetchedClasses = await classService.getStudentClasses();
+                        setStudentClasses(fetchedClasses);
+                        const newClassList = ['All My Classes', ...fetchedClasses];
+                        setClassList(newClassList);
+                        if (storedClass && newClassList.includes(storedClass)) {
+                            setSelectedClassState(storedClass);
+                        } else {
+                            setSelectedClassState('All My Classes');
+                        }
+                    } catch (e) {
+                        console.error("Failed to load student classes", e);
+                        setClassList(['All My Classes']);
+                        setSelectedClassState('All My Classes');
+                    }
+                } else { // Teacher or Super Admin
                     try {
                         const data = await classService.getClasses();
-                        if (data && data.length > 0) {
-                            const names = data.map(c => c.name);
-                            const uniqueNames = Array.from(new Set(names));
-                            setClassList(['All Classes', ...uniqueNames]);
+                        const names = data && data.length > 0 ? data.map(c => c.name) : [];
+                        const uniqueNames = Array.from(new Set(names));
+                        const fullClassList = ['All Classes', ...uniqueNames];
+                        setClassList(fullClassList);
+
+                        if (storedClass && fullClassList.includes(storedClass)) {
+                             setSelectedClassState(storedClass);
                         } else {
-                            setClassList(['All Classes']);
+                             setSelectedClassState('All Classes');
                         }
                     } catch (e) {
                         console.error("Failed to load classes", e);
+                        setClassList(['All Classes']);
+                        setSelectedClassState('All Classes');
                     }
                 }
             }
@@ -89,12 +116,12 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         setJoinError('');
         setIsJoining(true);
         const code = joinCode.trim().toUpperCase();
-        
         try {
             const success = await onJoinByCode(code);
             if (success) {
                 setShowJoinModal(false);
                 setJoinCode('');
+                window.location.reload(); // Reload to refetch classes
             } else {
                 setJoinError('Invalid Join Code. Please check and try again.');
             }
@@ -108,6 +135,8 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     const handleLogout = async () => {
         localStorage.removeItem('cb_teacher_tab');
         localStorage.removeItem('cb_student_tab');
+        localStorage.removeItem('cb_teacher_selected_class');
+        localStorage.removeItem('cb_student_selected_class');
         await supabase.auth.signOut();
     };
 
@@ -115,7 +144,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         activeTab, setActiveTab, showJoinModal, setShowJoinModal,
         showSetupModal, setShowSetupModal, joinCode, setJoinCode, joinError,
         isJoining, handleJoinSubmit, userEmail, isSuperAdmin, isStudent, 
-        selectedClass, setSelectedClass, classList,
+        selectedClass, setSelectedClass, classList, studentClasses,
         showClassMenu, setShowClassMenu, showProfileMenu, setShowProfileMenu,
         profileMenuRef, handleLogout
     };
