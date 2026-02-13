@@ -103,8 +103,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
   const [theme] = useState(() => THEMES[Math.floor(Math.random() * THEMES.length)]);
 
   useEffect(() => {
-      if (initialError) setError(initialError);
-  }, [initialError]);
+    if (initialError) setError(initialError);
+
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        onLoginSuccess();
+      }
+    };
+
+    checkSession();
+  }, [initialError, onLoginSuccess]);
+
 
   const handleGoogleLogin = async () => {
     setLoading(true);

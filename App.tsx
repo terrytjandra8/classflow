@@ -10,6 +10,7 @@ import { boardService } from './services/boardService';
 import { profileService } from './services/profileService';
 import { noteService } from './services/noteService';
 import { mapBoard } from './utils/mappers';
+import './src/index.css';
 
 // Lazy load heavy views
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
@@ -304,7 +305,7 @@ function AppContent() {
               setActiveBoardId(board.id);
 
               const isPublic = board.is_public;
-              const isLive = board.is_published;
+              const isLive =.is_published;
               const settings = board.settings as any;
               const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
               const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
