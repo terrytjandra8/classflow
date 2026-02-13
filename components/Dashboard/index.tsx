@@ -44,7 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       joinCode, setJoinCode,
       joinError, isJoining,
       handleJoinSubmit,
-      userEmail, isSuperAdmin,
+      userEmail, isSuperAdmin, isStudent,
       selectedClass, setSelectedClass,
       classList,
       showClassMenu, setShowClassMenu,
@@ -55,24 +55,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   
-  // Use Notification Hook
   const { 
       notifications, unreadCount, markAsRead, markAllRead 
   } = useNotifications(isSuperAdmin);
 
-  // --- ROUTING FIXES ---
-  
-  // Wrapper to switch to 'home' tab immediately after creating a board
-  // This ensures pressing "Back" from the board lands you on the Dashboard list, not the Make screen
   const handleCreateBoardWrapper = (format: BoardFormat, templateData?: Partial<Board>, initialNotes?: Note[]) => {
       setActiveTab('home'); 
       onCreateBoard(format, templateData, initialNotes);
   };
 
-  // Wrapper to ensure we are contextually correct when selecting a board
   const handleSelectBoardWrapper = (boardId: string) => {
-      // We generally stay on the current tab (e.g. if in Admin view), but if we want to force home:
-      // setActiveTab('home'); 
       onSelectBoard(boardId);
   };
 
@@ -93,13 +85,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className={`h-screen flex flex-col ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-[#111] text-white'} transition-colors duration-300 overflow-hidden`}>
       
-      {/* Realtime Notification Toast System */}
       <SuperAdminNotifications isSuperAdmin={isSuperAdmin} />
 
-      {/* Top Navigation Bar */}
       <div className={`h-16 border-b shrink-0 flex items-center justify-between px-4 md:px-6 relative z-50 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#161616] border-white/5'}`}>
         
-        {/* Left: Branding & Filter */}
         <div className="flex items-center gap-3 md:gap-4">
             <div onClick={() => setActiveTab('home')} className="cursor-pointer flex items-center gap-3 group shrink-0">
                 <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -112,12 +101,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <h1 className={`font-bold text-lg md:text-xl tracking-tight hidden sm:block ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>ClassBoards</h1>
             </div>
 
-            {/* Desktop Teacher Badge */}
-            <div className="hidden lg:flex items-center gap-1 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded text-[10px] font-bold text-pink-500 uppercase tracking-wide shrink-0">
-                <ShieldCheck size={10} /> {isSuperAdmin ? 'Super Admin' : 'Teacher'}
-            </div>
+            {!isStudent && (
+              <div className="hidden lg:flex items-center gap-1 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded text-[10px] font-bold text-pink-500 uppercase tracking-wide shrink-0">
+                  <ShieldCheck size={10} /> {isSuperAdmin ? 'Super Admin' : 'Teacher'}
+              </div>
+            )}
 
-            {/* Class Selector (Left Side) */}
             <div className="relative group shrink-0 ml-2 sm:ml-0">
                 <button 
                     onClick={() => setShowClassMenu(!showClassMenu)}
@@ -150,21 +139,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
         </div>
         
-        {/* Right: Controls */}
         <div className="flex items-center gap-2 md:gap-6 shrink-0">
             
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
-                <NavButton tab="home" label="Home" />
-                <NavButton tab="make" label="Make" />
-                <NavButton tab="gallery" label="Gallery" />
-                <NavButton tab="admin" label="Classroom" icon={Users} />
-                {isSuperAdmin && <NavButton tab="system" label="System" icon={Activity} />}
-            </nav>
+            {!isStudent && (
+                <nav className="hidden md:flex items-center gap-1">
+                    <NavButton tab="home" label="Home" />
+                    <NavButton tab="make" label="Make" />
+                    <NavButton tab="gallery" label="Gallery" />
+                    <NavButton tab="admin" label="Classroom" icon={Users} />
+                    {isSuperAdmin && <NavButton tab="system" label="System" icon={Activity} />}
+                </nav>
+            )}
             
             <div className="h-6 w-px bg-gray-200 dark:bg-white/10 hidden md:block"></div>
             
-            {/* Documentation Button */}
             <Tooltip content="Documentation & Guide">
                 <button 
                     onClick={() => setActiveTab('documentation')}
@@ -174,7 +162,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
             </Tooltip>
 
-            {/* Notification Bell (Super Admin Only) */}
             {isSuperAdmin && (
                 <div className="relative">
                     <Tooltip content="Notifications">
@@ -236,7 +223,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
             </Tooltip>
             
-            {/* User Avatar with Dropdown Menu */}
             <div className="relative" ref={profileMenuRef}>
                 <Tooltip content={username} position="left">
                     <div 
@@ -258,8 +244,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <div className="p-3 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1a1a1a]">
                             <p className="font-bold text-sm truncate text-gray-800 dark:text-white">{username}</p>
                             <div className="flex flex-col gap-1 mt-1">
-                                <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded w-fit ${isSuperAdmin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                                    {isSuperAdmin ? 'Super Admin' : 'Teacher'}
+                                <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded w-fit ${isStudent ? 'bg-blue-500/20 text-blue-400' : (isSuperAdmin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400')}`}>
+                                    {isStudent ? 'Student' : (isSuperAdmin ? 'Super Admin' : 'Teacher')}
                                 </span>
                                 <span className="text-[10px] text-gray-500 truncate" title={userEmail}>
                                     {userEmail || 'No Email'}
@@ -292,7 +278,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Main View Area */}
       <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
           {activeTab === 'home' && (
              <Home 
@@ -311,6 +296,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 userId={userId}
                 theme={theme}
                 isSuperAdmin={isSuperAdmin}
+                isStudent={isStudent}
                 selectedClass={selectedClass}
              />
           )}
@@ -327,7 +313,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
              </div>
           )}
 
-          {activeTab === 'admin' && (
+          {activeTab === 'admin' && !isStudent && (
              <div className="h-full w-full overflow-y-auto custom-scrollbar relative">
                  <AdminDashboard 
                     boards={boards} 
@@ -348,14 +334,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {activeTab === 'documentation' && (
               <Documentation 
-                  role={isSuperAdmin ? 'superadmin' : 'teacher'} 
+                  role={isSuperAdmin ? 'superadmin' : (isStudent ? 'student' : 'teacher')} 
                   onBack={() => setActiveTab('home')} 
                   theme={theme}
               />
           )}
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 h-16 border-t z-50 flex items-center justify-around ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#0a0a0a] border-white/10'}`}>
           <button 
             onClick={() => setActiveTab('home')} 
@@ -373,32 +358,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-[10px] font-medium">Join</span>
           </button>
 
-          <button 
-            onClick={() => setActiveTab('make')} 
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'make' ? 'text-pink-500' : 'text-gray-500'}`}
-          >
-              <PlusSquare size={20} strokeWidth={activeTab === 'make' ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">Make</span>
-          </button>
+          {!isStudent && (
+            <>
+            <button 
+              onClick={() => setActiveTab('make')} 
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'make' ? 'text-pink-500' : 'text-gray-500'}`}
+            >
+                <PlusSquare size={20} strokeWidth={activeTab === 'make' ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">Make</span>
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('gallery')} 
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'gallery' ? 'text-pink-500' : 'text-gray-500'}`}
-          >
-              <ImageIcon size={20} strokeWidth={activeTab === 'gallery' ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">Gallery</span>
-          </button>
+            <button 
+              onClick={() => setActiveTab('gallery')} 
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'gallery' ? 'text-pink-500' : 'text-gray-500'}`}
+            >
+                <ImageIcon size={20} strokeWidth={activeTab === 'gallery' ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">Gallery</span>
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('admin')} 
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'admin' ? 'text-pink-500' : 'text-gray-500'}`}
-          >
-              <Users size={20} strokeWidth={activeTab === 'admin' ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">Admin</span>
-          </button>
+            <button 
+              onClick={() => setActiveTab('admin')} 
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'admin' ? 'text-pink-500' : 'text-gray-500'}`}
+            >
+                <Users size={20} strokeWidth={activeTab === 'admin' ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">Admin</span>
+            </button>
+            </>
+          )}
       </div>
 
-      {/* Join Modal */}
       {showJoinModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
               <div className="bg-[#1a1a1a] rounded-xl shadow-2xl w-full max-w-md border border-white/10 p-6">
@@ -437,7 +425,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
       )}
 
-      <SetupModal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} />
+      {!isStudent && <SetupModal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} />}
     </div>
   );
 };

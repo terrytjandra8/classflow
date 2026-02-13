@@ -218,7 +218,7 @@ export const useBoardBrowser = (
 
     return {
         sidebarFilter, setSidebarFilter, filter, setFilter, sortBy, setSortBy, classes, setClasses,
-        menu, isSortMenuOpen, setIsSortMenuOpen, renamingId, setRenamingId, exitingBoardId, confirmModal, 
+        menu, isSortMenuOpen, setIsSortMenuOpen, renamingId, setRenamingId, exitingBoardId, confirmModal, setConfirmModal,
         menuRef, sortMenuRef, filteredBoards, groupedBoards, handleMenuOpen, handleRestore, 
         openConfirmModal, handleConfirmAction, handleMenuAction
     };

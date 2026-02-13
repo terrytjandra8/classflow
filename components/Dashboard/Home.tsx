@@ -182,7 +182,7 @@ export const Home: React.FC<HomeProps> = ({
                                                         {sortBy === 'created' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
                                                     </button>
                                                     <button 
-                                                        onClick={() => { setSortby('updated'); setIsSortMenuOpen(false); }}
+                                                        onClick={() => { setSortBy('updated'); setIsSortMenuOpen(false); }}
                                                         className={`w-full text-left px-3 py-2 text-xs font-bold flex items-center gap-2 rounded-lg transition-colors ${sortBy === 'updated' ? (theme === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400') : (theme === 'light' ? 'text-slate-600 hover:bg-slate-50' : 'text-gray-300 hover:bg-white/5 hover:text-gray-200')}`}
                                                     >
                                                         <Clock size={14} className={sortBy === 'updated' ? "text-blue-500" : "text-gray-400"} />
