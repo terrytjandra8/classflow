@@ -27,11 +27,12 @@ interface HomeProps {
     isSuperAdmin: boolean;
     isStudent: boolean;
     selectedClass: string;
+    studentClasses: string[];
 }
 
 export const Home: React.FC<HomeProps> = ({ 
     boards, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash,
-    onJoinBoard, onNavigateToMake, onOpenSetup, onUpdateBoard, username, userAvatar, userId, theme, isSuperAdmin, isStudent, selectedClass
+    onJoinBoard, onNavigateToMake, onOpenSetup, onUpdateBoard, username, userAvatar, userId, theme, isSuperAdmin, isStudent, selectedClass, studentClasses
 }) => {
     
     const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
@@ -54,7 +55,7 @@ export const Home: React.FC<HomeProps> = ({
         openConfirmModal,
         handleConfirmAction,
         handleMenuAction
-    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent);
+    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent, studentClasses);
 
     const getDisplayTitle = () => {
         if (isStudent) {
