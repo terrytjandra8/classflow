@@ -34,7 +34,7 @@ export const profileService = {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, full_name, avatar_url, role, enrolled_classes, email') // Explicitly select columns
             .eq('id', user.id)
             .single();
 
