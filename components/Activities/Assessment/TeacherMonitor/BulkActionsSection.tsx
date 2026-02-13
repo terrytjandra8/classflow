@@ -1,0 +1,49 @@
+
+import React from 'react';
+import { CheckSquare, Square, Printer, RotateCcw } from 'lucide-react';
+
+interface BulkActionsSectionProps {
+    hasStudents: boolean;
+    selectedCount: number;
+    totalCount: number;
+    onSelectAll: () => void;
+    onPrintSelected: () => void;
+    onAllowRevisionSelected: () => void;
+}
+
+export const BulkActionsSection: React.FC<BulkActionsSectionProps> = ({ hasStudents, selectedCount, totalCount, onSelectAll, onPrintSelected, onAllowRevisionSelected }) => {
+    if (!hasStudents) return null;
+
+    return (
+        <div className="flex items-center gap-4 mb-4 animate-in fade-in slide-in-from-top-1 bg-[#1a1a1a] p-2 rounded-lg border border-white/5 w-fit">
+            <button 
+                onClick={onSelectAll}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/10 text-xs font-bold text-gray-300 transition-colors"
+            >
+                {selectedCount === totalCount ? <CheckSquare size={16} className="text-blue-500" /> : <Square size={16} />}
+                {selectedCount === totalCount ? "Deselect All" : "Select All"}
+            </button>
+            
+            {selectedCount > 0 && (
+                <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+                    <span className="text-xs font-bold text-blue-400">{selectedCount} Selected</span>
+                    
+                    <button 
+                        onClick={onAllowRevisionSelected}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg"
+                        title="Allow revision for selected students"
+                    >
+                        <RotateCcw size={14} /> Allow Revision
+                    </button>
+
+                    <button 
+                        onClick={onPrintSelected}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg"
+                    >
+                        <Printer size={14} /> Print
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};

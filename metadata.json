@@ -1,0 +1,5 @@
+{
+  "name": "Classboard AI",
+  "description": "A real-time collaborative classroom wall where students and teachers can pin notes, images, and links.",
+  "requestFramePermissions": []
+}
