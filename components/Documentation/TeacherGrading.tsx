@@ -108,7 +108,7 @@ export const TeacherGrading: React.FC = () => (
                             <div>
                                 <strong className="text-sm">In Admin Dashboard (Full Gradebook)</strong>
                                 <p className="text-xs text-slate-600 dark:text-gray-400 mt-1">
-                                    Go to your Dashboard -> <strong>Classroom</strong> tab -> <strong>Gradebook</strong> sub-tab.
+                                    Go to your Dashboard &rarr; <strong>Classroom</strong> tab &rarr; <strong>Gradebook</strong> sub-tab.
                                     <br/>
                                     This shows a spreadsheet view of ALL boards for that class. You can grade multiple assignments at once here.
                                 </p>

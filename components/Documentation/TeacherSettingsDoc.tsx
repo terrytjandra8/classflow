@@ -55,7 +55,7 @@ export const TeacherSettingsDoc: React.FC = () => (
                     <div className="bg-gray-50 dark:bg-black/20 p-4 rounded-xl text-sm space-y-2 border border-gray-100 dark:border-white/5">
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">1.</span>
-                            <span>Open <strong>Settings</strong> -> <strong>Engagement</strong>.</span>
+                            <span>Open <strong>Settings</strong> &rarr; <strong>Engagement</strong>.</span>
                         </div>
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">2.</span>
@@ -111,7 +111,7 @@ export const TeacherSettingsDoc: React.FC = () => (
                     <div className="bg-gray-50 dark:bg-black/20 p-4 rounded-xl text-sm space-y-2 border border-gray-100 dark:border-white/5">
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">1.</span>
-                            <span>Open <strong>Settings</strong> -> <strong>Engagement</strong>.</span>
+                            <span>Open <strong>Settings</strong> &rarr; <strong>Engagement</strong>.</span>
                         </div>
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">2.</span>
@@ -163,7 +163,7 @@ export const TeacherSettingsDoc: React.FC = () => (
                     <div className="bg-gray-50 dark:bg-black/20 p-4 rounded-xl text-sm space-y-2 border border-gray-100 dark:border-white/5">
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">1.</span>
-                            <span>Open <strong>Settings</strong> -> <strong>Appearance</strong>.</span>
+                            <span>Open <strong>Settings</strong> &rarr; <strong>Appearance</strong>.</span>
                         </div>
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">2.</span>
@@ -193,7 +193,7 @@ export const TeacherSettingsDoc: React.FC = () => (
                     <div className="bg-gray-50 dark:bg-black/20 p-4 rounded-xl text-sm space-y-2 border border-gray-100 dark:border-white/5">
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">1.</span>
-                            <span>Open <strong>Settings</strong> -> <strong>Advanced</strong>.</span>
+                            <span>Open <strong>Settings</strong> &rarr; <strong>Advanced</strong>.</span>
                         </div>
                         <div className="flex gap-3">
                             <span className="font-bold text-gray-400">2.</span>
