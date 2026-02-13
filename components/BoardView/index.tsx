@@ -557,36 +557,38 @@ export const BoardView: React.FC<BoardViewProps> = ({
     if (board.format === 'assessment') {
         return (
             <BoardProvider value={contextValue}>
-                {/* Assessment manages its own protections */}
-                <AssessmentManager 
-                    board={board}
-                    notes={notes}
-                    userId={userId}
-                    isStudent={isStudent || isSimulatingStudent}
-                    onUpdateBoard={onUpdateBoard}
-                    onBack={onBack}
-                    onlineUsers={onlineUsers}
-                    onOpenSettings={() => setIsSettingsOpen(true)}
-                    onOpenShare={() => setIsShareModalOpen(true)}
-                />
-                {!isPresentationMode && !isStudent && !isSimulatingStudent && (
-                    <BoardOverlays 
-                        board={board} 
-                        isStudent={isStudent}
-                        username={username}
-                        isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
-                        isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
-                        isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
-                        isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
-                        isGuideOpen={false} setIsGuideOpen={() => {}}
-                        isDragOver={false}
+                <div className="h-screen w-full relative bg-[#111]">
+                    {/* Assessment manages its own protections */}
+                    <AssessmentManager 
+                        board={board}
+                        notes={notes}
+                        userId={userId}
+                        isStudent={isStudent || isSimulatingStudent}
                         onUpdateBoard={onUpdateBoard}
-                        setNotes={setNotes}
-                        onAddNote={handleModalSubmit}
-                        pendingPasteImage={null}
-                        editingNote={null}
+                        onBack={onBack}
+                        onlineUsers={onlineUsers}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenShare={() => setIsShareModalOpen(true)}
                     />
-                )}
+                    {!isPresentationMode && !isStudent && !isSimulatingStudent && (
+                        <BoardOverlays 
+                            board={board} 
+                            isStudent={isStudent}
+                            username={username}
+                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
+                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
+                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
+                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
+                            isGuideOpen={false} setIsGuideOpen={() => {}}
+                            isDragOver={false}
+                            onUpdateBoard={onUpdateBoard}
+                            setNotes={setNotes}
+                            onAddNote={handleModalSubmit}
+                            pendingPasteImage={null}
+                            editingNote={null}
+                        />
+                    )}
+                </div>
             </BoardProvider>
         );
     }
