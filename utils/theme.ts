@@ -78,6 +78,40 @@ export const FONTS: Record<string, string> = {
   'hand': 'font-hand',
 };
 
+export const NOTE_COLORS = {
+    YELLOW: 'yellow',
+    CREAM: 'cream',
+    AMBER: 'amber',
+    BLUE: 'blue',
+    ICE: 'ice',
+    SKY: 'sky',
+    CYAN: 'cyan',
+    GREEN: 'green',
+    MINT: 'mint',
+    EMERALD: 'emerald',
+    LIME: 'lime',
+    TEAL: 'teal',
+    PINK: 'pink',
+    BLUSH: 'blush',
+    ROSE: 'rose',
+    RED: 'red',
+    FUCHSIA: 'fuchsia',
+    PURPLE: 'purple',
+    LILAC: 'lilac',
+    VIOLET: 'violet',
+    INDIGO: 'indigo',
+    PERIWINKLE: 'periwinkle',
+    ORANGE: 'orange',
+    PEACH: 'peach',
+    SLATE: 'slate',
+    GRAY: 'gray',
+    ZINC: 'zinc',
+    NEUTRAL: 'neutral',
+    STONE: 'stone',
+    TRANSPARENT: 'transparent',
+    WHITE: 'white',
+};
+
 export const resolveBackgroundStyle = (wallpaper: string, theme: 'light' | 'dark' = 'dark') => {
     if (!wallpaper) {
         // Default fallback for undefined wallpaper
@@ -114,78 +148,78 @@ export const resolveBackgroundStyle = (wallpaper: string, theme: 'light' | 'dark
 export const getNoteColorClasses = (color: NoteColor) => {
     switch (color) {
         // Yellows
-        case NoteColor.YELLOW:
+        case NOTE_COLORS.YELLOW:
             return 'bg-[#FFFFBA] dark:bg-[#E2E2A5] border-[#EAEAAB] dark:border-[#CFCF95] text-slate-900';
-        case NoteColor.CREAM:
+        case NOTE_COLORS.CREAM:
             return 'bg-[#FEF9C3] dark:bg-[#EFE9AE] border-[#FEF08A] dark:border-[#E2D870] text-slate-900';
-        case NoteColor.AMBER:
+        case NOTE_COLORS.AMBER:
             return 'bg-amber-200 dark:bg-amber-300 border-amber-300 dark:border-amber-400 text-slate-900';
         
         // Blues
-        case NoteColor.BLUE:
+        case NOTE_COLORS.BLUE:
             return 'bg-[#BAE1FF] dark:bg-[#95B8D6] border-[#A8CDEB] dark:border-[#83A2BD] text-slate-900';
-        case NoteColor.ICE:
+        case NOTE_COLORS.ICE:
             return 'bg-[#E0F2FE] dark:bg-[#B9E6FE] border-[#BAE6FD] dark:border-[#7DD3FC] text-slate-900';
-        case NoteColor.SKY:
+        case NOTE_COLORS.SKY:
             return 'bg-sky-200 dark:bg-sky-300 border-sky-300 dark:border-sky-400 text-slate-900';
-        case NoteColor.CYAN:
+        case NOTE_COLORS.CYAN:
             return 'bg-cyan-200 dark:bg-cyan-300 border-cyan-300 dark:border-cyan-400 text-slate-900';
         
         // Greens
-        case NoteColor.GREEN:
+        case NOTE_COLORS.GREEN:
             return 'bg-[#BAFFC9] dark:bg-[#97D6A5] border-[#A9EBBC] dark:border-[#85C293] text-slate-900';
-        case NoteColor.MINT:
+        case NOTE_COLORS.MINT:
             return 'bg-[#D1FAE5] dark:bg-[#A7F3D0] border-[#6EE7B7] dark:border-[#34D399] text-slate-900';
-        case NoteColor.EMERALD:
+        case NOTE_COLORS.EMERALD:
             return 'bg-emerald-200 dark:bg-emerald-300 border-emerald-300 dark:border-emerald-400 text-slate-900';
-        case NoteColor.LIME:
+        case NOTE_COLORS.LIME:
             return 'bg-lime-200 dark:bg-lime-300 border-lime-300 dark:border-lime-400 text-slate-900';
-        case NoteColor.TEAL:
+        case NOTE_COLORS.TEAL:
             return 'bg-teal-200 dark:bg-teal-300 border-teal-300 dark:border-teal-400 text-slate-900';
         
         // Pinks & Reds
-        case NoteColor.PINK:
+        case NOTE_COLORS.PINK:
             return 'bg-[#FFB3BA] dark:bg-[#D69299] border-[#EBA4AB] dark:border-[#BD8087] text-slate-900';
-        case NoteColor.BLUSH:
+        case NOTE_COLORS.BLUSH:
             return 'bg-[#FFE4E6] dark:bg-[#FDA4AF] border-[#FECDD3] dark:border-[#FB7185] text-slate-900';
-        case NoteColor.ROSE:
+        case NOTE_COLORS.ROSE:
             return 'bg-rose-200 dark:bg-rose-300 border-rose-300 dark:border-rose-400 text-slate-900';
-        case NoteColor.RED:
+        case NOTE_COLORS.RED:
             return 'bg-red-200 dark:bg-red-300 border-red-300 dark:border-red-400 text-slate-900';
-        case NoteColor.FUCHSIA:
+        case NOTE_COLORS.FUCHSIA:
             return 'bg-fuchsia-200 dark:bg-fuchsia-300 border-fuchsia-300 dark:border-fuchsia-400 text-slate-900';
         
         // Purples
-        case NoteColor.PURPLE:
+        case NOTE_COLORS.PURPLE:
             return 'bg-[#E1BAFF] dark:bg-[#BE9BD6] border-[#D0A9EB] dark:border-[#A888BD] text-slate-900';
-        case NoteColor.LILAC:
+        case NOTE_COLORS.LILAC:
             return 'bg-[#F3E8FF] dark:bg-[#E9D5FF] border-[#D8B4FE] dark:border-[#C084FC] text-slate-900';
-        case NoteColor.VIOLET:
+        case NOTE_COLORS.VIOLET:
             return 'bg-violet-200 dark:bg-violet-300 border-violet-300 dark:border-violet-400 text-slate-900';
-        case NoteColor.INDIGO:
+        case NOTE_COLORS.INDIGO:
             return 'bg-indigo-200 dark:bg-indigo-300 border-indigo-300 dark:border-indigo-400 text-slate-900';
-        case NoteColor.PERIWINKLE:
+        case NOTE_COLORS.PERIWINKLE:
             return 'bg-[#E0E7FF] dark:bg-[#C7D2FE] border-[#A5B4FC] dark:border-[#818CF8] text-slate-900';
         
         // Oranges
-        case NoteColor.ORANGE:
+        case NOTE_COLORS.ORANGE:
             return 'bg-orange-200 dark:bg-orange-300 border-orange-300 dark:border-orange-400 text-slate-900';
-        case NoteColor.PEACH:
+        case NOTE_COLORS.PEACH:
             return 'bg-[#FFEDD5] dark:bg-[#FED7AA] border-[#FDBA74] dark:border-[#FB923C] text-slate-900';
         
         // Greys
-        case NoteColor.SLATE:
+        case NOTE_COLORS.SLATE:
             return 'bg-slate-200 dark:bg-slate-300 border-slate-300 dark:border-slate-400 text-slate-900';
-        case NoteColor.GRAY:
+        case NOTE_COLORS.GRAY:
             return 'bg-gray-200 dark:bg-gray-300 border-gray-300 dark:border-gray-400 text-slate-900';
-        case NoteColor.ZINC:
+        case NOTE_COLORS.ZINC:
             return 'bg-zinc-200 dark:bg-zinc-300 border-zinc-300 dark:border-zinc-400 text-slate-900';
-        case NoteColor.NEUTRAL:
+        case NOTE_COLORS.NEUTRAL:
             return 'bg-neutral-200 dark:bg-neutral-300 border-neutral-300 dark:border-neutral-400 text-slate-900';
-        case NoteColor.STONE:
+        case NOTE_COLORS.STONE:
             return 'bg-stone-200 dark:bg-stone-300 border-stone-300 dark:border-stone-400 text-slate-900';
         
-        case NoteColor.TRANSPARENT:
+        case NOTE_COLORS.TRANSPARENT:
             return 'bg-transparent border-transparent text-slate-900 dark:text-white';
         default: 
             return 'bg-white dark:bg-[#333333] border-slate-200 dark:border-white/20 text-slate-800 dark:text-gray-100';
@@ -195,43 +229,43 @@ export const getNoteColorClasses = (color: NoteColor) => {
 export const getColorName = (color: NoteColor): string => {
     switch (color) {
         // Reds/Pinks
-        case NoteColor.RED: return "Cherry Red";
-        case NoteColor.ROSE: return "Rose Petal";
-        case NoteColor.BLUSH: return "Sweet Blush";
-        case NoteColor.PINK: return "Cotton Candy";
-        case NoteColor.FUCHSIA: return "Hot Pink";
+        case NOTE_COLORS.RED: return "Cherry Red";
+        case NOTE_COLORS.ROSE: return "Rose Petal";
+        case NOTE_COLORS.BLUSH: return "Sweet Blush";
+        case NOTE_COLORS.PINK: return "Cotton Candy";
+        case NOTE_COLORS.FUCHSIA: return "Hot Pink";
         // Purples
-        case NoteColor.LILAC: return "Soft Lilac";
-        case NoteColor.PURPLE: return "Lavender Dream";
-        case NoteColor.VIOLET: return "Amethyst";
-        case NoteColor.INDIGO: return "Twilight";
-        case NoteColor.PERIWINKLE: return "Periwinkle";
+        case NOTE_COLORS.LILAC: return "Soft Lilac";
+        case NOTE_COLORS.PURPLE: return "Lavender Dream";
+        case NOTE_COLORS.VIOLET: return "Amethyst";
+        case NOTE_COLORS.INDIGO: return "Twilight";
+        case NOTE_COLORS.PERIWINKLE: return "Periwinkle";
         // Blues
-        case NoteColor.BLUE: return "Baby Blue";
-        case NoteColor.ICE: return "Glacier Ice";
-        case NoteColor.SKY: return "Clear Sky";
-        case NoteColor.CYAN: return "Aqua";
+        case NOTE_COLORS.BLUE: return "Baby Blue";
+        case NOTE_COLORS.ICE: return "Glacier Ice";
+        case NOTE_COLORS.SKY: return "Clear Sky";
+        case NOTE_COLORS.CYAN: return "Aqua";
         // Greens
-        case NoteColor.TEAL: return "Ocean Foam";
-        case NoteColor.EMERALD: return "Sea Glass";
-        case NoteColor.MINT: return "Fresh Mint";
-        case NoteColor.GREEN: return "Matcha Latte";
-        case NoteColor.LIME: return "Key Lime";
+        case NOTE_COLORS.TEAL: return "Ocean Foam";
+        case NOTE_COLORS.EMERALD: return "Sea Glass";
+        case NOTE_COLORS.MINT: return "Fresh Mint";
+        case NOTE_COLORS.GREEN: return "Matcha Latte";
+        case NOTE_COLORS.LIME: return "Key Lime";
         // Yellows/Oranges
-        case NoteColor.YELLOW: return "Lemon Drop";
-        case NoteColor.CREAM: return "Vanilla Cream";
-        case NoteColor.AMBER: return "Honey";
-        case NoteColor.ORANGE: return "Tangerine";
-        case NoteColor.PEACH: return "Peachy Keen";
+        case NOTE_COLORS.YELLOW: return "Lemon Drop";
+        case NOTE_COLORS.CREAM: return "Vanilla Cream";
+        case NOTE_COLORS.AMBER: return "Honey";
+        case NOTE_COLORS.ORANGE: return "Tangerine";
+        case NOTE_COLORS.PEACH: return "Peachy Keen";
         // Neutrals
-        case NoteColor.STONE: return "Pebble";
-        case NoteColor.NEUTRAL: return "Sand";
-        case NoteColor.ZINC: return "Chrome";
-        case NoteColor.GRAY: return "Fog";
-        case NoteColor.SLATE: return "Storm";
+        case NOTE_COLORS.STONE: return "Pebble";
+        case NOTE_COLORS.NEUTRAL: return "Sand";
+        case NOTE_COLORS.ZINC: return "Chrome";
+        case NOTE_COLORS.GRAY: return "Fog";
+        case NOTE_COLORS.SLATE: return "Storm";
         // Special
-        case NoteColor.WHITE: return "Paper White";
-        case NoteColor.TRANSPARENT: return "Ghost (Transparent)";
+        case NOTE_COLORS.WHITE: return "Paper White";
+        case NOTE_COLORS.TRANSPARENT: return "Ghost (Transparent)";
         default: return "Custom";
     }
 };

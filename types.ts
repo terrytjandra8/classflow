@@ -77,8 +77,8 @@ export type AssessmentState = 'setup' | 'reading' | 'inprogress' | 'submitted' |
 
 export interface Board {
     id: string;
-    created_at: string;
-    updated_at?: string;
+    createdAt: string;
+    updatedAt?: string;
     title: string;
     description?: string;
     owner_id: string;
@@ -87,18 +87,18 @@ export interface Board {
     sectionGroups?: SectionGroup[];
     settings?: BoardSettings;
     wallpaper?: string;
-    class_code?: string;
-    is_public?: boolean;
-    is_published?: boolean;
-    target_grade?: string;
+    classCode?: string;
+    isPublic?: boolean;
+    isPublished?: boolean;
+    targetGrade?: string;
     subject?: string;
     topic?: string;
-    grading_type?: 'manual' | 'automatic' | 'none';
-    is_favorite?: boolean;
+    gradingType?: 'manual' | 'automatic' | 'none';
+    isFavorite?: boolean;
     lockMode?: LockMode;
     viewMode?: 'presentation' | 'collaboration';
     steps?: LessonStep[];
-    current_step_index?: number;
+    currentStepIndex?: number;
     notes?: Note[];
     grades?: Grade[];
     deletedAt?: Date | null;
@@ -132,7 +132,7 @@ export interface Board {
     quizQuestions?: QuizQuestion[];
     quizMusic?: string;
     quizStartTime?: number;
-    current_question_index?: number;
+    currentQuestionIndex?: number;
     assessmentConfig?: AssessmentConfig;
     assessmentState?: AssessmentState;
     assessmentQuestions?: AssessmentQuestion[];
@@ -199,7 +199,7 @@ export interface Note {
     id: string;
     board_id: string;
     section_id?: string;
-    created_at: string;
+    createdAt: string;
     content: string;
     author_id: string;
     author_name?: string;
@@ -216,7 +216,7 @@ export interface Note {
     is_watermarked?: boolean;
     image_url?: string;
     video_url?: string;
-    attachment_url?: string;
+    attachmentUrl?: string;
     reactions?: any[];
     comments?: Comment[];
     tags?: string[];
@@ -255,7 +255,7 @@ export interface Comment {
     author_avatar?: string;
     content: string;
     text: string;
-    created_at: string;
+    createdAt: string;
     is_anonymous?: boolean;
     liked_by?: string[];
     replies?: Comment[];
@@ -307,4 +307,19 @@ export interface Class {
 
 export interface ColumnAnalyticsData {
   // Define properties based on usage
+}
+
+export interface Participant {
+    id: string;
+    name: string;
+    role: UserRole;
+    disqualified: boolean;
+    status: 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready';
+    violations: any;
+    hasLowWordCount: any;
+    progress: number;
+    score: any;
+    noteId: string;
+    data: any;
+    submittedAt: string;
 }
