@@ -36,7 +36,7 @@ export const ClassesList: React.FC<ClassesProps> = ({
             // Strict role check
             if (s.role !== 'student') return false;
             
-            const enrolled = s.enrolled_classes || [];
+            const enrolled = s.enrolledClasses || [];
             return enrolled.some((c: string) => c.trim().toLowerCase() === normalizedClassName);
         }).length;
     };

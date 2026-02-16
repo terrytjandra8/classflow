@@ -16,181 +16,199 @@ export interface Database {
           title: string
           description: string | null
           topic: string | null
-          owner_id: string
+          ownerId: string
           format: string
-          class_code: string | null
+          classCode: string | null
           wallpaper: string | null
           settings: Json
-          is_published: boolean
-          is_public: boolean
-          is_favorite: boolean
-          target_grade: string | null
+          isPublished: boolean
+          isPublic: boolean
+          isFavorite: boolean
+          targetGrade: string | null
           subject: string | null
-          grading_type: string
+          gradingType: string
           steps: Json
-          current_step_index: number
-          created_at: string
-          updated_at: string
+          currentStepIndex: number
+          createdAt: string
+          updatedAt: string
+          deletedAt: string | null
+          isTrashed: boolean
+          collaborators: Json
         }
         Insert: {
           id?: string
           title?: string
           description?: string | null
           topic?: string | null
-          owner_id?: string
+          ownerId?: string
           format?: string
-          class_code?: string | null
+          classCode?: string | null
           wallpaper?: string | null
           settings?: Json
-          is_published?: boolean
-          is_public?: boolean
-          is_favorite?: boolean
-          target_grade?: string | null
+          isPublished?: boolean
+          isPublic?: boolean
+          isFavorite?: boolean
+          targetGrade?: string | null
           subject?: string | null
-          grading_type?: string
+          gradingType?: string
           steps?: Json
-          current_step_index?: number
-          created_at?: string
-          updated_at?: string
+          currentStepIndex?: number
+          createdAt?: string
+          updatedAt?: string
+          deletedAt?: string | null
+          isTrashed?: boolean
+          collaborators?: Json
         }
         Update: {
           id?: string
           title?: string
           description?: string | null
           topic?: string | null
-          owner_id?: string
+          ownerId?: string
           format?: string
-          class_code?: string | null
+          classCode?: string | null
           wallpaper?: string | null
           settings?: Json
-          is_published?: boolean
-          is_public?: boolean
-          is_favorite?: boolean
-          target_grade?: string | null
+          isPublished?: boolean
+          isPublic?: boolean
+          isFavorite?: boolean
+          targetGrade?: string | null
           subject?: string | null
-          grading_type?: string
+          gradingType?: string
           steps?: Json
-          current_step_index?: number
-          created_at?: string
-          updated_at?: string
+          currentStepIndex?: number
+          createdAt?: string
+          updatedAt?: string
+          deletedAt?: string | null
+          isTrashed?: boolean
+          collaborators?: Json
         }
       }
       notes: {
         Row: {
           id: string
-          board_id: string
+          boardId: string
           title: string | null
           content: string | null
           author: string | null
-          author_id: string | null
-          author_role: string
-          author_avatar: string | null
+          authorId: string | null
+          authorRole: string
+          authorAvatar: string | null
           type: string
           color: string
           x: number
           y: number
           width: number | null
           height: number | null
-          section_id: string | null
-          attachment_url: string | null
-          is_pinned: boolean
-          is_placeholder: boolean
-          is_watermarked: boolean // Added
+          sectionId: string | null
+          attachment: string | null
+          isPinned: boolean
+          isPlaceholder: boolean
+          isWatermarked: boolean
+          isDeleted: boolean
           connections: Json
           likes: number
           comments: Json
           liked_by: string[]
-          created_at: string
+          createdAt: string
+          imageUrl: string | null
+          videoUrl: string | null
         }
         Insert: {
           id?: string
-          board_id: string
+          boardId: string
           title?: string | null
           content?: string | null
           author?: string | null
-          author_id?: string | null
-          author_role?: string
-          author_avatar?: string | null
+          authorId?: string | null
+          authorRole?: string
+          authorAvatar?: string | null
           type?: string
           color?: string
           x?: number
           y?: number
           width?: number | null
           height?: number | null
-          section_id?: string | null
-          attachment_url?: string | null
-          is_pinned?: boolean
-          is_placeholder?: boolean
-          is_watermarked?: boolean // Added
+          sectionId?: string | null
+          attachment?: string | null
+          isPinned?: boolean
+          isPlaceholder?: boolean
+          isWatermarked?: boolean
+          isDeleted?: boolean
           connections?: Json
           likes?: number
           comments?: Json
           liked_by?: string[]
-          created_at?: string
+          createdAt?: string
+          imageUrl?: string | null
+          videoUrl?: string | null
         }
         Update: {
           id?: string
-          board_id?: string
+          boardId?: string
           title?: string | null
           content?: string | null
           author?: string | null
-          author_id?: string | null
-          author_role?: string
-          author_avatar?: string | null
+          authorId?: string | null
+          authorRole?: string
+          authorAvatar?: string | null
           type?: string
           color?: string
           x?: number
           y?: number
           width?: number | null
           height?: number | null
-          section_id?: string | null
-          attachment_url?: string | null
-          is_pinned?: boolean
-          is_placeholder?: boolean
-          is_watermarked?: boolean // Added
+          sectionId?: string | null
+          attachment?: string | null
+          isPinned?: boolean
+          isPlaceholder?: boolean
+          isWatermarked?: boolean
+          isDeleted?: boolean
           connections?: Json
           likes?: number
           comments?: Json
           liked_by?: string[]
-          created_at?: string
+          createdAt?: string
+          imageUrl?: string | null
+          videoUrl?: string | null
         }
       }
       profiles: {
         Row: {
           id: string
           email: string | null
-          full_name: string | null
-          avatar_url: string | null
-          grade_level: string | null
-          enrolled_classes: string[]
+          fullName: string | null
+          avatarUrl: string | null
+          gradeLevel: string | null
+          enrolledClasses: string[]
           role: string
           preferences: Json
-          created_at: string
-          updated_at: string
+          createdAt: string
+          updatedAt: string
         }
         Insert: {
           id: string
           email?: string | null
-          full_name?: string | null
-          avatar_url?: string | null
-          grade_level?: string | null
-          enrolled_classes?: string[]
+          fullName?: string | null
+          avatarUrl?: string | null
+          gradeLevel?: string | null
+          enrolledClasses?: string[]
           role?: string
           preferences?: Json
-          created_at?: string
-          updated_at?: string
+          createdAt?: string
+          updatedAt?: string
         }
         Update: {
           id?: string
           email?: string | null
-          full_name?: string | null
-          avatar_url?: string | null
-          grade_level?: string | null
-          enrolled_classes?: string[]
+          fullName?: string | null
+          avatarUrl?: string | null
+          gradeLevel?: string | null
+          enrolledClasses?: string[]
           role?: string
           preferences?: Json
-          created_at?: string
-          updated_at?: string
+          createdAt?: string
+          updatedAt?: string
         }
       }
       classes: {
@@ -198,48 +216,54 @@ export interface Database {
           id: string
           name: string
           description: string | null
-          created_at: string
+          createdAt: string
+          ownerId: string
+          autoEnroll: boolean
         }
         Insert: {
           id?: string
           name: string
           description?: string | null
-          created_at?: string
+          createdAt?: string
+          ownerId: string
+          autoEnroll: boolean
         }
         Update: {
           id?: string
           name?: string
           description?: string | null
-          created_at?: string
+          createdAt?: string
+          ownerId?: string
+          autoEnroll?: boolean
         }
       }
       grades: {
         Row: {
           id: string
-          student_id: string
-          board_id: string
+          studentId: string
+          boardId: string
           score: number | null
           feedback: string | null
-          created_at: string
-          updated_at: string
+          createdAt: string
+          updatedAt: string
         }
         Insert: {
           id?: string
-          student_id: string
-          board_id: string
+          studentId: string
+          boardId: string
           score?: number | null
           feedback?: string | null
-          created_at?: string
-          updated_at?: string
+          createdAt?: string
+          updatedAt?: string
         }
         Update: {
           id?: string
-          student_id?: string
-          board_id?: string
+          studentId?: string
+          boardId?: string
           score?: number | null
           feedback?: string | null
-          created_at?: string
-          updated_at?: string
+          createdAt?: string
+          updatedAt?: string
         }
       }
     }

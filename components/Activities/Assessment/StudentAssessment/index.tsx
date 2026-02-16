@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { AssessmentQuestion, Board, AssessmentConfig, SubmissionData } from '../../../../types';
+import { AssessmentQuestion, Board, AssessmentConfig, SubmissionData, BackupData } from '../../../../types';
 import { useFocusMode } from '../../../../hooks/useFocusMode';
 import { supabase } from '../../../../services/supabaseClient';
 import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
 import { Cloud, Loader2, AlertCircle } from 'lucide-react';
-
-interface BackupData extends SubmissionData {
-    timestamp: number;
-    status: 'inprogress' | 'submitted' | 'disqualified';
-}
 
 interface StudentAssessmentProps {
     board: Board;
@@ -47,7 +42,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return () => clearInterval(interval);
     }, []);
 
-    const isTimeExpired = board.auto_lock_time ? now >= board.auto_lock_time : false;
+    const isTimeExpired = board.autoLockTime ? now >= board.autoLockTime : false;
     const isClosed = config.status === 'finished' || isTimeExpired;
 
     const isReadingMode = config.status === 'reading' && !isTimeExpired;
@@ -138,7 +133,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             .eq('board_id', board.id)
             .eq('author_id', userId)
             .eq('type', 'assessment_submission')
-            .order('created_at', { ascending: false })
+            .order('createdAt', { ascending: false })
             .limit(1)
             .single();
         

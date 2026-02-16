@@ -27,7 +27,7 @@ export const useNoteActions = ({
     const historyStack = useRef<HistoryAction[]>([]);
 
     const updateBoardTimestamp = useCallback(async () => {
-        await supabase.from('boards').update({ updated_at: new Date().toISOString() }).eq('id', boardId);
+        await supabase.from('boards').update({ updatedAt: new Date().toISOString() }).eq('id', boardId);
     }, [boardId]);
 
     const performUndo = useCallback(async () => {
@@ -44,11 +44,11 @@ export const useNoteActions = ({
 
             case 'DELETE_NOTE':
                 const noteToRestore = lastAction.note;
-                const { created_at, ...rest } = noteToRestore;
+                const { createdAt, ...rest } = noteToRestore;
                 
                 const payload = {
                     ...rest,
-                    created_at: new Date(created_at).toISOString()
+                    createdAt: new Date(createdAt).toISOString()
                 };
 
                 setNotes(prev => [noteToRestore, ...prev]);
@@ -94,23 +94,23 @@ export const useNoteActions = ({
         const finalAuthorId = user?.id || userId;
 
         const noteToInsert = {
-            board_id: boardId,
+            boardId: boardId,
             content: noteData.content,
             title: noteData.title,
-            author: noteData.author || username || 'Anonymous',
-            author_id: finalAuthorId,
-            author_role: userRole || 'student',
-            author_avatar: userAvatar,
+            authorName: noteData.author || username || 'Anonymous',
+            authorId: finalAuthorId,
+            authorRole: userRole || 'student',
+            authorAvatar: userAvatar,
             type: noteData.type,
             color: noteData.color,
-            position_x: noteData.position_x || 0,
-            position_y: noteData.position_y || 0,
-            section_id: noteData.section_id,
-            attachment_url: noteData.attachment_url,
+            x: noteData.x || 0,
+            y: noteData.y || 0,
+            sectionId: noteData.sectionId,
+            attachment: noteData.attachment,
             likes: 0,
             comments: [],
             liked_by: [],
-            created_at: noteData.created_at ? new Date(noteData.created_at).toISOString() : new Date().toISOString()
+            createdAt: noteData.createdAt ? new Date(noteData.createdAt).toISOString() : new Date().toISOString()
         };
 
         const { data, error } = await supabase.from('notes').insert([noteToInsert]).select().single();
@@ -215,11 +215,11 @@ export const useNoteActions = ({
         const newComment: Comment = {
             id: Math.random().toString(36).substr(2, 9),
             text,
-            author: username || 'Student', 
+            author_name: username || 'Student', 
             author_id: userId, 
-            author_role: userRole, 
+            author_role: userRole || 'student', 
             author_avatar: userAvatar || undefined,
-            created_at: Date.now(),
+            createdAt: new Date().toISOString(),
             attachment,
             likes: 0, 
             liked_by: []
@@ -253,23 +253,23 @@ export const useNoteActions = ({
         const finalAuthorId = user?.id || userId;
         
         const noteToInsert = {
-            board_id: boardId,
+            boardId: boardId,
             content: note.content,
             title: note.title ? `${note.title} (Copy)` : undefined,
-            author: username || 'Student',
-            author_id: finalAuthorId,
-            author_role: userRole,
-            author_avatar: userAvatar,
+            authorName: username || 'Student',
+            authorId: finalAuthorId,
+            authorRole: userRole || 'student', 
+            authorAvatar: userAvatar,
             type: note.type,
             color: note.color,
-            position_x: note.position_x + 20,
-            position_y: note.position_y + 20,
-            section_id: note.section_id,
-            attachment_url: note.attachment_url,
+            x: (note.x || 0) + 20,
+            y: (note.y || 0) + 20,
+            sectionId: note.sectionId,
+            attachment: note.attachment,
             likes: 0,
             comments: [],
             liked_by: [],
-            created_at: new Date().toISOString()
+            createdAt: new Date().toISOString()
         };
 
         const { data, error } = await supabase.from('notes').insert([noteToInsert]).select().single();

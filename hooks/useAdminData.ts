@@ -7,15 +7,15 @@ import { supabase } from '../services/supabaseClient';
 export interface Profile {
     id: string;
     email: string;
-    full_name: string;
-    grade_level: string;
-    enrolled_classes: string[];
+    fullName: string;
+    gradeLevel: string;
+    enrolledClasses: string[];
     role: string;
 }
 
 export interface Grade {
-    student_id: string;
-    board_id: string;
+    studentId: string;
+    boardId: string;
     score: number;
 }
 
@@ -107,8 +107,8 @@ export const useAdminData = (scope: 'my_classes' | 'global' = 'my_classes') => {
 
     const updateStudentClasses = async (id: string, newClasses: string[]) => {
         try {
-            setStudents(prev => prev.map(s => s.id === id ? { ...s, enrolled_classes: newClasses } : s));
-            await adminService.updateProfile(id, { enrolled_classes: newClasses });
+            setStudents(prev => prev.map(s => s.id === id ? { ...s, enrolledClasses: newClasses } : s));
+            await adminService.updateProfile(id, { enrolledClasses: newClasses });
         } catch (e) {
             console.error("Failed to update student classes", e);
         }
@@ -129,11 +129,11 @@ export const useAdminData = (scope: 'my_classes' | 'global' = 'my_classes') => {
         const newScore = scoreStr === '' ? null : score;
 
         setGrades(prev => {
-            const existing = prev.find(g => g.student_id === studentId && g.board_id === boardId);
+            const existing = prev.find(g => g.studentId === studentId && g.boardId === boardId);
             if (existing) {
-                return prev.map(g => (g.student_id === studentId && g.board_id === boardId) ? { ...g, score: newScore || 0 } : g);
+                return prev.map(g => (g.studentId === studentId && g.boardId === boardId) ? { ...g, score: newScore || 0 } : g);
             }
-            return [...prev, { student_id: studentId, board_id: boardId, score: newScore || 0 }];
+            return [...prev, { studentId: studentId, boardId: boardId, score: newScore || 0 }];
         });
 
         try {

@@ -161,7 +161,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[9px] ${metaTextClass}`}>{formatTime(comment.created_at)}</span>
+                        <span className={`text-[9px] ${metaTextClass}`}>{formatTime(comment.createdAt)}</span>
                         
                         {(canReply || canManage) && (
                             <div className="relative" ref={menuRef}>

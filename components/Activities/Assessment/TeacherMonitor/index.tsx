@@ -111,8 +111,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 disqualified: isDQ,
                 hasLowWordCount: hasLowWordCount && !isDQ && data?.submitted,
                 data: data,
-                submittedAt: sub.created_at, 
-                lastActivity: new Date(sub.updated_at || sub.created_at).getTime()
+                submittedAt: sub.createdAt, 
+                lastActivity: new Date(sub.updatedAt || sub.createdAt).getTime().toString()
             };
         });
 
@@ -142,7 +142,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 hasLowWordCount: false,
                 data: {},
                 submittedAt: new Date().toISOString(),
-                lastActivity: Date.now()
+                lastActivity: Date.now().toString()
             }));
 
         const all: Participant[] = [...mappedSubmissions, ...pendingStudents];
@@ -454,7 +454,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const handlePrintMaster = (withKey: boolean) => {
         setPrintKeyMode(withKey);
         setPrintWithFeedback(false);
-        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: 0, hasLowWordCount: false, progress: 1, score: 100, noteId: null, submittedAt: new Date().toISOString(), data: { answers: {} }, lastActivity: Date.now() }]);
+        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: 0, hasLowWordCount: false, progress: 1, score: 100, noteId: "master-copy-note-id", submittedAt: new Date().toISOString(), data: { answers: {} }, lastActivity: Date.now().toString() }]);
     };
 
     return (

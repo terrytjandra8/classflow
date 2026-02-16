@@ -16,8 +16,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
             id: Math.random().toString(36).substr(2, 9),
             question: "New Question",
             options: ["Option 1", "Option 2", "Option 3", "Option 4"],
-            correctAnswer: "Option 1",
-            time_limit: 20
+            correct_answer: 0,
+            timeLimit: 20
         };
         onUpdateBoard({ quizQuestions: [...questions, newQ] });
         setEditingQuestion(newQ);
@@ -61,8 +61,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                     <input 
                                         type="radio" 
                                         name="correct"
-                                        checked={editingQuestion.correctAnswer === opt} 
-                                        onChange={() => setEditingQuestion({...editingQuestion, correctAnswer: opt})}
+                                        checked={editingQuestion.correct_answer === i} 
+                                        onChange={() => setEditingQuestion({...editingQuestion, correct_answer: i})}
                                         className="accent-green-500 w-4 h-4 cursor-pointer shrink-0"
                                     />
                                     <input 
@@ -72,7 +72,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                             newOpts[i] = e.target.value;
                                             setEditingQuestion({...editingQuestion, options: newOpts});
                                         }}
-                                        className={`flex-1 bg-[#111] border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-500 ${editingQuestion.correctAnswer === opt ? 'border-green-500 text-green-400 font-bold' : 'border-white/10'}`}
+                                        className={`flex-1 bg-[#111] border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-500 ${editingQuestion.correct_answer === i ? 'border-green-500 text-green-400 font-bold' : 'border-white/10'}`}
                                     />
                                 </div>
                             ))}
@@ -83,8 +83,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                         <label className="text-xs font-bold text-gray-500 uppercase">Time (Seconds)</label>
                         <input 
                             type="number"
-                            value={editingQuestion.time_limit}
-                            onChange={(e) => setEditingQuestion({...editingQuestion, time_limit: parseInt(e.target.value) || 10})}
+                            value={editingQuestion.timeLimit}
+                            onChange={(e) => setEditingQuestion({...editingQuestion, timeLimit: parseInt(e.target.value) || 10})}
                             className="w-full bg-[#111] border border-white/10 rounded-lg p-2 text-sm"
                         />
                     </div>

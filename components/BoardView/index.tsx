@@ -76,7 +76,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     }, [initialBoard.id]);
 
     useEffect(() => {
-        const timers = [liveBoard.auto_lock_time, liveBoard.auto_live_time].filter(t => t && t > Date.now()) as number[];
+        const timers = [liveBoard.autoLockTime, liveBoard.autoLiveTime].filter(t => t && t > Date.now()) as number[];
         
         if (timers.length > 0) {
             const nextTime = Math.min(...timers);
@@ -88,13 +88,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
             
             return () => clearTimeout(timerId);
         }
-    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time]);
+    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime]);
 
-    const isExpired = liveBoard.auto_lock_time && Date.now() >= liveBoard.auto_lock_time;
+    const isExpired = liveBoard.autoLockTime && Date.now() >= liveBoard.autoLockTime;
     
     const board = useMemo(() => ({
         ...liveBoard,
-        lock_mode: (isExpired ? 'readonly' : liveBoard.lock_mode) as LockMode
+        lockMode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
     }), [liveBoard, isExpired]);
 
     const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
@@ -117,11 +117,11 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     useEffect(() => {
         if (!isPresentationMode) {
-            if (board.guide && !board.guide_dismissed) {
+            if (board.guide && !board.guideDismissed) {
                 setIsGuideOpen(true);
             }
         }
-    }, [board.guide, board.guide_dismissed, isPresentationMode]);
+    }, [board.guide, board.guideDismissed, isPresentationMode]);
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -142,20 +142,20 @@ export const BoardView: React.FC<BoardViewProps> = ({
     useEffect(() => {
         if (!canManageBoard) return;
         
-        const hasAutoLock = liveBoard.auto_lock_time && liveBoard.lock_mode !== 'readonly';
-        const hasAutoLive = liveBoard.auto_live_time && !liveBoard.is_published;
+        const hasAutoLock = liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly';
+        const hasAutoLive = liveBoard.autoLiveTime && !liveBoard.isPublished;
 
         if (!hasAutoLock && !hasAutoLive) return;
 
         const checkTimers = () => {
             const now = Date.now();
             
-            if (liveBoard.auto_lock_time && liveBoard.lock_mode !== 'readonly' && now >= liveBoard.auto_lock_time) {
-                onUpdateBoard({ lock_mode: 'readonly' });
+            if (liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly' && now >= liveBoard.autoLockTime) {
+                onUpdateBoard({ lockMode: 'readonly' });
             }
 
-            if (liveBoard.auto_live_time && !liveBoard.is_published && now >= liveBoard.auto_live_time) {
-                onUpdateBoard({ is_published: true, auto_live_time: null });
+            if (liveBoard.autoLiveTime && !liveBoard.isPublished && now >= liveBoard.autoLiveTime) {
+                onUpdateBoard({ isPublished: true, autoLiveTime: null });
             }
         };
 
@@ -163,7 +163,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         checkTimers();
 
         return () => clearInterval(interval);
-    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time, liveBoard.lock_mode, liveBoard.is_published, canManageBoard, onUpdateBoard]);
+    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime, liveBoard.lockMode, liveBoard.isPublished, canManageBoard, onUpdateBoard]);
 
     const sortedNotes = useMemo(() => {
         let filtered = notes;
@@ -171,21 +171,21 @@ export const BoardView: React.FC<BoardViewProps> = ({
             filtered = notes.filter(n => {
                 if (!n.section_id) return true;
                 const section = board.sections?.find(s => s.id === n.section_id);
-                return !section?.is_hidden;
+                return !section?.isHidden;
             });
         }
 
         return [...filtered].sort((a, b) => {
-            if (a.is_pinned && b.is_pinned) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            if (a.is_pinned && b.is_pinned) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             if (a.is_pinned && !b.is_pinned) return -1;
             if (!a.is_pinned && b.is_pinned) return 1;
 
-            if (board.sort_order === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-            if (board.sort_order === 'likes') return b.likes - a.likes;
+            if (board.sortOrder === 'date_asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            if (board.sortOrder === 'likes') return b.likes - a.likes;
             
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
-    }, [notes, board.sort_order, board.sections, canManageBoard]);
+    }, [notes, board.sortOrder, board.sections, canManageBoard]);
 
     const backgroundStyle = resolveBackgroundStyle(board.wallpaper || 'default', theme);
     const fontClass = board.font || 'font-sans';
@@ -213,8 +213,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 section_id: typeof addNoteLocation === 'string' 
                     ? addNoteLocation 
                     : (addNoteLocation?.section_id || undefined), 
-                position_x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined,
-                position_y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined,
+                x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined,
+                y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined,
             };
             await createNote(payload);
         }
@@ -233,13 +233,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
             id: 'default', 
             title: 'Group 1',
             locked: false,
-            is_content_blurred: false,
-            is_hidden: false,
-            is_anonymous: false,
-            comments_enabled: true,
-            replies_enabled: true,
-            students_can_drag: false,
-            is_published: true,
+            isContentBlurred: false,
+            isHidden: false,
+            isAnonymous: false,
+            commentsEnabled: true,
+            repliesEnabled: true,
+            studentsCanDrag: false,
+            isPublished: true,
         }];
     }, [board.sections]);
 
@@ -253,7 +253,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                return { ...s, is_content_blurred: !s.is_content_blurred };
+                return { ...s, isContentBlurred: !s.isContentBlurred };
             }
             return s;
         });
@@ -262,13 +262,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const toggleSectionVisibility = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, is_hidden: !s.is_hidden } : s);
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isHidden: !s.isHidden } : s);
         onUpdateBoard({ sections: updatedSections });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionAnonymous = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, is_anonymous: !s.is_anonymous } : s);
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isAnonymous: !s.isAnonymous } : s);
         onUpdateBoard({ sections: updatedSections });
     }, [getEffectiveSections, onUpdateBoard]);
 
@@ -276,7 +276,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                return { ...s, comments_enabled: !s.comments_enabled };
+                return { ...s, commentsEnabled: !s.commentsEnabled };
             }
             return s;
         });
@@ -287,7 +287,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                return { ...s, replies_enabled: !s.replies_enabled };
+                return { ...s, repliesEnabled: !s.repliesEnabled };
             }
             return s;
         });
@@ -298,7 +298,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                return { ...s, students_can_drag: !s.students_can_drag };
+                return { ...s, studentsCanDrag: !s.studentsCanDrag };
             }
             return s;
         });
@@ -316,7 +316,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         isLoadingNotes,
         updateBoard: onUpdateBoard,
         deleteNote,
-        likeNote: (id) => board.reactions_enabled && likeNote(id),
+        likeNote: (id) => board.reactionsEnabled && likeNote(id),
         addComment,
         updateNote,
         duplicateNote,
@@ -326,8 +326,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         openSettings: () => setIsSettingsOpen(true),
         openShare: () => setIsShareModalOpen(true),
         openBoardAnalysis: () => {}, 
-        isSimulating: isSimulatingStudent,
-        toggleSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
+        isSimulatingStudent: isSimulatingStudent,
+        toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
         isAiLoading: false,
         summarize: () => {},
         backgroundStyle,
@@ -359,7 +359,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     ]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
-        const protectionEnabled = !!board.block_screenshots && (isStudent || isSimulatingStudent);
+        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
         
         return (
             <ScreenshotGuard isEnabled={protectionEnabled} username={username}>

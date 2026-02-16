@@ -21,7 +21,7 @@ export const adminService = {
         
         if (!fetchGlobal) {
             // "My Classes" Scope: Matches sidebar logic (Owned + Legacy/Unowned)
-            classesQuery = classesQuery.or(`owner_id.eq.${user.id},owner_id.is.null`);
+            classesQuery = classesQuery.or(`ownerId.eq.${user.id},ownerId.is.null`);
         }
         
         const classesRes = await classesQuery;
@@ -30,11 +30,11 @@ export const adminService = {
         const visibleClassNames = new Set((classesRes.data || []).map((c: any) => c.name.trim().toLowerCase()));
         
         // 2. Fetch Boards (Only IDs needed for filtering grades/notes)
-        let boardsQuery = supabase.from('boards').select('id, owner_id');
+        let boardsQuery = supabase.from('boards').select('id, ownerId');
         
         if (!fetchGlobal) {
             // "My Classes" Scope: Only boards I own
-            boardsQuery = boardsQuery.eq('owner_id', user.id);
+            boardsQuery = boardsQuery.eq('ownerId', user.id);
         }
         
         const boardsRes = await boardsQuery;
@@ -45,7 +45,7 @@ export const adminService = {
         
         if (!fetchGlobal) {
             if (visibleBoardIds.length > 0) {
-                gradesQuery = gradesQuery.in('board_id', visibleBoardIds);
+                gradesQuery = gradesQuery.in('boardId', visibleBoardIds);
             } else {
                 // Return empty set if no boards owned
                 gradesQuery = gradesQuery.eq('id', '00000000-0000-0000-0000-000000000000'); 
@@ -54,16 +54,16 @@ export const adminService = {
         const gradesRes = await gradesQuery;
 
         // 4. Fetch Profiles
-        // We fetch ALL profiles initially because filtering by JSON array (enrolled_classes) in Supabase is tricky/limited
+        // We fetch ALL profiles initially because filtering by JSON array (enrolledClasses) in Supabase is tricky/limited
         // We will filter in memory below.
-        const profilesRes = await supabase.from('profiles').select('*').order('full_name');
+        const profilesRes = await supabase.from('profiles').select('*').order('fullName');
 
         // 5. Fetch Activity (Notes) - Lightweight
-        let activityQuery = supabase.from('notes').select('author_id, content, board_id');
+        let activityQuery = supabase.from('notes').select('authorId, content, boardId');
         
         if (!fetchGlobal) {
             if (visibleBoardIds.length > 0) {
-                activityQuery = activityQuery.in('board_id', visibleBoardIds);
+                activityQuery = activityQuery.in('boardId', visibleBoardIds);
             } else {
                 activityQuery = activityQuery.eq('id', '00000000-0000-0000-0000-000000000000'); 
             }
@@ -80,7 +80,7 @@ export const adminService = {
 
         const students = (profilesRes.data || []).map((p: any) => ({
             ...p,
-            enrolled_classes: (Array.isArray(p.enrolled_classes) ? p.enrolled_classes : [])
+            enrolledClasses: (Array.isArray(p.enrolledClasses) ? p.enrolledClasses : [])
                 .map((c: any) => typeof c === 'string' ? c.trim() : '')
                 .filter((c: string) => c.length > 0),
             role: (p.role || 'student').toLowerCase().trim()
@@ -97,7 +97,7 @@ export const adminService = {
             if (s.role === 'teacher') return false; 
             
             // 4. Show Students ENROLLED in visible classes
-            const studentClasses = s.enrolled_classes || [];
+            const studentClasses = s.enrolledClasses || [];
             const isEnrolled = studentClasses.some((cls: string) => visibleClassNames.has(cls.trim().toLowerCase()));
             
             return isEnrolled;
@@ -107,28 +107,28 @@ export const adminService = {
         const engagementStats: Record<string, number> = {};
         const storageStats: Record<string, { bytes: number; items: number; boards: number }> = {};
 
-        (activityRes.data || []).forEach((n: { author_id: string | null; content: string | null }) => {
-            if (n.author_id) {
-                engagementStats[n.author_id] = (engagementStats[n.author_id] || 0) + 1;
+        (activityRes.data || []).forEach((n: { authorId: string | null; content: string | null }) => {
+            if (n.authorId) {
+                engagementStats[n.authorId] = (engagementStats[n.authorId] || 0) + 1;
 
-                if (!storageStats[n.author_id]) storageStats[n.author_id] = { bytes: 0, items: 0, boards: 0 };
+                if (!storageStats[n.authorId]) storageStats[n.authorId] = { bytes: 0, items: 0, boards: 0 };
                 let size = n.content ? n.content.length : 0;
                 size += 1024; 
-                storageStats[n.author_id].bytes += size;
-                storageStats[n.author_id].items += 1;
+                storageStats[n.authorId].bytes += size;
+                storageStats[n.authorId].items += 1;
             }
         });
 
-        (boardsRes.data || []).forEach((b: { owner_id: string }) => {
-            if (b.owner_id) {
-                if (!storageStats[b.owner_id]) storageStats[b.owner_id] = { bytes: 0, items: 0, boards: 0 };
-                storageStats[b.owner_id].bytes += 2048;
-                storageStats[b.owner_id].boards += 1;
+        (boardsRes.data || []).forEach((b: { ownerId: string }) => {
+            if (b.ownerId) {
+                if (!storageStats[b.ownerId]) storageStats[b.ownerId] = { bytes: 0, items: 0, boards: 0 };
+                storageStats[b.ownerId].bytes += 2048;
+                storageStats[b.ownerId].boards += 1;
             }
         });
 
         return {
-            classes: (classesRes.data || []).map((c: any) => ({ ...c, autoEnroll: c.auto_enroll })),
+            classes: (classesRes.data || []).map((c: any) => ({ ...c, autoEnroll: c.autoEnroll })),
             students: students,
             grades: gradesRes.data || [],
             engagementStats,
@@ -141,16 +141,16 @@ export const adminService = {
     async updateGrade(studentId: string, boardId: string, score: number | null) {
         if (score === null) {
              await supabase.from('grades').upsert({
-                student_id: studentId,
-                board_id: boardId,
+                studentId: studentId,
+                boardId: boardId,
                 score: null
-            }, { onConflict: 'student_id, board_id' });
+            }, { onConflict: 'studentId, boardId' });
         } else {
             await supabase.from('grades').upsert({
-                student_id: studentId,
-                board_id: boardId,
+                studentId: studentId,
+                boardId: boardId,
                 score: score
-            }, { onConflict: 'student_id, board_id' });
+            }, { onConflict: 'studentId, boardId' });
         }
     },
 
@@ -158,15 +158,15 @@ export const adminService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("No user");
 
-        // Insert with owner_id
+        // Insert with ownerId
         const { data, error } = await supabase.from('classes').insert([{ 
             name: name.trim(),
-            owner_id: user.id,
-            auto_enroll: autoEnroll
+            ownerId: user.id,
+            autoEnroll: autoEnroll
         }]).select().single();
         
         if (error) throw error;
-        return { ...data, autoEnroll: data.auto_enroll };
+        return { ...data, autoEnroll: data.autoEnroll };
     },
 
     async deleteClass(id: string) {
@@ -175,11 +175,11 @@ export const adminService = {
     },
 
     async updateClass(id: string, name: string, autoEnroll: boolean) {
-        const { error } = await supabase.from('classes').update({ name: name.trim(), auto_enroll: autoEnroll }).eq('id', id);
+        const { error } = await supabase.from('classes').update({ name: name.trim(), autoEnroll: autoEnroll }).eq('id', id);
         if (error) throw error;
     },
 
-    async updateProfile(id: string, updates: { role?: string; enrolled_classes?: string[] }) {
+    async updateProfile(id: string, updates: { role?: string; enrolledClasses?: string[] }) {
         const { error } = await supabase.from('profiles').update(updates).eq('id', id);
         if (error) throw error;
     },
@@ -225,7 +225,7 @@ export const adminService = {
         if (data.grades?.length) {
              const batchSize = 200;
              for (let i = 0; i < data.grades.length; i += batchSize) {
-                await supabase.from('grades').upsert(data.grades.slice(i, i + batchSize), { onConflict: 'student_id, board_id' });
+                await supabase.from('grades').upsert(data.grades.slice(i, i + batchSize), { onConflict: 'studentId, boardId' });
              }
         }
     }

@@ -66,7 +66,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
-                    className={board.target_grade}
+                    className={board.targetGrade}
                     onAfterPrint={() => setIsPrinting(false)}
                 />
             )}

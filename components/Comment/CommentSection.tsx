@@ -118,7 +118,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
     };
 
     const handleReplyComment = (parentId: string, text: string) => {
-        if (!onUpdateNote || isReadOnly) return;
+        if (!onUpdateNote || isReadOnly || !userId) return;
         
         const newReply: Comment = {
             id: Math.random().toString(36).substr(2, 9),

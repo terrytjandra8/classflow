@@ -200,6 +200,7 @@ export interface Note {
     board_id: string;
     section_id?: string;
     createdAt: string;
+    updatedAt?: string;
     content: string;
     author_id: string;
     author_name?: string;
@@ -321,8 +322,26 @@ export interface Participant {
     hasLowWordCount: any;
     progress: number;
     score: any;
-    noteId: string;
+    noteId: string | null;
     data: any;
     submittedAt: string;
     lastActivity: string;
+}
+
+export interface SubmissionData {
+    id: string;
+    name: string;
+    role: UserRole;
+    status: ParticipantStatus;
+    violations: any[];
+    answers: any;
+    score: number;
+    feedback?: string;
+    [key: string]: any;
+}
+
+export interface BackupData {
+    answers: { [key: string]: string };
+    violations: any[];
+    timestamp: number;
 }
