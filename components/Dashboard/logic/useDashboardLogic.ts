@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { classService } from '../../../services/classService';
@@ -6,7 +5,7 @@ import { SUPER_ADMIN_EMAIL } from '../constants';
 
 export type TabView = 'home' | 'gallery' | 'make' | 'admin' | 'system' | 'documentation';
 
-export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolean>) => {
+export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolean>, userId: string | undefined) => {
     const [userEmail, setUserEmail] = useState('');
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [isStudent, setIsStudent] = useState(false);
@@ -22,7 +21,6 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     
     const [selectedClass, setSelectedClassState] = useState<string>('');
     const [classList, setClassList] = useState<string[]>([]);
-    const [studentClasses, setStudentClasses] = useState<string[]>([]);
 
     const [showClassMenu, setShowClassMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -50,7 +48,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
                         setIsSuperAdmin(true);
                     }
                 }
-                const studentStatus = user.user_metadata.is_student ?? false;
+                const studentStatus = user.user_metadata.isStudent ?? false;
                 setIsStudent(studentStatus);
 
                 const tabKey = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
@@ -62,8 +60,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
 
                 if (studentStatus) {
                     try {
-                        const fetchedClasses = await classService.getStudentClasses();
-                        setStudentClasses(fetchedClasses);
+                        const fetchedClasses = await classService.getStudentClasses(userId || '');
                         const newClassList = ['All My Classes', ...fetchedClasses];
                         setClassList(newClassList);
                         if (storedClass && newClassList.includes(storedClass)) {
@@ -99,7 +96,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         };
 
         fetchUserAndClasses();
-    }, []);
+    }, [userId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -138,13 +135,14 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         localStorage.removeItem('cb_teacher_selected_class');
         localStorage.removeItem('cb_student_selected_class');
         await supabase.auth.signOut();
+        window.location.href = '/';
     };
 
     return {
         activeTab, setActiveTab, showJoinModal, setShowJoinModal,
         showSetupModal, setShowSetupModal, joinCode, setJoinCode, joinError,
         isJoining, handleJoinSubmit, userEmail, isSuperAdmin, isStudent, 
-        selectedClass, setSelectedClass, classList, studentClasses,
+        selectedClass, setSelectedClass, classList,
         showClassMenu, setShowClassMenu, showProfileMenu, setShowProfileMenu,
         profileMenuRef, handleLogout
     };

@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Note, Comment } from '../types';
@@ -27,7 +26,7 @@ export const useNoteActions = ({
     const historyStack = useRef<HistoryAction[]>([]);
 
     const updateBoardTimestamp = useCallback(async () => {
-        await supabase.from('boards').update({ updatedAt: new Date().toISOString() }).eq('id', boardId);
+        await supabase.from('boards').update({ updated_at: new Date().toISOString() }).eq('id', boardId);
     }, [boardId]);
 
     const performUndo = useCallback(async () => {
@@ -44,11 +43,11 @@ export const useNoteActions = ({
 
             case 'DELETE_NOTE':
                 const noteToRestore = lastAction.note;
-                const { createdAt, ...rest } = noteToRestore;
+                const { created_at, ...rest } = noteToRestore;
                 
                 const payload = {
                     ...rest,
-                    createdAt: new Date(createdAt).toISOString()
+                    created_at: new Date(created_at).toISOString()
                 };
 
                 setNotes(prev => [noteToRestore, ...prev]);
@@ -94,23 +93,23 @@ export const useNoteActions = ({
         const finalAuthorId = user?.id || userId;
 
         const noteToInsert = {
-            boardId: boardId,
+            board_id: boardId,
             content: noteData.content,
             title: noteData.title,
-            authorName: noteData.author || username || 'Anonymous',
-            authorId: finalAuthorId,
-            authorRole: userRole || 'student',
-            authorAvatar: userAvatar,
+            author_name: noteData.author || username || 'Anonymous',
+            author_id: finalAuthorId,
+            author_role: userRole || 'student',
+            author_avatar: userAvatar,
             type: noteData.type,
             color: noteData.color,
             x: noteData.x || 0,
             y: noteData.y || 0,
-            sectionId: noteData.sectionId,
+            section_id: noteData.sectionId,
             attachment: noteData.attachment,
             likes: 0,
             comments: [],
             liked_by: [],
-            createdAt: noteData.createdAt ? new Date(noteData.createdAt).toISOString() : new Date().toISOString()
+            created_at: noteData.createdAt ? new Date(noteData.createdAt).toISOString() : new Date().toISOString()
         };
 
         const { data, error } = await supabase.from('notes').insert([noteToInsert]).select().single();
@@ -132,7 +131,7 @@ export const useNoteActions = ({
 
     const updateNote = useCallback(async (id: string, updates: Partial<Note>) => {
         setNotes(currentNotes => {
-            const noteToUpdate = currentNotes.find(n => n.id === id);
+            const noteToUpdate = currentNotes.find(n => n.id === id); 
             if (noteToUpdate) {
                 const previousData: Partial<Note> = {};
                 Object.keys(updates).forEach(key => {
@@ -214,15 +213,16 @@ export const useNoteActions = ({
     const addComment = useCallback(async (noteId: string, text: string, attachment?: any) => {
         const newComment: Comment = {
             id: Math.random().toString(36).substr(2, 9),
-            text,
+            content: text,
             author_name: username || 'Student', 
             author_id: userId, 
             author_role: userRole || 'student', 
             author_avatar: userAvatar || undefined,
-            createdAt: new Date().toISOString(),
+            created_at: new Date().toISOString(),
             attachment,
             likes: 0, 
-            liked_by: []
+            liked_by: [],
+            is_published: true,
         };
 
         setNotes(prev => {
@@ -253,23 +253,23 @@ export const useNoteActions = ({
         const finalAuthorId = user?.id || userId;
         
         const noteToInsert = {
-            boardId: boardId,
+            board_id: boardId,
             content: note.content,
             title: note.title ? `${note.title} (Copy)` : undefined,
-            authorName: username || 'Student',
-            authorId: finalAuthorId,
-            authorRole: userRole || 'student', 
-            authorAvatar: userAvatar,
+            author_name: username || 'Student',
+            author_id: finalAuthorId,
+            author_role: userRole || 'student', 
+            author_avatar: userAvatar,
             type: note.type,
             color: note.color,
             x: (note.x || 0) + 20,
             y: (note.y || 0) + 20,
-            sectionId: note.sectionId,
+            section_id: note.section_id,
             attachment: note.attachment,
             likes: 0,
             comments: [],
             liked_by: [],
-            createdAt: new Date().toISOString()
+            created_at: new Date().toISOString()
         };
 
         const { data, error } = await supabase.from('notes').insert([noteToInsert]).select().single();

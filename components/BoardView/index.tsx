@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Board, Note, LockMode, Section } from '../../types';
+import { Board, Note, LockMode, Section, BoardFormat, UserRole } from '../../types';
 import { useBoardData } from './logic/useBoardData';
 import { useNoteActions } from '../../hooks/useNoteActions';
 import { BoardLayout } from './Board';
@@ -27,7 +26,7 @@ interface BoardViewProps {
     userAvatar: string | null;
     userId?: string;
     isStudent: boolean;
-    userRole: string;
+    userRole: UserRole | string;
     isPresentationMode?: boolean;
 }
 
@@ -57,56 +56,42 @@ export const BoardView: React.FC<BoardViewProps> = ({
     useEffect(() => {
         const channel = supabase.channel(`board_meta:${initialBoard.id}`)
             .on('postgres_changes',
-                { 
-                    event: 'UPDATE', 
-                    schema: 'public', 
-                    table: 'boards', 
-                    filter: `id=eq.${initialBoard.id}` 
-                },
+                { event: 'UPDATE', schema: 'public', table: 'boards', filter: `id=eq.${initialBoard.id}` },
                 (payload) => {
-                    if (payload.new) {
-                        const updatedBoard = mapBoard(payload.new as any);
-                        setLiveBoard(updatedBoard);
-                    }
+                    if (payload.new) setLiveBoard(mapBoard(payload.new as any));
                 }
             )
             .subscribe();
-
         return () => { supabase.removeChannel(channel); };
     }, [initialBoard.id]);
 
     useEffect(() => {
-        const timers = [liveBoard.autoLockTime, liveBoard.autoLiveTime].filter(t => t && t > Date.now()) as number[];
-        
+        const timers = [liveBoard.auto_lock_time, liveBoard.auto_live_time].filter(t => t && t > Date.now()) as number[];
         if (timers.length > 0) {
             const nextTime = Math.min(...timers);
             const delay = Math.max(0, nextTime - Date.now()) + 500; 
-            
-            const timerId = setTimeout(() => {
-                setTick(t => t + 1); 
-            }, delay);
-            
+            const timerId = setTimeout(() => setTick(t => t + 1), delay);
             return () => clearTimeout(timerId);
         }
-    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime]);
+    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time]);
 
-    const isExpired = liveBoard.autoLockTime && Date.now() >= liveBoard.autoLockTime;
+    const isExpired = liveBoard.auto_lock_time && Date.now() >= liveBoard.auto_lock_time;
     
     const board = useMemo(() => ({
         ...liveBoard,
-        lockMode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
+        lock_mode: (isExpired ? 'readonly' : liveBoard.lock_mode) as LockMode
     }), [liveBoard, isExpired]);
 
-    const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
+    const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole as UserRole);
     
     const { 
         createNote, updateNote, deleteNote, likeNote, addComment, duplicateNote 
     } = useNoteActions({
         boardId: board.id,
-        userId,
+        userId: userId || '',
         username,
-        userAvatar,
-        userRole,
+        userAvatar: userAvatar || '',
+        userRole: userRole as UserRole,
         setNotes,
         onTouchBoard: () => {} 
     });
@@ -116,12 +101,10 @@ export const BoardView: React.FC<BoardViewProps> = ({
     );
 
     useEffect(() => {
-        if (!isPresentationMode) {
-            if (board.guide && !board.guideDismissed) {
-                setIsGuideOpen(true);
-            }
+        if (!isPresentationMode && board.guide && !board.guide_dismissed) {
+            setIsGuideOpen(true);
         }
-    }, [board.guide, board.guideDismissed, isPresentationMode]);
+    }, [board.guide, board.guide_dismissed, isPresentationMode]);
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -129,9 +112,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 try {
                     const classes = await classService.getClasses();
                     setClassList(classes.map(c => c.name));
-                } catch (e) {
-                    console.error("Failed to load classes for board header", e);
-                }
+                } catch (e) { console.error("Failed to load classes for board header", e); }
             }
         };
         fetchClasses();
@@ -142,28 +123,24 @@ export const BoardView: React.FC<BoardViewProps> = ({
     useEffect(() => {
         if (!canManageBoard) return;
         
-        const hasAutoLock = liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly';
-        const hasAutoLive = liveBoard.autoLiveTime && !liveBoard.isPublished;
+        const hasAutoLock = liveBoard.auto_lock_time && liveBoard.lock_mode !== 'readonly';
+        const hasAutoLive = liveBoard.auto_live_time && !liveBoard.is_published;
 
         if (!hasAutoLock && !hasAutoLive) return;
 
         const checkTimers = () => {
             const now = Date.now();
-            
-            if (liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly' && now >= liveBoard.autoLockTime) {
-                onUpdateBoard({ lockMode: 'readonly' });
+            if (liveBoard.auto_lock_time && liveBoard.lock_mode !== 'readonly' && now >= liveBoard.auto_lock_time) {
+                onUpdateBoard({ lock_mode: 'readonly' });
             }
-
-            if (liveBoard.autoLiveTime && !liveBoard.isPublished && now >= liveBoard.autoLiveTime) {
-                onUpdateBoard({ isPublished: true, autoLiveTime: null });
+            if (liveBoard.auto_live_time && !liveBoard.is_published && now >= liveBoard.auto_live_time) {
+                onUpdateBoard({ is_published: true, auto_live_time: null });
             }
         };
-
         const interval = setInterval(checkTimers, 5000);
         checkTimers();
-
         return () => clearInterval(interval);
-    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime, liveBoard.lockMode, liveBoard.isPublished, canManageBoard, onUpdateBoard]);
+    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time, liveBoard.lock_mode, liveBoard.is_published, canManageBoard, onUpdateBoard]);
 
     const sortedNotes = useMemo(() => {
         let filtered = notes;
@@ -174,23 +151,20 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 return !section?.isHidden;
             });
         }
-
         return [...filtered].sort((a, b) => {
-            if (a.is_pinned && b.is_pinned) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (a.is_pinned && b.is_pinned) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
             if (a.is_pinned && !b.is_pinned) return -1;
             if (!a.is_pinned && b.is_pinned) return 1;
-
-            if (board.sortOrder === 'date_asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            if (board.sortOrder === 'likes') return b.likes - a.likes;
-            
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (board.sort_order === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            if (board.sort_order === 'likes') return (b.likes || 0) - (a.likes || 0);
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-    }, [notes, board.sortOrder, board.sections, canManageBoard]);
+    }, [notes, board.sort_order, board.sections, canManageBoard]);
 
     const backgroundStyle = resolveBackgroundStyle(board.wallpaper || 'default', theme);
     const fontClass = board.font || 'font-sans';
 
-    const openAddNoteModal = useCallback((location?: string | { x: number; y: number; section_id?: string }) => {
+    const openAddNoteModal = useCallback((location?: string | { x: number; y: number; sectionId?: string }) => {
         if (isPresentationMode) return;
         setAddNoteLocation(location);
         setPendingPasteImage(null);
@@ -208,11 +182,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         if (editingNote) {
             await updateNote(editingNote.id, noteData);
         } else {
-            const payload = {
-                ...noteData,
-                section_id: typeof addNoteLocation === 'string' 
-                    ? addNoteLocation 
-                    : (addNoteLocation?.section_id || undefined), 
+            const payload = { ...noteData,
+                sectionId: typeof addNoteLocation === 'string' ? addNoteLocation : (addNoteLocation?.sectionId || undefined), 
                 x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined,
                 y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined,
             };
@@ -229,80 +200,42 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const getEffectiveSections = useCallback((): Section[] => {
         if (board.sections && board.sections.length > 0) return board.sections;
-        return [{ 
-            id: 'default', 
-            title: 'Group 1',
-            locked: false,
-            isContentBlurred: false,
-            isHidden: false,
-            isAnonymous: false,
-            commentsEnabled: true,
-            repliesEnabled: true,
-            studentsCanDrag: false,
-            isPublished: true,
-        }];
+        return [{ id: 'default', title: 'Group 1', is_published: true, locked: false, isContentBlurred: false, isHidden: false, isAnonymous: false, commentsEnabled: true, repliesEnabled: true, studentsCanDrag: false }];
     }, [board.sections]);
 
     const toggleSectionLock = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, locked: !s.locked } : s);
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, locked: !s.locked } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionContentBlur = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => {
-            if (s.id === sectionId) {
-                return { ...s, isContentBlurred: !s.isContentBlurred };
-            }
-            return s;
-        });
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, isContentBlurred: !s.isContentBlurred } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionVisibility = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isHidden: !s.isHidden } : s);
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, isHidden: !s.isHidden } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionAnonymous = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isAnonymous: !s.isAnonymous } : s);
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, isAnonymous: !s.isAnonymous } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionComments = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => {
-            if (s.id === sectionId) {
-                return { ...s, commentsEnabled: !s.commentsEnabled };
-            }
-            return s;
-        });
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, commentsEnabled: !s.commentsEnabled } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionReplies = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => {
-            if (s.id === sectionId) {
-                return { ...s, repliesEnabled: !s.repliesEnabled };
-            }
-            return s;
-        });
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, repliesEnabled: !s.repliesEnabled } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionRearrange = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => {
-            if (s.id === sectionId) {
-                return { ...s, studentsCanDrag: !s.studentsCanDrag };
-            }
-            return s;
-        });
-        onUpdateBoard({ sections: updatedSections });
+        onUpdateBoard({ sections: sections.map(s => s.id === sectionId ? { ...s, studentsCanDrag: !s.studentsCanDrag } : s) });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const contextValue: BoardContextType = useMemo(() => ({
@@ -311,12 +244,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
         setNotes,
         userId,
         username, 
+        userRole,
         isStudent: isStudent || isSimulatingStudent, 
         canManageBoard, 
         isLoadingNotes,
         updateBoard: onUpdateBoard,
         deleteNote,
-        likeNote: (id) => board.reactionsEnabled && likeNote(id),
+        likeNote: (id) => board.reactions_enabled && likeNote(id),
         addComment,
         updateNote,
         duplicateNote,
@@ -326,8 +260,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         openSettings: () => setIsSettingsOpen(true),
         openShare: () => setIsShareModalOpen(true),
         openBoardAnalysis: () => {}, 
-        isSimulatingStudent: isSimulatingStudent,
-        toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
+        isSimulating: isSimulatingStudent,
+        toggleSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
         isAiLoading: false,
         summarize: () => {},
         backgroundStyle,
@@ -347,25 +281,22 @@ export const BoardView: React.FC<BoardViewProps> = ({
         toggleSectionReplies,
         toggleSectionRearrange,
         highlightedUserId,
-        setHighlightedUserId
+        setHighlightedUserId,
+        isSimulatingStudent: isSimulatingStudent,
+        toggleStudentSimulation: () => setIsSimulatingStudent(prev => !prev)
     }), [
-        board, sortedNotes, userId, username, isStudent, isSimulatingStudent, canManageBoard, isLoadingNotes,
+        board, sortedNotes, userId, username, userRole, isStudent, isSimulatingStudent, canManageBoard, isLoadingNotes,
         onUpdateBoard, deleteNote, likeNote, addComment, updateNote, duplicateNote,
         openAddNoteModal, openEditNoteModal, onBack,
-        backgroundStyle, fontClass, userAvatar, onlineUsers, isPresentationMode, classList,
+        backgroundStyle, fontClass, userAvatar, onlineUsers, isPresentationMode, classList, 
         launchProjectorMode, toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous,
         toggleSectionComments, toggleSectionReplies, toggleSectionRearrange, typingUsers, setTypingStatus,
         highlightedUserId
     ]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
-        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
-        
-        return (
-            <ScreenshotGuard isEnabled={protectionEnabled} username={username}>
-                {content}
-            </ScreenshotGuard>
-        );
+        const protectionEnabled = !!board.block_screenshots && (isStudent || isSimulatingStudent);
+        return <ScreenshotGuard isEnabled={protectionEnabled} username={username}>{content}</ScreenshotGuard>;
     };
 
     const ViewComponent = useMemo(() => {
@@ -379,29 +310,16 @@ export const BoardView: React.FC<BoardViewProps> = ({
     }, [board.format]);
 
     const commonProps = {
-        board,
-        notes,
-        userId,
-        isStudent: isStudent || isSimulatingStudent,
-        onUpdateBoard,
-        onBack,
-        onlineUsers,
-        onOpenSettings: () => setIsSettingsOpen(true),
-        onOpenShare: () => setIsShareModalOpen(true),
-        isPresentationMode
+        board, notes, userId, isStudent: isStudent || isSimulatingStudent,
+        onUpdateBoard, onBack, onlineUsers, onOpenSettings: () => setIsSettingsOpen(true),
+        onOpenShare: () => setIsShareModalOpen(true), isPresentationMode
     };
 
     return (
         <BoardProvider value={contextValue}>
             {renderProtectedContent(
-                <div 
-                    className="h-screen w-full relative overflow-hidden" 
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                >
-                    <ViewComponent {...commonProps as any} />
-                    
+                <div className="h-screen w-full relative overflow-hidden" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+                    <ViewComponent {...commonProps} />
                     <BoardOverlays 
                         board={board} 
                         isStudent={isStudent || isSimulatingStudent}

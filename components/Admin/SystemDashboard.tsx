@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useAdminData } from '../../hooks/useAdminData';
 import { UserDirectory } from './UserDirectory';
@@ -12,7 +11,6 @@ interface SystemDashboardProps {
 }
 
 export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
-    // Use 'global' scope to see ALL users and stats for system administration
     const { 
         loading, students: allProfiles, storageStats, onlineUserIds, updateUserRole, refresh 
     } = useAdminData('global');
@@ -32,12 +30,10 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
     const totalTeachers = allProfiles.filter(s => s.role === 'teacher').length;
     const totalStudents = allProfiles.filter(s => s.role === 'student').length;
     
-    // Recent Users (last 50, sorted by date)
     const recentUsers = [...allProfiles].sort((a: any, b: any) => {
-        return (new Date(b.created_at).getTime() || 0) - (new Date(a.created_at).getTime() || 0);
+        return (new Date(b.createdAt).getTime() || 0) - (new Date(a.createdAt).getTime() || 0);
     }).slice(0, 50);
 
-    // Aggregated Storage
     const totalStorageBytes = Object.values(storageStats).reduce<number>((acc, curr: any) => acc + (curr.bytes || 0), 0);
     const formatBytes = (bytes: number) => {
         if (!+bytes) return '0 Bytes';
@@ -53,7 +49,7 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
             isOpen: true, 
             type, 
             id, 
-            name: user?.full_name || 'this user' 
+            name: user?.fullName || 'this user' 
         });
     };
 
@@ -134,10 +130,10 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
                     {recentUsers.map((user: any) => (
                         <div key={user.id} className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                             <div className="flex items-center gap-3">
-                                <Avatar src={user.avatar_url} name={user.full_name} size="sm" />
+                                <Avatar src={user.avatarUrl} name={user.fullName} size="sm" />
                                 <div>
                                     <p className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                        {user.full_name}
+                                        {user.fullName}
                                         {onlineUserIds.has(user.id) && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Online now"></div>}
                                     </p>
                                     <p className="text-xs text-gray-500">{user.email}</p>
@@ -148,7 +144,7 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
                                     {user.role}
                                 </span>
                                 <div className="text-[9px] text-gray-400 mt-1 flex items-center gap-1 justify-end">
-                                    <Clock size={10} /> {new Date(user.created_at).toLocaleDateString()}
+                                    <Clock size={10} /> {new Date(user.createdAt).toLocaleDateString()}
                                 </div>
                             </div>
                         </div>

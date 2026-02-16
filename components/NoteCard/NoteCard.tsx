@@ -64,7 +64,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   // --- Logic & Permissions (Engine) ---
   const canEdit = BoardRules.canEditNote(note, effectiveUserId, isStudentBool, isLockedBool);
   const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, isStudentBool, isLockedBool);
-  const canCopy = BoardRules.canCopyContent(board, note.section_id, isStudentBool);
+  const canCopy = BoardRules.canCopyContent(board, note.sectionId, isStudentBool);
   
   const isTransparent = note.color === NOTE_COLORS.TRANSPARENT;
   const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
@@ -75,8 +75,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const isReadOnly = (board.lockMode === 'readonly' && !canManageBoard);
 
   // Highlighting Logic
-  const isHighlighted = highlightedUserId && note.author_id === highlightedUserId;
-  const isDimmed = highlightedUserId && note.author_id !== highlightedUserId;
+  const isHighlighted = highlightedUserId && note.authorId === highlightedUserId;
+  const isDimmed = highlightedUserId && note.authorId !== highlightedUserId;
 
   // --- Handlers ---
   const setRefs = (node: HTMLDivElement | null) => {
@@ -147,7 +147,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     <div 
         ref={setRefs} 
         data-note-id={note.id} 
-        data-author-id={note.author_id}
+        data-author-id={note.authorId}
         className={containerClasses} 
         style={style}
         onMouseDown={(e) => isCanvasModeBool && onMouseDown && onMouseDown(e, note.id)}
@@ -176,7 +176,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                 onDelete={(id) => onDelete && onDelete(id)}
                 onEdit={() => openEditNote(note)}
                 onColorChange={(color) => onUpdate && onUpdate(note.id, { color })}
-                onPin={canEdit && onUpdate ? (id) => onUpdate(id, { is_pinned: !note.is_pinned }) : undefined}
+                onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined}
                 onDuplicate={(n) => {}} 
                 onAddBefore={onAddBefore}
                 onAddAfter={onAddAfter}

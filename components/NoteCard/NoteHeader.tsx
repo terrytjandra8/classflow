@@ -36,20 +36,15 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     const triggerRef = useRef<HTMLButtonElement>(null);
 
     const isTeacher = note.author_role === 'teacher' || note.author === 'Teacher';
-    const isAuthor = userId === note.author_id;
+    const isAuthor = userId === note.authorId;
     
-    // --- CENTRALIZED ANONYMITY LOGIC ---
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
-    const anonymousIdentity = shouldMask && note.author_id ? getAnonymousIdentity(note.author_id) : null;
+    const anonymousIdentity = shouldMask && note.authorId ? getAnonymousIdentity(note.authorId) : null;
     
-    // Display Logic with Fallback for empty strings
     const rawName = note.author && note.author.trim() !== '' ? note.author : 'Anonymous';
     const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : rawName;
-    const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.author_avatar;
+    const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.authorAvatar;
 
-    // VISIBILITY FIX:
-    // Transparent -> Adaptive (Dark on Light, White on Dark)
-    // Solid (White/Colors) -> Always Dark
     const nameColor = isTransparent ? 'text-slate-900 dark:text-white' : 'text-slate-900';
     const subTextColor = isTransparent ? 'text-slate-600 dark:text-slate-400' : 'text-slate-600';
     const iconHoverBg = isTransparent ? 'hover:bg-black/5 dark:hover:bg-white/10' : 'hover:bg-black/10';
@@ -87,9 +82,9 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {shouldMask && isAuthor && <span className="opacity-60 text-[10px] ml-0.5">(You)</span>}
                         {shouldMask && <Ghost size={10} className="text-gray-400" />}
                         {isTeacher && <ShieldCheck size={12} className="text-pink-600 fill-pink-100" />}
-                        {note.is_pinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
+                        {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
                     </span>
-                    <span className={`text-[10px] font-medium ${subTextColor}`}>{formatTime(note.created_at)}</span>
+                    <span className={`text-[10px] font-medium ${subTextColor}`}>{formatTime(note.createdAt)}</span>
                 </div>
             </div>
             

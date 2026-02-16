@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Loader2, ShieldCheck, School } from 'lucide-react';
 import { Board } from '../types';
@@ -17,7 +16,6 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, selectedClass = 'All Classes', onSelectBoard }) => {
-  // Persist Active Tab
   const [activeTab, setActiveTabState] = useState<'overview' | 'students' | 'classes' | 'gradebook'>(() => {
       return (localStorage.getItem('cb_admin_tab') as any) || 'overview';
   });
@@ -29,38 +27,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
 
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Use Custom Hook with 'my_classes' scope to filter out unrelated students/classes
   const { 
       loading, students, grades, classes, engagementStats, isSuperAdmin, userId,
       addClass, deleteClass, updateClass, updateStudentClasses, updateGradeScore
   } = useAdminData('my_classes');
 
-  // STRICT BOARD FILTERING
-  // Even for Super Admins, the "Classroom Admin" view is personal.
-  // We strictly filter to show ONLY boards owned by the current user.
   const filteredBoards = useMemo(() => {
       if (loading || !userId) return []; 
       return boards.filter(b => b.owner_id === userId);
   }, [boards, userId, loading]);
 
-  // Classes Management UI State
   const [newClassName, setNewClassName] = useState('');
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [editClassName, setEditClassName] = useState('');
 
-  // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{ 
       isOpen: boolean; 
       type: 'delete_class'; 
       id: string | null; 
-  }>({ 
-      isOpen: false, 
-      type: 'delete_class', 
-      id: null 
-  });
+  }>({ isOpen: false, type: 'delete_class', id: null });
 
-  // --- ACTIONS Wrappers ---
   const handleAddClassWrapper = async (autoEnroll: boolean) => {
       const res = await addClass(newClassName, autoEnroll);
       if (res) {
@@ -82,19 +69,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
 
   const handleConfirmAction = async () => {
       const { type, id } = confirmModal;
-      
-      if (type === 'delete_class' && id) {
-          await deleteClass(id);
-      }
-      
+      if (type === 'delete_class' && id) await deleteClass(id);
       setConfirmModal({ ...confirmModal, isOpen: false });
   };
 
-  // --- HELPERS ---
   const getAvgScore = (studentId: string) => {
-      const studentGrades = grades.filter(g => g.student_id === studentId);
+      const studentGrades = grades.filter((g: any) => g.student_id === studentId);
       if (studentGrades.length === 0) return 0;
-      const sum = studentGrades.reduce((acc, curr) => acc + curr.score, 0);
+      const sum = studentGrades.reduce((acc, curr) => acc + (curr.score || 0), 0);
       return Math.round(sum / studentGrades.length);
   };
 
@@ -105,16 +87,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
       return { label: 'Low', color: 'red' };
   };
 
-  // --- FILTERED STUDENTS ---
   const filteredStudents = useMemo(() => {
-    return students.filter(s => {
-        // EXCLUDE TEACHERS from the list - Classroom view is for student management
+    return students.filter((s: any) => {
         if (s.role === 'teacher') return false;
 
-        // Filter by selected class (Case Insensitive)
         if (selectedClass !== 'All Classes') {
             const hasClass = (s.enrolled_classes || []).some(
-                c => c.trim().toLowerCase() === selectedClass.trim().toLowerCase()
+                (c: string) => c.trim().toLowerCase() === selectedClass.trim().toLowerCase()
             );
             if (!hasClass) return false;
         }
@@ -153,7 +132,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
       );
   }
 
-  // Tabs for Classroom Management
   const tabs = ['overview', 'students', 'classes', 'gradebook'] as const;
 
   return (
@@ -206,8 +184,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
                 highEngagementCount={highEngagementCount}
                 medEngagementCount={medEngagementCount}
                 classes={classes}
-                students={filteredStudents}
-                grades={grades}
+                students={filteredStudents as any}
+                grades={grades as any}
                 boards={filteredBoards}
                 selectedClass={selectedClass}
                 onSelectBoard={onSelectBoard}
@@ -219,11 +197,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
         {activeTab === 'students' && (
             <StudentsList 
                 theme={theme}
-                students={filteredStudents}
+                students={filteredStudents as any}
                 classes={classes}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                // onUpdateRole removed to enforce read-only
                 onUpdateClasses={updateStudentClasses}
                 getAvgScore={getAvgScore}
                 getEngagementLevel={getEngagementLevel}
@@ -234,7 +211,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
             <ClassesList 
                 theme={theme}
                 classes={classes}
-                students={filteredStudents} // Use filtered students for count
+                students={filteredStudents as any}
                 isAddingClass={isAddingClass}
                 setIsAddingClass={setIsAddingClass}
                 newClassName={newClassName}
@@ -253,8 +230,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
         {activeTab === 'gradebook' && (
             <Gradebook 
                 theme={theme}
-                students={filteredStudents}
-                grades={grades}
+                students={filteredStudents as any}
+                grades={grades as any}
                 boards={filteredBoards}
                 selectedClass={selectedClass}
                 onSelectBoard={onSelectBoard}

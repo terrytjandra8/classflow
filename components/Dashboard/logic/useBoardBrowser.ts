@@ -103,32 +103,32 @@ export const useBoardBrowser = (
             // Student View: Filter by their enrolled classes
             const viewableClasses = selectedClass === 'All My Classes' ? studentClasses : [selectedClass];
             result = boards.filter(b => 
-                !b.isTrashed && 
-                b.isPublished &&
+                !b.is_trashed && 
+                b.is_published &&
                 // Condition 1: Board is not assigned to any class (meant for everyone)
-                (!b.targetGrade || b.targetGrade.trim() === '' || 
+                (!b.target_grade || b.target_grade.trim() === '' || 
                 // Condition 2: Board is assigned to a class the student is in
-                viewableClasses.includes(b.targetGrade))
+                viewableClasses.includes(b.target_grade))
             );
         } else {
             // Teacher/Admin View
             if (sidebarFilter === 'trashed') {
-                result = result.filter(b => b.isTrashed && b.ownerId === userId);
+                result = result.filter(b => b.is_trashed && b.owner_id === userId);
             } else if (sidebarFilter === 'global_trash') {
-                result = result.filter(b => b.isTrashed);
+                result = result.filter(b => b.is_trashed);
             } else if (sidebarFilter === 'all_boards') {
-                result = result.filter(b => !b.isTrashed);
+                result = result.filter(b => !b.is_trashed);
             } else {
-                result = result.filter(b => !b.isTrashed);
+                result = result.filter(b => !b.is_trashed);
                 if (selectedClass && selectedClass !== 'All Classes') {
-                    result = result.filter(b => (b.targetGrade || 'General').trim().toLowerCase() === selectedClass.trim().toLowerCase());
+                    result = result.filter(b => (b.target_grade || 'General').trim().toLowerCase() === selectedClass.trim().toLowerCase());
                 }
                 if (sidebarFilter === 'favourites') {
-                    result = result.filter(b => b.isFavorite);
+                    result = result.filter(b => b.is_favorite);
                 } else if (sidebarFilter === 'made_by_me') {
-                    result = result.filter(b => b.ownerId === userId || (b.collaborators && b.collaborators.includes(userId!)));
+                    result = result.filter(b => b.owner_id === userId || (b.collaborators && b.collaborators.includes(userId!)));
                 } else if (sidebarFilter !== 'recents') {
-                     result = result.filter(b => (b.targetGrade || 'General') === sidebarFilter);
+                     result = result.filter(b => (b.target_grade || 'General') === sidebarFilter);
                 }
             }
         }
@@ -138,15 +138,15 @@ export const useBoardBrowser = (
         }
 
         return result.sort((a, b) => {
-            const timeA = new Date(sortBy === 'created' ? a.createdAt : (a.updatedAt || a.createdAt)).getTime();
-            const timeB = new Date(sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt)).getTime();
+            const timeA = new Date(sortBy === 'created' ? a.created_at : (a.updated_at || a.created_at)).getTime();
+            const timeB = new Date(sortBy === 'created' ? b.created_at : (b.updated_at || b.created_at)).getTime();
             return timeB - timeA;
         });
     }, [boards, filter, sidebarFilter, userId, sortBy, selectedClass, isStudent, studentClasses]);
 
     const groupedBoards = useMemo(() => {
         if (filter.trim() || ['trashed', 'global_trash', 'all_boards'].includes(sidebarFilter) || isStudent) return null;
-        const getTimestamp = (b: Board) => sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
+        const getTimestamp = (b: Board) => sortBy === 'created' ? b.created_at : (b.updated_at || b.created_at);
         const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
         return categories.map(category => ({
             title: category,
@@ -221,7 +221,7 @@ export const useBoardBrowser = (
             case 'toggleFav': onToggleFavorite(menu.boardId); break;
             case 'rename': setRenamingId(menu.boardId); break;
             case 'copyLink':
-                if (board) navigator.clipboard.writeText(`${window.location.origin}/?board=${board.customSlug || board.id}`);
+                if (board) navigator.clipboard.writeText(`${window.location.origin}/?board=${board.custom_slug || board.id}`);
                 break;
         }
         setMenu({ ...menu, visible: false });
