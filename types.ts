@@ -1,4 +1,3 @@
-'''
 import { PostgrestError } from "@supabase/supabase-js";
 
 export interface Board {
@@ -152,4 +151,3 @@ export interface Class {
     auto_enroll?: boolean;
     position?: number;
 }
-''
