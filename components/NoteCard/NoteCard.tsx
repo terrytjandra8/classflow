@@ -23,8 +23,6 @@ interface NoteCardProps {
   isSelectedForConnection?: boolean;
   onMouseDown?: (e: React.MouseEvent, id: string) => void;
   domRef?: (instance: HTMLDivElement | null) => void;
-  userId?: string;
-  isStudent?: boolean;
   isLocked?: boolean; 
   commentsEnabled?: boolean;
   reactionsEnabled?: boolean;
@@ -37,15 +35,16 @@ interface NoteCardProps {
   canDrag?: boolean;
 }
 
-const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
+const isHexColor = (color: string): boolean => !!color && color.startsWith('#';
 
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
-    note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
-    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote, canDrag
+    note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, isLocked,
+    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote
 }) => {
-  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, username, highlightedUserId } = useBoard();
+  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, username, highlightedUserId, isStudent: isStudentFromContext } = useBoard();
   
-  const effectiveUserId = userId || contextUserId;
+  const isStudent = isStudentFromContext
+  const effectiveUserId = contextUserId;
   const [showMenu, setShowMenu] = useState(false);
   const localRef = useRef<HTMLDivElement | null>(null);
 
@@ -217,7 +216,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
           <div className="relative z-10">
               <NoteFooter 
                   note={note}
-                  userId={effectiveUserId}
+                  userId={effectiveUserId || ''}
                   onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }}
                   commentsEnabled={commentsEnabledBool}
                   reactionsEnabled={reactionsEnabledBool}
@@ -228,10 +227,11 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                       comments={note.comments || []}
                       noteId={note.id}
                       userId={effectiveUserId}
+                      userRole={isStudent ? 'student' : 'teacher'}
                       onAddComment={onAddComment}
                       onUpdateNote={onUpdate}
                       reactionsEnabled={reactionsEnabledBool}
-                      noteColor={note.color}
+                      noteColor={note.color as NoteColor}
                       isStudent={isStudentBool}
                       disablePaste={disablePasteBool}
                       repliesEnabled={repliesEnabledBool}

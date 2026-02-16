@@ -15,6 +15,18 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
         loading, students: allProfiles, storageStats, onlineUserIds, updateUserRole, refresh 
     } = useAdminData('global');
 
+    const profiles = useMemo(() => {
+        if (!allProfiles) return [];
+        return (allProfiles as any[]).map(p => ({
+            id: p.id,
+            email: p.email,
+            fullName: p.full_name,
+            avatarUrl: p.avatar_url,
+            role: p.role,
+            createdAt: p.created_at,
+        }));
+    }, [allProfiles]);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmModal, setConfirmModal] = useState<{ 
         isOpen: boolean; 
@@ -27,10 +39,10 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
         id: null 
     });
 
-    const totalTeachers = allProfiles.filter(s => s.role === 'teacher').length;
-    const totalStudents = allProfiles.filter(s => s.role === 'student').length;
+    const totalTeachers = profiles.filter(s => s.role === 'teacher').length;
+    const totalStudents = profiles.filter(s => s.role === 'student').length;
     
-    const recentUsers = [...allProfiles].sort((a: any, b: any) => {
+    const recentUsers = [...profiles].sort((a: any, b: any) => {
         return (new Date(b.createdAt).getTime() || 0) - (new Date(a.createdAt).getTime() || 0);
     }).slice(0, 50);
 
@@ -44,7 +56,7 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
     };
 
     const openConfirmModal = (type: 'promote' | 'demote', id: string) => {
-        const user = allProfiles.find(s => s.id === id);
+        const user = profiles.find(s => s.id === id);
         setConfirmModal({ 
             isOpen: true, 
             type, 
@@ -159,7 +171,7 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
                 </h3>
                 <UserDirectory 
                     theme={theme}
-                    users={allProfiles}
+                    users={profiles}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     onPromote={(id) => openConfirmModal('promote', id)}

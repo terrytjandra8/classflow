@@ -31,7 +31,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     noteColor, isStudent, disablePaste, repliesEnabled, isSectionAnonymous, isReadOnly 
 }) => {
     const { board, username, userAvatar: contextAvatar } = useBoard();
-    const allowLinks = board.allow_links; 
+    const allowLinks = board.allowLinks; 
 
     const [showAllComments, setShowAllComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
@@ -84,10 +84,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         if (!reactionsEnabled || !userId || !onUpdateNote || isReadOnly) return;
         
         const updater = (c: Comment) => {
-            const isLiked = c.liked_by?.includes(userId);
-            const newLikedBy = isLiked ? (c.liked_by || []).filter((uid: string) => uid !== userId) : [...(c.liked_by || []), userId];
+            const isLiked = c.likedBy?.includes(userId);
+            const newLikedBy = isLiked ? (c.likedBy || []).filter((uid: string) => uid !== userId) : [...(c.likedBy || []), userId];
             const newLikes = isLiked ? Math.max(0, (c.likes || 0) - 1) : (c.likes || 0) + 1;
-            return { ...c, likes: newLikes, liked_by: newLikedBy };
+            return { ...c, likes: newLikes, likedBy: newLikedBy };
         };
 
         onUpdateNote(noteId, { comments: updateCommentInTree(comments, commentId, updater) });
@@ -108,16 +108,17 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         
         const newReply: Comment = {
             id: Math.random().toString(36).substr(2, 9),
-            note_id: noteId,
+            noteId: noteId,
             content: text,
-            author_id: userId,
-            author_name: username || 'Student', 
-            author_role: isTeacher ? 'teacher' : 'student',
-            author_avatar: contextAvatar || undefined,
+            authorId: userId,
+            authorName: username || 'Student', 
+            authorRole: isTeacher ? 'teacher' : 'student',
+            authorAvatar: contextAvatar || undefined,
             createdAt: new Date().toISOString(),
             likes: 0,
-            liked_by: [],
+            likedBy: [],
             replies: [],
+            isPublished: true
         };
 
         onUpdateNote(noteId, { comments: addReplyToTree(comments, parentId, newReply) });

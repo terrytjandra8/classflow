@@ -19,25 +19,23 @@ export const noteService = {
         return (data as NoteRow[]).map(mapNote);
     },
 
-    async createNote(note: Partial<Note> & { board_id: string, author_id: string }) {
+    async createNote(note: Partial<Note> & { boardId: string, authorId: string }) {
         const payload: NoteInsert = {
-            board_id: note.board_id,
+            board_id: note.boardId,
             content: note.content,
             title: note.title,
-            author: note.author,
-            author_id: note.author_id,
-            author_role: note.author_role,
-            author_avatar: note.author_avatar,
+            author: note.author as any,
+            author_id: note.authorId,
             type: note.type,
             color: note.color,
-            position_x: note.position_x,
-            position_y: note.position_y,
-            section_id: note.section_id,
-            attachment_url: note.attachment_url,
+            x: note.x,
+            y: note.y,
+            section_id: note.sectionId,
+            attachment: note.attachmentUrl,
             likes: 0,
-            comments: [],
+            comments: [] as any,
             liked_by: [],
-            connections: []
+            connections: [] as any
         };
 
         const { data, error } = await supabase
@@ -56,16 +54,16 @@ export const noteService = {
         if (updates.content !== undefined) dbUpdates.content = updates.content;
         if (updates.title !== undefined) dbUpdates.title = updates.title;
         if (updates.color !== undefined) dbUpdates.color = updates.color;
-        if (updates.position_x !== undefined) dbUpdates.position_x = updates.position_x;
-        if (updates.position_y !== undefined) dbUpdates.position_y = updates.position_y;
+        if (updates.x !== undefined) dbUpdates.x = updates.x;
+        if (updates.y !== undefined) dbUpdates.y = updates.y;
         if (updates.width !== undefined) dbUpdates.width = updates.width;
         if (updates.height !== undefined) dbUpdates.height = updates.height;
-        if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
+        if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
         if (updates.likes !== undefined) dbUpdates.likes = updates.likes;
-        if (updates.liked_by !== undefined) dbUpdates.liked_by = updates.liked_by;
+        if (updates.likedBy !== undefined) dbUpdates.liked_by = updates.likedBy;
         if (updates.comments !== undefined) dbUpdates.comments = updates.comments as any;
         if (updates.connections !== undefined) dbUpdates.connections = updates.connections as any;
-        if (updates.section_id !== undefined) dbUpdates.section_id = updates.section_id;
+        if (updates.sectionId !== undefined) dbUpdates.section_id = updates.sectionId;
 
         const { data, error } = await supabase
             .from('notes')

@@ -7,6 +7,8 @@ import { mapBoard } from '../utils/mappers';
 type BoardRow = Database['public']['Tables']['boards']['Row'];
 type BoardInsert = Database['public']['Tables']['boards']['Insert'];
 
+const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
 export const boardService = {
     async getBoards() {
         const { data: { user } } = await supabase.auth.getUser();
@@ -35,27 +37,27 @@ export const boardService = {
     async createBoard(board: Partial<Board>, userId: string) {
         const settings: any = {
             sections: board.sections || [],
-            lock_mode: board.lock_mode || 'unlocked',
-            auto_lock_time: board.auto_lock_time || null,
-            auto_live_time: board.auto_live_time || null,
-            comments_enabled: board.comments_enabled ?? true,
-            reactions_enabled: board.reactions_enabled ?? true,
+            lock_mode: board.lockMode || 'unlocked',
+            auto_lock_time: board.autoLockTime || null,
+            auto_live_time: board.autoLiveTime || null,
+            comments_enabled: board.commentsEnabled ?? true,
+            reactions_enabled: board.reactionsEnabled ?? true,
             wallpaper: board.wallpaper,
-            color_scheme: board.color_scheme,
+            color_scheme: board.colorScheme,
             font: board.font,
-            recipe_id: board.recipe_id,
-            recipe_status: board.recipe_status,
+            recipe_id: board.recipeId,
+            recipe_status: board.recipeStatus,
             icon: board.icon,
             guide: board.guide,
             polls: board.polls,
-            quiz_questions: board.quiz_questions,
-            assessment_questions: board.assessment_questions,
-            assessment_state: board.assessment_state,
-            assessment_config: board.assessment_config,
-            grading_config: board.grading_config
+            quiz_questions: board.quizQuestions,
+            assessment_questions: board.assessmentQuestions,
+            assessment_state: board.assessmentState,
+            assessment_config: board.assessmentConfig,
+            grading_config: board.gradingConfig
         };
 
-        const payload: BoardInsert = {
+        const payload = {
             title: board.title || 'Untitled Board',
             description: board.description,
             owner_id: userId,
@@ -63,14 +65,14 @@ export const boardService = {
             wallpaper: board.wallpaper,
             class_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
             settings: settings,
-            target_grade: board.target_grade || 'General',
+            target_grade: board.targetGrade || 'General',
             steps: board.steps as any,
-            current_step_index: 0
+            current_step_index: board.currentStepIndex || 0
         };
 
         const { data, error } = await supabase
             .from('boards')
-            .insert(payload)
+            .insert(payload as any)
             .select()
             .single();
 
@@ -92,10 +94,11 @@ export const boardService = {
         const settingsUpdates: any = { ...currentSettings };
 
         Object.entries(updates).forEach(([key, value]) => {
-            if (dbColumns.includes(key)) {
-                dbUpdates[key] = value;
+            const snakeKey = toSnakeCase(key);
+            if (dbColumns.includes(snakeKey)) {
+                dbUpdates[snakeKey] = value;
             } else {
-                settingsUpdates[key] = value;
+                settingsUpdates[snakeKey] = value;
             }
         });
 

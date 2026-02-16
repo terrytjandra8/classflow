@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Board, LessonStep, Note } from '../../types';
+import { Board, LessonStep, Note, Profile } from '../../types';
 import { supabase } from '../../services/supabaseClient';
 import { ArrowLeft, Settings, Maximize2, ChevronLeft, ChevronRight, Minimize2, PanelLeft, Share2, MonitorPlay } from 'lucide-react';
 import { LessonSidebar } from './Sidebar';
@@ -9,11 +9,10 @@ import { StudentView } from './StudentView';
 
 interface LessonManagerProps {
     board: Board;
-    isStudent: boolean;
+    profile: Profile;
     onUpdateBoard: (updates: Partial<Board>) => void;
     onBack: () => void;
     notes: Note[];
-    userId?: string;
     onAddComment: (noteId: string, text: string, attachment?: any) => void;
     onDeleteNote: (id: string) => void;
     onLikeNote: (id: string) => void;
@@ -26,13 +25,13 @@ interface LessonManagerProps {
 }
 
 export const LessonManager: React.FC<LessonManagerProps> = ({
-    board, isStudent, onUpdateBoard, onBack,
-    notes, userId, onAddComment, onDeleteNote, onLikeNote, onUpdateNote, onDuplicateNote, onOpenAddNote, onOpenSettings, onOpenShare,
+    board, profile, onUpdateBoard, onBack,
+    notes, onAddComment, onDeleteNote, onLikeNote, onUpdateNote, onDuplicateNote, onOpenAddNote, onOpenSettings, onOpenShare,
     isPresentationMode
 }) => {
     const [steps, setSteps] = useState<LessonStep[]>(board.steps || []);
-    const [currentIndex, setCurrentIndex] = useState(board.current_step_index || 0);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(!isStudent && !isPresentationMode);
+    const [currentIndex, setCurrentIndex] = useState(board.currentStepIndex || 0);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(!profile.isStudent && !isPresentationMode);
     const [isPresenting, setIsPresenting] = useState(false);
     const [sidebarWidth, setSidebarWidth] = useState(300);
     
@@ -42,16 +41,16 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         const timeSinceInteraction = Date.now() - lastInteractionRef.current;
         if (timeSinceInteraction > 2000 || isPresentationMode) {
             if (board.steps) setSteps(board.steps);
-            if (board.current_step_index !== undefined) setCurrentIndex(board.current_step_index);
+            if (board.currentStepIndex !== undefined) setCurrentIndex(board.currentStepIndex);
         }
-    }, [board.steps, board.current_step_index, isPresentationMode]);
+    }, [board.steps, board.currentStepIndex, isPresentationMode]);
 
     const handleStepChange = async (index: number) => {
         if (index < 0 || (steps.length > 0 && index >= steps.length)) return;
         
         lastInteractionRef.current = Date.now();
         setCurrentIndex(index);
-        onUpdateBoard({ current_step_index: index });
+        onUpdateBoard({ currentStepIndex: index });
         
         await supabase.from('boards').update({ current_step_index: index }).eq('id', board.id);
     };
@@ -69,7 +68,7 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         const newIndex = newSteps.length - 1;
         setSteps(newSteps);
         setCurrentIndex(newIndex);
-        onUpdateBoard({ steps: newSteps, current_step_index: newIndex });
+        onUpdateBoard({ steps: newSteps, currentStepIndex: newIndex });
         await supabase.from('boards').update({ 
             steps: newSteps,
             current_step_index: newIndex
@@ -105,8 +104,8 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         step: currentStep,
         board: board,
         notes: notes,
-        userId: userId,
-        isStudent: isStudent,
+        userId: profile.id,
+        isStudent: profile.isStudent,
         onAddComment: onAddComment,
         onDeleteNote: onDeleteNote,
         onLikeNote: onLikeNote,
@@ -115,7 +114,7 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         onOpenAddNote: onOpenAddNote
     };
 
-    if (isStudent) {
+    if (profile.isStudent) {
         return (
             <StudentView step={currentStep} totalSteps={steps.length} currentIndex={currentIndex}>
                 <SlideViewer {...viewerProps} />

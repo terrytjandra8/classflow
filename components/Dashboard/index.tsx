@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sun, Moon, X, ShieldCheck, Users, ChevronDown, Filter, Layout, LogOut, Home as HomeIcon, PlusSquare, Image as ImageIcon, Activity, Hash, BookOpen, Bell, Check, GraduationCap } from 'lucide-react';
-import { Board, BoardFormat, Note } from '../../types';
+import { Board, BoardFormat, Note, Profile } from '../../types';
 import { Home } from './Home';
 import { Make } from './Make';
 import { Gallery } from './Gallery';
@@ -16,6 +16,7 @@ import { Avatar } from '../ui/Avatar';
 
 interface DashboardProps {
   boards: Board[];
+  profile: Profile;
   onCreateBoard: (format: BoardFormat, templateData?: Partial<Board>, initialNotes?: Note[]) => void;
   onSelectBoard: (boardId: string) => void;
   onDeleteBoard: (boardId: string) => void;
@@ -25,15 +26,12 @@ interface DashboardProps {
   onUpdateBoard: (id: string, updates: Partial<Board>) => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  username: string;
-  userAvatar: string | null;
-  userId?: string;
   onJoinByCode: (code: string) => Promise<boolean>;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
-    boards, onCreateBoard, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash, onUpdateBoard,
-    theme, onToggleTheme, username, userAvatar, userId, onJoinByCode
+    boards, profile, onCreateBoard, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash, onUpdateBoard,
+    theme, onToggleTheme, onJoinByCode
 }) => {
   
   const {
@@ -43,14 +41,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
       joinCode, setJoinCode,
       joinError, isJoining,
       handleJoinSubmit,
-      userEmail, isSuperAdmin, isStudent,
+      isSuperAdmin, isStudent,
       selectedClass, setSelectedClass,
       classList,
       showClassMenu, setShowClassMenu,
       showProfileMenu, setShowProfileMenu,
       profileMenuRef,
       handleLogout
-  } = useDashboardLogic(onJoinByCode, userId);
+  } = useDashboardLogic(profile, onJoinByCode);
 
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   
@@ -105,13 +103,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>}
             <Tooltip content={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}><button onClick={onToggleTheme} className={`p-2 rounded-full transition-colors hidden md:block ${theme === 'light' ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}>{theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}</button></Tooltip>
             <div className="relative" ref={profileMenuRef as React.RefObject<HTMLDivElement>}>
-                <Tooltip content={username} position="left"><div onClick={() => setShowProfileMenu(!showProfileMenu)} className={`w-8 h-8 md:w-9 md:h-9 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-lg border-2 cursor-pointer shrink-0 hover:scale-105 transition-transform ${theme === 'light' ? 'border-slate-200' : 'border-[#111]'}`}>{userAvatar ? <img src={userAvatar} alt={username} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center">{username.substring(0, 2).toUpperCase()}</div>}</div></Tooltip>
-                {showProfileMenu && <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#222] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50"><div className="p-3 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1a1a1a]"><p className="font-bold text-sm truncate text-gray-800 dark:text-white">{username}</p><div className="flex flex-col gap-1 mt-1"><span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded w-fit ${isStudent ? 'bg-blue-500/20 text-blue-400' : (isSuperAdmin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400')}`}>{isStudent ? 'Student' : (isSuperAdmin ? 'Super Admin' : 'Teacher')}</span><span className="text-[10px] text-gray-500 truncate" title={userEmail}>{userEmail || 'No Email'}</span></div></div><div className="p-1"><button onClick={onToggleTheme} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg md:hidden flex items-center gap-2">{theme === 'dark' ? <><Sun size={14}/> Light Mode</> : <><Moon size={14}/> Dark Mode</>}</button><button onClick={() => { setActiveTab('documentation'); setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg md:hidden flex items-center gap-2"><BookOpen size={14} /> Documentation</button><button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 font-bold transition-colors"><LogOut size={14} /> Sign Out</button></div></div>}
+                <Tooltip content={profile.fullName} position="left"><div onClick={() => setShowProfileMenu(!showProfileMenu)} className={`w-8 h-8 md:w-9 md:h-9 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-lg border-2 cursor-pointer shrink-0 hover:scale-105 transition-transform ${theme === 'light' ? 'border-slate-200' : 'border-[#111]'}`}>{profile.avatarUrl ? <img src={profile.avatarUrl} alt={profile.fullName} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center">{profile.fullName.substring(0, 2).toUpperCase()}</div>}</div></Tooltip>
+                {showProfileMenu && <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#222] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50"><div className="p-3 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1a1a1a]"><p className="font-bold text-sm truncate text-gray-800 dark:text-white">{profile.fullName}</p><div className="flex flex-col gap-1 mt-1"><span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded w-fit ${isStudent ? 'bg-blue-500/20 text-blue-400' : (isSuperAdmin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400')}`}>{isStudent ? 'Student' : (isSuperAdmin ? 'Super Admin' : 'Teacher')}</span><span className="text-[10px] text-gray-500 truncate" title={profile.email}>{profile.email || 'No Email'}</span></div></div><div className="p-1"><button onClick={onToggleTheme} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg md:hidden flex items-center gap-2">{theme === 'dark' ? <><Sun size={14}/> Light Mode</> : <><Moon size={14}/> Dark Mode</>}</button><button onClick={() => { setActiveTab('documentation'); setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg md:hidden flex items-center gap-2"><BookOpen size={14} /> Documentation</button><button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 font-bold transition-colors"><LogOut size={14} /> Sign Out</button></div></div>}
             </div>
         </div>
       </div>
       <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
-          {activeTab === 'home' && <Home boards={boards} studentClasses={classList} onSelectBoard={handleSelectBoardWrapper} onDeleteBoard={onDeleteBoard} onDuplicateBoard={onDuplicateBoard} onToggleFavorite={onToggleFavorite} onEmptyTrash={onEmptyTrash} onJoinBoard={() => setShowJoinModal(true)} onNavigateToMake={() => setActiveTab('make')} onOpenSetup={() => setShowSetupModal(true)} onUpdateBoard={onUpdateBoard} username={username} userAvatar={userAvatar} userId={userId} theme={theme} isSuperAdmin={isSuperAdmin} isStudent={isStudent} selectedClass={selectedClass} />}
+          {activeTab === 'home' && <Home boards={boards} studentClasses={classList} onSelectBoard={handleSelectBoardWrapper} onDeleteBoard={onDeleteBoard} onDuplicateBoard={onDuplicateBoard} onToggleFavorite={onToggleFavorite} onEmptyTrash={onEmptyTrash} onJoinBoard={() => setShowJoinModal(true)} onNavigateToMake={() => setActiveTab('make')} onOpenSetup={() => setShowSetupModal(true)} onUpdateBoard={onUpdateBoard} profile={profile} theme={theme} isSuperAdmin={isSuperAdmin} isStudent={isStudent} selectedClass={selectedClass} />}
           {activeTab === 'make' && <div className="h-full w-full overflow-y-auto custom-scrollbar relative"><Make onCreateBoard={handleCreateBoardWrapper} theme={theme} /></div>}
           {activeTab === 'gallery' && <div className="h-full w-full overflow-y-auto custom-scrollbar relative"><Gallery onCreateBoard={handleCreateBoardWrapper} theme={theme} /></div>}
           {activeTab === 'admin' && !isStudent && <div className="h-full w-full overflow-y-auto custom-scrollbar relative"><AdminDashboard boards={boards} theme={theme} selectedClass={selectedClass} onSelectBoard={handleSelectBoardWrapper}/></div>}

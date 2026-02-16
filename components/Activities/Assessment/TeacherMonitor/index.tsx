@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { AssessmentQuestion, Note, AssessmentConfig, Board, UserRole, ParticipantStatus } from '../../../../types';
+import { AssessmentQuestion, Note, AssessmentConfig, Board, UserRole, ParticipantStatus, Participant } from '../../../../types';
 import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView } from '../AssessmentPrintView';
 import { mapNote } from '../../../../utils/mappers';
@@ -11,19 +11,10 @@ import { GradingModal } from './GradingModal';
 import { RetryModal } from './RetryModal';
 
 // Define a local, specific participant type for this monitor view to avoid global type conflicts.
-interface MonitorParticipant {
-    id: string;
+interface MonitorParticipant extends Participant {
     noteId: string | null;
-    name: string;
-    role: UserRole;
-    violations: any[];
-    score: number;
-    status: any;
-    progress: number;
-    disqualified: boolean;
     hasLowWordCount: boolean;
     data: any;
-    submittedAt: string;
     lastActivity: string;
 }
 
@@ -109,10 +100,10 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             const totalQuestions = questions.filter(q => q.type !== 'section').length || 1;
 
             return {
-                id: sub.author_id as string,
+                id: sub.authorId as string,
                 noteId: sub.id, 
-                name: sub.author_name as string,
-                role: sub.author_role || 'student',
+                name: sub.authorName as string,
+                role: sub.authorRole || 'student',
                 violations: data?.violations || [],
                 score: score,
                 status: status,
@@ -120,8 +111,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 disqualified: isDQ,
                 hasLowWordCount: hasLowWordCount && !isDQ && data?.submitted,
                 data: data,
-                submittedAt: new Date(sub.created_at).toISOString(), 
-                lastActivity: new Date(sub.updated_at || sub.created_at).getTime().toString()
+                submittedAt: new Date(sub.createdAt).toISOString(), 
+                lastActivity: new Date(sub.updatedAt || sub.createdAt).getTime().toString()
             };
         });
 
@@ -221,7 +212,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
         await supabase.from('notes').update({ 
             connections: updatedData, content: 'Revising', color: 'bg-white'
-        }).eq('id', participant.noteId);
+        }).eq('id', participant.noteI I will now commit the changes I have made and push them to the remote repository.d);
 
         setTimeout(handleForceRefresh, 500);
     };    
@@ -231,7 +222,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         if (!confirm(`Allow revision for ${selectedStudentIds.size} selected students?`)) return;
 
         setSubmissions(prev => prev.map(sub => {
-            const pId = sub.author_id;
+            const pId = sub.authorId;
             if (pId && selectedStudentIds.has(pId)) {
                  const oldData = sub.connections as any || {};
                  const updatedData = {
@@ -408,7 +399,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const handlePrintMaster = (withKey: boolean) => {
         setPrintKeyMode(withKey);
         setPrintWithFeedback(false);
-        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: [], hasLowWordCount: false, progress: 1, score: 100, noteId: "master-copy-note-id", submittedAt: new Date().toISOString(), data: { answers: {} }, lastActivity: Date.now().toString() }]);
+        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: 0, hasLowWordCount: false, progress: 1, score: 100, noteId: "master-copy-note-id", submittedAt: new Date().toISOString(), data: { answers: {} }, lastActivity: Date.now().toString() }]);
     };
 
     return (
@@ -416,7 +407,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             
             {printTargets.length > 0 && (
                 <AssessmentPrintView 
-                    participants={printTargets as any}
+                    participants={printTargets as Participant[]}
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
@@ -449,8 +440,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             />
 
             <ParticipantsSection 
-                teachers={teachers}
-                students={students as any}
+                teachers={teachers as Participant[]}
+                students={students as Participant[]}
                 selectedStudentIds={selectedStudentIds}
                 onToggleSelect={toggleSelectStudent}
                 onReset={initiateReset as any}
@@ -462,14 +453,14 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
             <RetryModal 
                 isOpen={retryModal.isOpen} 
-                participant={retryModal.participant as any}
+                participant={retryModal.participant as Participant}
                 onClose={() => setRetryModal({ isOpen: false, participant: null })}
                 onConfirm={confirmReset}
             />
 
             <GradingModal 
                 isOpen={gradingModal.isOpen}
-                participant={gradingModal.participant as any}
+                participant={gradingModal.participant as Participant}
                 onClose={() => setGradingModal({ isOpen: false, participant: null })}
                 questions={questions}
                 currentGrades={currentGrades}

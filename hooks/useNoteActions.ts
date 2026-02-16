@@ -43,15 +43,15 @@ export const useNoteActions = ({
 
             case 'DELETE_NOTE':
                 const noteToRestore = lastAction.note;
-                const { created_at, ...rest } = noteToRestore;
+                const { createdAt, ...rest } = noteToRestore;
                 
                 const payload = {
                     ...rest,
-                    created_at: new Date(created_at).toISOString()
+                    created_at: new Date(createdAt).toISOString()
                 };
 
                 setNotes(prev => [noteToRestore, ...prev]);
-                await supabase.from('notes').insert([payload]);
+                await supabase.from('notes').insert([payload] as any);
                 break;
 
             case 'UPDATE_NOTE':
@@ -105,7 +105,7 @@ export const useNoteActions = ({
             x: noteData.x || 0,
             y: noteData.y || 0,
             section_id: noteData.sectionId,
-            attachment: noteData.attachment,
+            attachment: noteData.attachmentUrl,
             likes: 0,
             comments: [],
             liked_by: [],
@@ -191,9 +191,9 @@ export const useNoteActions = ({
         setNotes(prev => prev.map(n => {
             if (n.id !== id) return n;
 
-            const isLiked = n.liked_by?.includes(userId);
+            const isLiked = n.likedBy?.includes(userId);
             let newLikes = n.likes;
-            let newLikedBy = [...(n.liked_by || [])];
+            let newLikedBy = [...(n.likedBy || [])];
 
             if (isLiked) {
                 newLikes = Math.max(0, newLikes - 1);
@@ -202,7 +202,7 @@ export const useNoteActions = ({
                 newLikes = newLikes + 1;
                 newLikedBy.push(userId);
             }
-            return { ...n, likes: newLikes, liked_by: newLikedBy };
+            return { ...n, likes: newLikes, likedBy: newLikedBy };
         }));
 
         const { error } = await supabase.rpc('toggle_like', { target_note_id: id, user_id: userId });
@@ -214,16 +214,16 @@ export const useNoteActions = ({
         const newComment: Comment = {
             id: Math.random().toString(36).substr(2, 9),
             content: text,
-            author_name: username || 'Student', 
-            author_id: userId, 
-            author_role: userRole || 'student', 
-            author_avatar: userAvatar || undefined,
-            created_at: new Date().toISOString(),
-            attachment,
-            likes: 0, 
-            liked_by: [],
-            is_published: true,
-        };
+            authorName: username || 'Student',
+            authorId: userId,
+            authorRole: userRole || 'student',
+            authorAvatar: userAvatar || undefined,
+            createdAt: new Date().toISOString(),
+            attachment: attachment,
+            likes: 0,
+            likedBy: [],
+            isPublished: true,
+        } as unknown as Comment;
 
         setNotes(prev => {
             const note = prev.find(n => n.id === noteId);
@@ -265,7 +265,7 @@ export const useNoteActions = ({
             x: (note.x || 0) + 20,
             y: (note.y || 0) + 20,
             section_id: note.section_id,
-            attachment: note.attachment,
+            attachment: note.attachmentUrl,
             likes: 0,
             comments: [],
             liked_by: [],

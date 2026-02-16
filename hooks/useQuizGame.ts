@@ -4,15 +4,15 @@ import { supabase } from '../services/supabaseClient';
 import { Board, Note, QuizQuestion, QuizState } from '../types';
 
 export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStudent?: boolean, onUpdateBoard?: (updates: Partial<Board>) => void, onActivity?: () => void) => {
-    const questions: QuizQuestion[] = board.quiz_questions || [];
-    const state: QuizState = board.quiz_state || 'setup'; 
-    const currentQIndex = board.current_question_index || 0;
+    const questions: QuizQuestion[] = board.quizQuestions || [];
+    const state: QuizState = board.quizState || 'setup'; 
+    const currentQIndex = board.currentQuestionIndex || 0;
     const currentQ = questions[currentQIndex];
     
     const calculateTimeLeft = () => {
-        if (state === 'question' && board.quiz_start_time && currentQ) {
-            const elapsed = (Date.now() - board.quiz_start_time) / 1000;
-            const remaining = (currentQ.time_limit || 30) - elapsed;
+        if (state === 'question' && board.quizStartTime && currentQ) {
+            const elapsed = (Date.now() - board.quizStartTime) / 1000;
+            const remaining = (currentQ.timeLimit || 30) - elapsed;
             return Math.ceil(Math.max(0, remaining));
         }
         return 0;
@@ -21,7 +21,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
     useEffect(() => {
-        if (state === 'question' && board.quiz_start_time && currentQ) {
+        if (state === 'question' && board.quizStartTime && currentQ) {
             setTimeLeft(calculateTimeLeft());
 
             const interval = setInterval(() => {
@@ -29,7 +29,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
                 setTimeLeft(remaining);
                 
                 if (remaining <= 0 && !isStudent && state === 'question' && onUpdateBoard) {
-                    onUpdateBoard({ quiz_state: 'reveal' });
+                    onUpdateBoard({ quizState: 'reveal' });
                 }
             }, 200);
             
@@ -37,11 +37,11 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         } else {
             setTimeLeft(0);
         }
-    }, [state, board.quiz_start_time, currentQ, isStudent, onUpdateBoard]);
+    }, [state, board.quizStartTime, currentQ, isStudent, onUpdateBoard]);
 
     const myAnswerNote = useMemo(() => {
         if (!userId) return undefined;
-        return notes.find(n => n.author_id === userId && n.title === `Q_${currentQIndex}`);
+        return notes.find(n => n.authorId === userId && n.title === `Q_${currentQIndex}`);
     }, [notes, userId, currentQIndex]);
 
     const hasAnswered = !!myAnswerNote;
@@ -52,9 +52,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         let streak = 0;
         for (let i = currentQIndex - 1; i >= 0; i--) {
             const q = questions[i];
-            const ansNote = notes.find(n => n.author_id === userId && n.title === `Q_${i}`);
+            const ansNote = notes.find(n => n.authorId == userId && n.title === `Q_${i}`);
             
-            if (ansNote && ansNote.content === q.correct_answer) {
+            if (ansNote && ansNote.content == q.correctAnswer) {
                 streak++;
             } else {
                 break; 
@@ -67,16 +67,16 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         const playerMap: Record<string, { name: string, score: number }> = {};
         
         notes.forEach(n => {
-            if (n.type === 'quiz_answer' && n.author_id) {
-                if (!playerMap[n.author_id]) {
-                    playerMap[n.author_id] = { name: n.author_name || 'Unknown', score: 0 };
+            if (n.type === 'quiz_answer' && n.authorId) {
+                if (!playerMap[n.authorId]) {
+                    playerMap[n.authorId] = { name: n.authorName || 'Unknown', score: 0 };
                 }
 
                 const qIdx = parseInt(n.title?.split('_')[1] || '-1');
                 const answer = n.content;
                 
-                if (questions[qIdx] && questions[qIdx].correct_answer === answer) {
-                    playerMap[n.author_id].score += 1000; 
+                if (questions[qIdx] && questions[qIdx].correctAnswer == answer) {
+                    playerMap[n.authorId].score += 1000; 
                 }
             }
         });
@@ -99,8 +99,8 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
             author_name: user?.user_metadata?.full_name || 'Player',
             author_id: userId,
             color: 'gray',
-            position_x: 0, 
-            position_y: 0,
+            x: 0, 
+            y: 0,
             width: 0,
             height: 0,
             likes: 0
@@ -112,9 +112,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
     const enterLobby = () => {
         if (onUpdateBoard) {
             onUpdateBoard({ 
-                quiz_state: 'lobby', 
-                current_question_index: 0,
-                is_published: true 
+                quizState: 'lobby', 
+                currentQuestionIndex: 0,
+                isPublished: true 
             });
         }
     };
@@ -122,9 +122,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
     const startGame = () => {
         if (onUpdateBoard) {
             onUpdateBoard({ 
-                quiz_state: 'question', 
-                current_question_index: 0, 
-                quiz_start_time: Date.now()
+                quizState: 'question', 
+                currentQuestionIndex: 0, 
+                quizStartTime: Date.now()
             });
         }
     };
@@ -133,16 +133,16 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         if (!onUpdateBoard) return;
 
         if (state === 'reveal') {
-            onUpdateBoard({ quiz_state: 'leaderboard' });
+            onUpdateBoard({ quizState: 'leaderboard' });
         } else if (state === 'leaderboard') {
             if (currentQIndex < questions.length - 1) {
                 onUpdateBoard({ 
-                    quiz_state: 'question', 
-                    current_question_index: currentQIndex + 1, 
-                    quiz_start_time: Date.now()
+                    quizState: 'question', 
+                    currentQuestionIndex: currentQIndex + 1, 
+                    quizStartTime: Date.now()
                 });
             } else {
-                onUpdateBoard({ quiz_state: 'finished' });
+                onUpdateBoard({ quizState: 'finished' });
             }
         }
     };
@@ -151,9 +151,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         if (!onUpdateBoard) return;
         
         onUpdateBoard({ 
-            quiz_state: 'setup',
-            current_question_index: 0,
-            is_published: false
+            quizState: 'setup',
+            currentQuestionIndex: 0,
+            isPublished: false
         });
         
         await supabase.from('notes').delete().eq('board_id', board.id).eq('type', 'quiz_answer');

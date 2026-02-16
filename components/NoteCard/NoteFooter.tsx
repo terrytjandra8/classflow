@@ -5,14 +5,14 @@ import { NOTE_COLORS } from '../../utils/theme';
 
 interface NoteFooterProps {
     note: Note;
-    userId?: string;
+    userId: string;
     onLike: (e: React.MouseEvent) => void;
     commentsEnabled: boolean;
     reactionsEnabled: boolean;
 }
 
 export const NoteFooter: React.FC<NoteFooterProps> = ({ note, userId, onLike, commentsEnabled, reactionsEnabled }) => {
-    const hasLiked = userId && note.liked_by && note.liked_by.includes(userId);
+    const hasLiked = userId && note.likedBy && note.likedBy.includes(userId);
     const comments = note.comments || [];
 
     if (!commentsEnabled && !reactionsEnabled) return null;

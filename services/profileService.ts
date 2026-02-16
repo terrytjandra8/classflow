@@ -1,40 +1,36 @@
 import { supabase } from './supabaseClient';
 import { Database } from '../types/db';
 import { SUPER_ADMIN_EMAIL } from '../components/Dashboard/constants';
+import { Profile } from '../types';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
-
-export interface UserProfile {
-    id: string;
-    email: string;
-    full_name: string;
-    avatar_url: string;
-    role: 'student' | 'teacher';
-    enrolled_classes: string[];
-}
 
 export interface UserPreferences {
     saved_colors?: string[];
     saved_gradients?: string[];
 }
 
-const mapProfile = (row: ProfileRow): UserProfile => ({
+const mapProfile = (row: ProfileRow): Profile => ({
     id: row.id,
     email: row.email || '',
-    full_name: row.full_name || 'Unknown',
-    avatar_url: row.avatar_url || '',
+    fullName: row.full_name || 'Unknown',
+    avatarUrl: row.avatar_url || '',
     role: (row.role as 'student' | 'teacher') || 'student',
-    enrolled_classes: row.enrolled_classes || [],
+    enrolledClasses: row.enrolled_classes || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    preferences: row.preferences as any,
+    gradeLevel: row.grade_level
 });
 
 export const profileService = {
-    async getCurrentProfile(): Promise<UserProfile | null> {
+    async getCurrentProfile(): Promise<Profile | null> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return null;
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, full_name, avatar_url, role, enrolled_classes, email')
+            .select('*')
             .eq('id', user.id)
             .single();
 
@@ -63,6 +59,7 @@ export const profileService = {
                 enrolled_classes: [],
                 preferences: {},
                 updated_at: new Date().toISOString(),
+                grade_level: null
             };
             
             const { error: insertError } = await supabase.from('profiles').upsert(newProfile);
@@ -75,6 +72,18 @@ export const profileService = {
         }
         
         return null;
+    },
+
+    async updateProfile(userId: string, updates: Partial<Profile>) {
+        const snakeCaseUpdates: any = {};
+        if (updates.fullName) snakeCaseUpdates.full_name = updates.fullName;
+        if (updates.avatarUrl) snakeCaseUpdates.avatar_url = updates.avatarUrl;
+        if (updates.role) snakeCaseUpdates.role = updates.role;
+        if (updates.enrolledClasses) snakeCaseUpdates.enrolled_classes = updates.enrolledClasses;
+        if (updates.preferences) snakeCaseUpdates.preferences = updates.preferences;
+
+        const { error } = await supabase.from('profiles').update(snakeCaseUpdates).eq('id', userId);
+        if (error) throw error;
     },
 
     async updateClasses(userId: string, classes: string[]) {

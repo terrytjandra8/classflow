@@ -7,7 +7,6 @@ import { Avatar } from '../ui/Avatar';
 import { useBoard } from '../BoardView/BoardContext';
 import { getAnonymousIdentity } from '../../utils/anonymizer';
 import { BoardRules } from '../../utils/boardRules';
-import { NOTE_COLORS } from '../../utils/theme';
 
 interface NoteHeaderProps {
     note: Note;
@@ -35,7 +34,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     const { board, isStudent, userId, isPresentationMode } = useBoard();
     const triggerRef = useRef<HTMLButtonElement>(null);
 
-    const isTeacher = note.author_role === 'teacher' || note.author === 'Teacher';
+    const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
     const isAuthor = userId === note.authorId;
     
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
