@@ -10,26 +10,15 @@ import { GradientGenerator } from './GradientGenerator';
 interface AppearanceSectionProps {
     board: Board;
     onUpdate: (updates: Partial<Board>) => void;
+    prefs: UserPreferences;
+    loadPreferences: () => void;
 }
 
-export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onUpdate }) => {
+export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onUpdate, prefs, loadPreferences }) => {
     const [isUploadingWallpaper, setIsUploadingWallpaper] = useState(false);
     const [showGradientBuilder, setShowGradientBuilder] = useState(false);
     const [customColor, setCustomColor] = useState('#ffffff');
-    
-    // User Preferences
-    const [prefs, setPrefs] = useState<UserPreferences>({ saved_colors: [], saved_gradients: [] });
-    
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        loadPreferences();
-    }, []);
-
-    const loadPreferences = async () => {
-        const p = await profileService.getPreferences();
-        setPrefs(p);
-    };
 
     const handleSaveColor = async () => {
         await profileService.saveColor(customColor);

@@ -9,21 +9,10 @@ interface LayoutSectionProps {
 
 export const LayoutSection: React.FC<LayoutSectionProps> = ({ board, onUpdate }) => {
     
-    // Check if we are in Lesson Mode. If so, we change the *internal* layout, not the global board format (which would exit Lesson Mode).
-    const isLessonMode = board.format === 'lesson';
-    const currentLayout = isLessonMode ? (board.settings?.lessonLayout || 'wall') : board.format;
+    const currentLayout = board.format;
 
     const handleFormatChange = (f: BoardFormat) => {
-        if (isLessonMode) {
-            onUpdate({ 
-                settings: { 
-                    ...(board.settings || {}), 
-                    lessonLayout: f 
-                } 
-            });
-        } else {
-            onUpdate({ format: f });
-        }
+        onUpdate({ format: f });
     };
 
     return (
@@ -33,7 +22,7 @@ export const LayoutSection: React.FC<LayoutSectionProps> = ({ board, onUpdate })
                 {/* Format */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-200">
-                        {isLessonMode ? 'Slide Layout' : 'Format'}
+                        Format
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                         {['wall', 'grid', 'canvas', 'stream', 'columns', 'timeline'].map(f => (
@@ -46,7 +35,6 @@ export const LayoutSection: React.FC<LayoutSectionProps> = ({ board, onUpdate })
                             </button>
                         ))}
                     </div>
-                    {isLessonMode && <p className="text-[10px] text-gray-500">Changes the layout of board slides within this lesson.</p>}
                 </div>
                 {/* Sort Order */}
                 <div className="space-y-2">

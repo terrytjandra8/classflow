@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Info, Lock } from 'lucide-react';
 import { Board } from '../../types';
 import { HeadingSection } from './HeadingSection';
@@ -8,6 +8,7 @@ import { LayoutSection } from './LayoutSection';
 import { EngagementSection } from './EngagementSection';
 import { GradingSection } from './GradingSection';
 import { AdvancedSection } from './AdvancedSection';
+import { profileService, UserPreferences } from '../../services/profileService';
 
 interface BoardSettingsDrawerProps {
   board: Board;
@@ -21,6 +22,18 @@ const ALL_TABS = ['Heading', 'Appearance', 'Layout', 'Engagement', 'Grading', 'A
 
 export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board, isOpen, onClose, onUpdate, isStudent = false }) => {
   const [activeTab, setActiveTab] = useState('Heading');
+  const [prefs, setPrefs] = useState<UserPreferences>({ saved_colors: [], saved_gradients: [] });
+
+  useEffect(() => {
+      if (isOpen) {
+        loadPreferences();
+      }
+  }, [isOpen]);
+
+  const loadPreferences = async () => {
+      const p = await profileService.getPreferences();
+      setPrefs(p);
+  };
 
   const visibleTabs = useMemo(() => {
       if (board.format === 'quiz' || board.format === 'poll') {
@@ -95,7 +108,7 @@ export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board,
                     </div>
 
                     <div id="setting-Appearance">
-                        <AppearanceSection board={board} onUpdate={onUpdate} />
+                        <AppearanceSection board={board} onUpdate={onUpdate} prefs={prefs} loadPreferences={loadPreferences} />
                     </div>
 
                     {visibleTabs.includes('Layout') && (

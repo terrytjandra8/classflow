@@ -117,6 +117,110 @@ function AppContent() {
   const activeBoardIdRef = useRef<string | null>(null);
   useEffect(() => { activeBoardIdRef.current = activeBoardId; }, [activeBoardId]);
 
+  useEffect(() => {
+    const initializeApp = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+
+      const params = new URLSearchParams(window.location.search);
+      const boardId = params.get('board');
+
+      if (session) {
+        await fetchProfile();
+        if (boardId) {
+          const board = await boardService.getBoardById(boardId);
+          if (board) {
+            setBoards([board]);
+            setActiveBoardId(boardId);
+            setView('board');
+          } else {
+            // Board not found or no access, redirect to dashboard
+            setView('dashboard');
+          }
+        } else {
+          await fetchBoards();
+          setView('dashboard');
+        }
+      } else if (boardId) {
+        // Guest access logic
+        setAccessCheckStatus('checking');
+        const { data: board, error } = await supabase
+            .from('boards')
+            .select('id, is_public, is_published, settings, format, owner_id, title, description, wallpaper')
+            .eq('id', boardId)
+            .maybeSingle();
+
+        if (error || !board) {
+            setAccessCheckStatus('denied');
+        } else {
+            const isPublic = board.is_public;
+            const isLive = board.is_published;
+            const settings = board.settings as any;
+            const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
+            const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
+
+            if (isPublic || isLive || isQuizActive || isAssessmentActive) {
+                setBoards([mapBoard(board as any)]);
+                setActiveBoardId(board.id);
+                setAccessCheckStatus('allowed');
+            } else {
+                setAccessCheckStatus('denied');
+            }
+        }
+      }
+
+      setLoading(false);
+    };
+
+    initializeApp();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        setSession(newSession);
+        if (newSession) {
+            setIsGuest(false);
+            fetchProfile();
+            const params = new URLSearchParams(window.location.search);
+            const boardId = params.get('board');
+            if (!boardId) {
+                setView('dashboard');
+            }
+        } else if (!isGuest) {
+            const params = new URLSearchParams(window.location.search);
+            const boardId = params.get('board');
+            if (!boardId) {
+                setView('auth');
+            }
+        }
+    });
+
+    return () => {
+        subscription.unsubscribe();
+    };
+}, [isGuest]); // isGuest is a dependency to re-evaluate if the user becomes a guest
+
+  const fetchProfile = async () => {
+      try {
+        const profile = await profileService.getCurrentProfile();
+        if (profile) {
+            setUserRole(profile.role);
+            setUserClasses(profile.enrolledClasses || []);
+            setUsername(profile.fullName);
+            setUserAvatar(profile.avatarUrl);
+        }
+      } catch (e) {
+          console.error("Failed to fetch profile", e);
+      }
+  };
+
+  const fetchBoards = async () => {
+    try {
+        const data = await boardService.getBoards();
+        setBoards(data);
+    } catch (e) {
+        console.error("Failed to fetch boards", e);
+    }
+  };
+
   // Sync theme to DOM
   useEffect(() => {
     if (theme === 'dark') {
@@ -186,165 +290,11 @@ function AppContent() {
       };
   }, [activeBoardId]);
 
-  // Load Session & Profile
-  useEffect(() => {
-    // Check URL immediately on mount
-    const params = new URLSearchParams(window.location.search);
-    const initialBoardId = params.get('board');
-    
-    // Safety timeout for loading
-    const safetyTimeout = setTimeout(() => {
-        setLoading(false);
-    }, 3000);
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-          fetchProfile().finally(() => {
-              clearTimeout(safetyTimeout);
-              setLoading(false);
-              // Handle deep link logic after auth confirmed
-              if (initialBoardId) {
-                  // Fetch the single board immediately to get fresh status
-                  boardService.getBoardById(initialBoardId).then(freshBoard => {
-                      if (freshBoard) {
-                          setBoards([freshBoard]); // Ensure it exists in state
-                          setActiveBoardId(initialBoardId);
-                          setView('board');
-                      }
-                  });
-              } else {
-                  setView('dashboard');
-              }
-          });
-      } else {
-          clearTimeout(safetyTimeout);
-          setLoading(false);
-          // Handle Guest/Public access or show Auth
-          if (initialBoardId) {
-              // We trigger the access check logic below
-          }
-      }
-    }).catch(err => {
-        console.error("Session check failed", err);
-        clearTimeout(safetyTimeout);
-        setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-          fetchProfile();
-          setIsGuest(false);
-          
-          const currentParams = new URLSearchParams(window.location.search);
-          const boardParam = currentParams.get('board');
-          
-          if (boardParam) {
-              setView('board');
-              setActiveBoardId(boardParam);
-          } else {
-              if (!activeBoardIdRef.current) {
-                  setView('dashboard');
-              }
-          }
-      } else if (!isGuest) {
-          // Only redirect to auth if not in a guest session
-          const currentParams = new URLSearchParams(window.location.search);
-          // If viewing a public board, don't force auth immediately, let guest logic handle it
-          if (!currentParams.get('board')) {
-              setView('auth');
-          }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [isGuest]);
-
-  const fetchProfile = async () => {
-      try {
-        const profile = await profileService.getCurrentProfile();
-        if (profile) {
-            setUserRole(profile.role);
-            setUserClasses(profile.enrolledClasses || []);
-            setUsername(profile.fullName);
-            setUserAvatar(profile.avatarUrl);
-        }
-      } catch (e) {
-          console.error("Failed to fetch profile", e);
-      }
-  };
-
-  // Check Board Access for Guests
-  useEffect(() => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const boardIdParam = urlParams.get('board');
-
-      const checkAccess = async () => {
-          if (!boardIdParam || session || isGuest) {
-              setAccessCheckStatus('idle');
-              return;
-          }
-
-          setAccessCheckStatus('checking');
-          try {
-              // This is a one-time check on mount/URL change for unauthenticated users
-              const { data: board, error } = await supabase
-                  .from('boards')
-                  .select('id, is_public, is_published, settings, format, owner_id, title, description, wallpaper')
-                  .eq('id', boardIdParam)
-                  .maybeSingle();
-
-              if (error || !board) {
-                  setAccessCheckStatus('denied');
-                  return;
-              }
-              
-              // Load this board into state so the listener can attach to it properly if we join
-              setBoards([mapBoard(board as any)]);
-              setActiveBoardId(board.id);
-
-              const isPublic = board.is_public;
-              const isLive = board.is_published;
-              const settings = board.settings as any;
-              const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
-              const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
-
-              if (isPublic || isLive || isQuizActive || isAssessmentActive) {
-                  setAccessCheckStatus('allowed');
-              } else {
-                  setAccessCheckStatus('denied');
-              }
-          } catch (e) {
-              setAccessCheckStatus('denied');
-          }
-      };
-
-      checkAccess();
-  }, [session, isGuest]); // removed activeBoardId dep to prevent loops, relying on URL param
-
-  // Load Boards List
-  useEffect(() => {
+  // Global Boards listener (adds/removes from dashboard list)
+   useEffect(() => {
       if (!session && !isGuest) return;
-      
-      const fetchBoards = async () => {
-          try {
-              const data = await boardService.getBoards();
-              setBoards(data);
-          } catch (e) {
-              console.error("Failed to fetch boards", e);
-          }
-      };
-
-      fetchBoards();
-      
-      // Global Boards listener (adds/removes from dashboard list)
       const channel = supabase.channel('public:boards')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
-          // Optimization: If it's the active board, our specific listener handles it.
-          // This listener is mainly for the dashboard list (new boards, titles, etc)
-          // But to be safe and consistent, we can just update state if we have the data.
-          
           if (payload.new) {
              const freshBoard = mapBoard(payload.new as any);
              setBoards(prev => {
@@ -354,8 +304,6 @@ function AppContent() {
                       newBoards[idx] = freshBoard;
                       return newBoards;
                   }
-                  // Only add to list if we are not currently viewing a specific board (dashboard mode)
-                  // or if we want realtime additions to dashboard
                   return [freshBoard, ...prev]; 
              });
           }
