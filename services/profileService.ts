@@ -13,14 +13,14 @@ export interface UserPreferences {
 const mapProfile = (row: ProfileRow): Profile => ({
     id: row.id,
     email: row.email || '',
-    fullName: row.fullName || 'Unknown',
-    avatarUrl: row.avatarUrl || '',
+    fullName: row.full_name || 'Unknown',
+    avatarUrl: row.avatar_url || '',
     role: (row.role as 'student' | 'teacher') || 'student',
-    enrolledClasses: row.enrolledClasses || [],
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    enrolledClasses: row.enrolled_classes || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
     preferences: row.preferences as any,
-    gradeLevel: row.gradeLevel
+    gradeLevel: row.grade_level || undefined,
 });
 
 export const profileService = {
@@ -52,14 +52,14 @@ export const profileService = {
             const newProfile: ProfileRow = {
                 id: user.id,
                 email: user.email!,
-                fullName: metaName,
-                avatarUrl: metaAvatar,
+                full_name: metaName,
+                avatar_url: metaAvatar,
                 role: role,
-                createdAt: new Date().toISOString(),
-                enrolledClasses: [],
+                created_at: new Date().toISOString(),
+                enrolled_classes: [],
                 preferences: {},
-                updatedAt: new Date().toISOString(),
-                gradeLevel: null
+                updated_at: new Date().toISOString(),
+                grade_level: null
             };
             
             const { error: insertError } = await supabase.from('profiles').upsert(newProfile);
@@ -76,10 +76,10 @@ export const profileService = {
 
     async updateProfile(userId: string, updates: Partial<Profile>) {
         const snakeCaseUpdates: any = {};
-        if (updates.fullName) snakeCaseUpdates.fullName = updates.fullName;
-        if (updates.avatarUrl) snakeCaseUpdates.avatarUrl = updates.avatarUrl;
+        if (updates.fullName) snakeCaseUpdates.full_name = updates.fullName;
+        if (updates.avatarUrl) snakeCaseUpdates.avatar_url = updates.avatarUrl;
         if (updates.role) snakeCaseUpdates.role = updates.role;
-        if (updates.enrolledClasses) snakeCaseUpdates.enrolledClasses = updates.enrolledClasses;
+        if (updates.enrolledClasses) snakeCaseUpdates.enrolled_classes = updates.enrolledClasses;
         if (updates.preferences) snakeCaseUpdates.preferences = updates.preferences;
 
         const { error } = await supabase.from('profiles').update(snakeCaseUpdates).eq('id', userId);
@@ -89,7 +89,7 @@ export const profileService = {
     async updateClasses(userId: string, classes: string[]) {
         const { error } = await supabase
             .from('profiles')
-            .update({ enrolledClasses: classes })
+            .update({ enrolled_classes: classes })
             .eq('id', userId);
         if (error) throw error;
     },

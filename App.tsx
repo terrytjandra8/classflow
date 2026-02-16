@@ -4,7 +4,7 @@ import { AuthPage } from './components/AuthPage';
 import { GuestNameModal } from './components/GuestNameModal';
 import { CreateBoardModal } from './components/CreateBoardModal';
 import { DuplicateModal } from './components/DuplicateModal'; 
-import { Board, BoardFormat, Note, UserProfile } from './types';
+import { Board, BoardFormat, Note, Profile } from './types';
 import { Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { boardService } from './services/boardService';
 import { profileService } from './services/profileService';
@@ -90,7 +90,7 @@ function AppContent() {
   const [guestAvatar, setGuestAvatar] = useState('');
   const [guestId, setGuestId] = useState<string>(''); 
 
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
@@ -130,17 +130,17 @@ function AppContent() {
         setAccessCheckStatus('checking');
         const { data: board, error } = await supabase
             .from('boards')
-            .select('id, is_public, is_published, assessment_config, format, owner_id, title, description, wallpaper, quiz_state')
+            .select('id, isPublic, isPublished, assessmentConfig, format, ownerId, title, description, wallpaper, quizState')
             .eq('id', boardId)
             .maybeSingle();
 
         if (error || !board) {
             setAccessCheckStatus('denied');
         } else {
-            const isPublic = board.is_public;
-            const isLive = board.is_published;
-            const assessmentConfig = board.assessment_config as Board['assessmentConfig'];
-            const isQuizActive = board.format === 'quiz' && board.quiz_state && board.quiz_state !== 'setup';
+            const isPublic = board.isPublic;
+            const isLive = board.isPublished;
+            const assessmentConfig = board.assessmentConfig as Board['assessmentConfig'];
+            const isQuizActive = board.format === 'quiz' && board.quizState && board.quizState !== 'setup';
             const isAssessmentActive = board.format === 'assessment' && assessmentConfig?.status === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
@@ -185,7 +185,7 @@ function AppContent() {
   const fetchProfile = async () => {
       try {
         const profile = await profileService.getCurrentProfile();
-        if (profile) setUserProfile(profile as UserProfile);
+        if (profile) setUserProfile(profile as Profile);
       } catch (e) {
           console.error("Failed to fetch profile", e);
       }
@@ -306,8 +306,8 @@ function AppContent() {
               if (initialNotes.length > 0) {
                   const rawPayload = initialNotes.map(n => ({
                       ...n,
-                      board_id: newBoard.id,
-                      author_id: user.id,
+                      boardId: newBoard.id,
+                      authorId: user.id,
                   }));
                   await supabase.from('notes').insert(rawPayload);
               }
@@ -395,20 +395,20 @@ function AppContent() {
           if (options.includeNotes) {
               const notes = await noteService.getNotes(boardId);
               const notesToCopy = notes.filter(n => {
-                  if (n.author_id !== user.id) return false;
-                  if (options.onlyPinned && !n.is_pinned) return false;
+                  if (n.authorId !== user.id) return false;
+                  if (options.onlyPinned && !n.isPinned) return false;
                   return true;
               });
 
               if (notesToCopy.length > 0) {
                   const newNotesPayload = notesToCopy.map(n => ({
                       ...n,
-                      board_id: newBoard.id,
-                      author_id: user.id,
-                      author_avatar: userProfile?.avatar_url,
+                      boardId: newBoard.id,
+                      authorId: user.id,
+                      authorAvatar: userProfile?.avatarUrl,
                       likes: 0,
                       comments: [],
-                      liked_by: [],
+                      likedBy: [],
                   }));
                   await supabase.from('notes').insert(newNotesPayload);
               }
@@ -439,7 +439,7 @@ function AppContent() {
       const { data: board, error } = await supabase
           .from('boards')
           .select('*')
-          .eq('class_code', code)
+          .eq('classCode', code)
           .single();
       
       if (error || !board) return false;
@@ -458,8 +458,8 @@ function AppContent() {
         id: `guest-${Math.random().toString(36).substr(2, 9)}`,
         email: 'guest@classboard.ai',
         user_metadata: {
-            full_name: name,
-            avatar_url: avatarUrl
+            fullName: name,
+            avatarUrl: avatarUrl
         },
         app_metadata: { provider: 'email' },
         aud: 'authenticated',
@@ -528,8 +528,8 @@ function AppContent() {
           return <LoadingScreen />;
       }
 
-      const effectiveUsername = isGuest ? guestName : userProfile?.full_name ?? '';
-      const effectiveAvatar = isGuest ? guestAvatar : userProfile?.avatar_url ?? null;
+      const effectiveUsername = isGuest ? guestName : userProfile?.fullName ?? '';
+      const effectiveAvatar = isGuest ? guestAvatar : userProfile?.avatarUrl ?? null;
       const effectiveUserId = isGuest ? guestId : (session?.user?.id) ?? '';
       const effectiveRole = isGuest ? 'student' : userProfile?.role ?? 'student'; 
       const isStudent = effectiveRole === 'student';
@@ -537,7 +537,7 @@ function AppContent() {
       const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
       const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
       
-      const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
+      const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.ownerId === effectiveUserId;
 
       if (!isAllowed) {
            return (
@@ -595,9 +595,9 @@ function AppContent() {
                   onSelectBoard={selectBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={isGuest ? guestName : userProfile?.full_name ?? ''}
-                  userAvatar={isGuest ? guestAvatar : userProfile?.avatar_url ?? null}
-                  userClasses={userProfile?.enrolled_classes ?? []}
+                  username={isGuest ? guestName : userProfile?.fullName ?? ''}
+                  userAvatar={isGuest ? guestAvatar : userProfile?.avatarUrl ?? null}
+                  userClasses={userProfile?.enrolledClasses ?? []}
               />
           ) : (
               <Dashboard 
@@ -611,8 +611,7 @@ function AppContent() {
                   onUpdateBoard={handleUpdateBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={userProfile?.full_name ?? ''}
-                  userAvatar={userProfile?.avatar_url ?? null}
+                  profile={userProfile}
                   userId={session?.user?.id}
                   onJoinByCode={handleJoinByCode}
               />
