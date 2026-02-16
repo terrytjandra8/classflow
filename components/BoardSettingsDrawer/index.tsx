@@ -32,7 +32,14 @@ export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board,
 
   const loadPreferences = async () => {
       const p = await profileService.getPreferences();
-      setPrefs(p);
+      if (p) {
+          setPrefs({
+              saved_colors: p.saved_colors || [],
+              saved_gradients: p.saved_gradients || []
+          });
+      } else {
+          setPrefs({ saved_colors: [], saved_gradients: [] });
+      }
   };
 
   const visibleTabs = useMemo(() => {
