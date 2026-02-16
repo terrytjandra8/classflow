@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense, useRef, ReactNode, ErrorInfo, Component } from 'react';
 import { supabase } from './services/supabaseClient';
 import { AuthPage } from './components/AuthPage';
@@ -12,7 +11,7 @@ import { profileService } from './services/profileService';
 import { noteService } from './services/noteService';
 import { mapBoard } from './utils/mappers';
 import './src/index.css';
-import { Session } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 const StudentDashboard = React.lazy(() => import('./components/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
@@ -140,12 +139,12 @@ function AppContent() {
         } else {
             const isPublic = board.is_public;
             const isLive = board.is_published;
-            const assessmentConfig = board.assessment_config as Board['assessment_config'];
+            const assessmentConfig = board.assessment_config as Board['assessmentConfig'];
             const isQuizActive = board.format === 'quiz' && board.quiz_state && board.quiz_state !== 'setup';
             const isAssessmentActive = board.format === 'assessment' && assessmentConfig?.status === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
-                setBoards([mapBoard(board as Board)]);
+                setBoards([mapBoard(board as any)]);
                 setActiveBoardId(board.id);
                 setAccessCheckStatus('allowed');
             } else {
@@ -236,15 +235,15 @@ function AppContent() {
               { event: 'UPDATE', schema: 'public', table: 'boards', filter: `id=eq.${activeBoardId}` },
               (payload) => {
                   if (payload.new) {
-                      const updatedBoard = mapBoard(payload.new as Board);
+                      const updatedBoard = mapBoard(payload.new as any);
                       
                       setBoards((currentBoards) => 
                           currentBoards.map(b => b.id === updatedBoard.id ? updatedBoard : b)
                       );
                       
-                      const isPublic = updatedBoard.is_public;
-                      const isLive = updatedBoard.is_published;
-                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quiz_state && updatedBoard.quiz_state !== 'setup';
+                      const isPublic = updatedBoard.isPublic;
+                      const isLive = updatedBoard.isPublished;
+                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
                       
                       if (isPublic || isLive || isQuizActive) {
                           setAccessCheckStatus('allowed');
@@ -264,7 +263,7 @@ function AppContent() {
       const channel = supabase.channel('public:boards')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
           if (payload.new) {
-             const freshBoard = mapBoard(payload.new as Board);
+             const freshBoard = mapBoard(payload.new as any);
              setBoards(prev => {
                   const idx = prev.findIndex(b => b.id === freshBoard.id);
                   if (idx > -1) {
@@ -340,7 +339,7 @@ function AppContent() {
   const handleDeleteBoard = async (id: string) => {
       try {
           setBoards(boards.filter(b => b.id !== id));
-          await boardService.updateBoard(id, { is_trashed: true, deleted_at: new Date() });
+          await boardService.updateBoard(id, { isTrashed: true, deletedAt: new Date() });
       } catch (e) {
           console.error("Failed to delete board", e);
       }
@@ -372,17 +371,17 @@ function AppContent() {
 
       const overrideSettings: Partial<Board> = {
           title: `${boardToDup.title} (Copy)`,
-          is_favorite: false,
-          is_published: false,
-          is_public: false,
-          quiz_state: 'setup',
-          current_step_index: 0,
-          assessment_config: boardToDup.assessment_config ? {
-              ...boardToDup.assessment_config,
+          isFavorite: false,
+          isPublished: false,
+          isPublic: false,
+          quizState: 'setup',
+          currentStepIndex: 0,
+          assessmentConfig: boardToDup.assessmentConfig ? {
+              ...boardToDup.assessmentConfig,
               status: 'setup',
               startTime: 0
           } : undefined,
-          current_poll_index: 0
+          currentPollIndex: 0
       };
 
       try {
@@ -396,8 +395,8 @@ function AppContent() {
           if (options.includeNotes) {
               const notes = await noteService.getNotes(boardId);
               const notesToCopy = notes.filter(n => {
-                  if (n.authorId !== user.id) return false;
-                  if (options.onlyPinned && !n.isPinned) return false;
+                  if (n.author_id !== user.id) return false;
+                  if (options.onlyPinned && !n.is_pinned) return false;
                   return true;
               });
 
@@ -423,14 +422,14 @@ function AppContent() {
   const handleToggleFavorite = async (id: string) => {
       const board = boards.find(b => b.id === id);
       if (board) {
-          const newVal = !board.is_favorite;
-          handleUpdateBoard(id, { is_favorite: newVal });
+          const newVal = !board.isFavorite;
+          handleUpdateBoard(id, { isFavorite: newVal });
       }
   };
 
   const handleEmptyTrash = async () => {
-      const trashedIds = boards.filter(b => b.is_trashed).map(b => b.id);
-      setBoards(prev => prev.filter(b => !b.is_trashed));
+      const trashedIds = boards.filter(b => b.isTrashed).map(b => b.id);
+      setBoards(prev => prev.filter(b => !b.isTrashed));
       if (trashedIds.length > 0) {
           await supabase.from('boards').delete().in('id', trashedIds);
       }
@@ -455,16 +454,19 @@ function AppContent() {
   };
 
   const handleGuestLogin = (name: string, avatarUrl: string) => {
-      const guestUser = {
-          id: `guest-${Math.random().toString(36).substr(2, 9)}`,
-          email: 'guest@classboard.ai',
-          user_metadata: {
-              full_name: name,
-              avatar_url: avatarUrl
-          }
-      };
+    const guestUser: User = {
+        id: `guest-${Math.random().toString(36).substr(2, 9)}`,
+        email: 'guest@classboard.ai',
+        user_metadata: {
+            full_name: name,
+            avatar_url: avatarUrl
+        },
+        app_metadata: { provider: 'email' },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+    };
       
-      setSession({ user: guestUser, auth: null, expires_at: 0, expires_in: 0, refresh_token: 'none', token_type: 'bearer', isNewUser: false });
+      setSession({ user: guestUser, access_token: 'guest-token', expires_at: 0, expires_in: 0, refresh_token: 'none', token_type: 'bearer' });
       setIsGuest(true);
       setGuestName(name);
       setGuestAvatar(avatarUrl);
@@ -532,10 +534,10 @@ function AppContent() {
       const effectiveRole = isGuest ? 'student' : userProfile?.role ?? 'student'; 
       const isStudent = effectiveRole === 'student';
       
-      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quiz_state && activeBoard.quiz_state !== 'setup';
-      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessment_config?.status === 'inprogress' || activeBoard.assessment_config?.status === 'reading');
+      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
+      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
       
-      const isAllowed = !isStudent || activeBoard.is_published || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
+      const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
 
       if (!isAllowed) {
            return (
@@ -575,7 +577,7 @@ function AppContent() {
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                   username={effectiveUsername}
-                  userAvatar={effectiveAvatar}
+                  userAvatar={effectiveAvatar as string | null}
                   userId={effectiveUserId}
                   isStudent={isStudent}
                   userRole={effectiveRole}

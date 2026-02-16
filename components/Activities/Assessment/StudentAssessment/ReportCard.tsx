@@ -1,17 +1,10 @@
-
 import React, { useState } from 'react';
 import { CheckCircle, Home, Printer, Eye, MessageSquare } from 'lucide-react';
-import { AssessmentQuestion, Board } from '../../../../types';
+import { AssessmentQuestion, Board, SubmissionData } from '../../../../types';
 import { useBoard } from '../../../BoardView/BoardContext';
 import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView } from '../AssessmentPrintView';
 import { parseMath } from '../../../../utils/mappers';
-
-interface SubmissionData {
-    answers: Record<string, string>;
-    score?: number;
-    grading?: Record<string, { score: number; feedback: string; }>;
-}
 
 interface ReportCardProps {
     board: Board;
@@ -41,6 +34,10 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     const isImageAnswer = (text: string) => {
         return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
     };
+
+    if (!submissionData) {
+        return null; 
+    }
 
     return (
         <div className="h-full overflow-y-auto bg-[#111] text-white p-6 font-sans relative">
@@ -129,14 +126,14 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                                     <span className="block text-xs font-bold text-gray-500 uppercase mb-2">Your Answer</span>
                                     {(q.type === 'mcq' || q.type === 'multiple_choice') ? (
                                         <div className="text-gray-300">
-                                            {q.options && answer ? q.options[parseInt(answer)] : <span className="italic text-gray-500">No Answer</span>}
+                                            {q.options && answer ? q.options[parseInt(String(answer))] : <span className="italic text-gray-500">No Answer</span>}
                                             {q.answer && (
-                                                <span className="ml-2 text-xs text-gray-500">(Correct: {q.options?.[parseInt(q.answer)]})</span>
+                                                <span className="ml-2 text-xs text-gray-500">(Correct: {q.options?.[parseInt(String(q.answer))]})</span>
                                             )}
                                         </div>
                                     ) : (
-                                        isImageAnswer(answer) ? (
-                                            <img src={answer} alt="Drawing" className="max-w-full h-auto rounded border border-white/10 bg-white" />
+                                        isImageAnswer(String(answer)) ? (
+                                            <img src={String(answer)} alt="Drawing" className="max-w-full h-auto rounded border border-white/10 bg-white" />
                                         ) : (
                                             <p className="whitespace-pre-wrap text-gray-300">{answer || <span className="italic text-gray-500">No Answer</span>}</p>
                                         )

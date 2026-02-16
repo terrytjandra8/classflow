@@ -1,10 +1,10 @@
-
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckSquare, PenTool, ChevronUp, ChevronDown, X, ZoomIn, PlayCircle, FileText, Globe, ExternalLink, Maximize2, Minimize2, BookOpen, Palette, CopyX } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
 import { renderFormattedContent } from './utils';
 import { useCopyProtection } from '../../hooks/useSecurity';
+import { NOTE_COLORS } from '../../utils/theme';
 
 interface NoteContentProps {
     note: Note;
@@ -259,8 +259,8 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
     const CHAR_LIMIT = 300;
     const isImage = note.type === 'image' || note.type === 'drawing';
     const isExitTicket = note.type === 'exit_ticket';
-    const isTransparent = note.color === NoteColor.TRANSPARENT;
-    const isColored = note.color !== NoteColor.WHITE && !isTransparent;
+    const isTransparent = note.color === NOTE_COLORS.TRANSPARENT;
+    const isColored = note.color !== NOTE_COLORS.WHITE && !isTransparent;
 
     const isLongText = note.content && note.content.length > CHAR_LIMIT;
     const shouldTruncate = !isStickyNote && !isTransparent && !isEditing && !isImage && isLongText;
@@ -283,11 +283,11 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
 
     // Apply Poisoning if watermark is active
     const processedContent = useMemo(() => {
-        if (note.isWatermarked && !isEditing) {
+        if (note.is_watermarked && !isEditing) {
             return poisonText(note.content);
         }
         return note.content;
-    }, [note.content, note.isWatermarked, isEditing]);
+    }, [note.content, note.is_watermarked, isEditing]);
 
     const renderContent = () => {
         // 1. Check if content is already valid HTML tags
@@ -384,7 +384,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
                     ${isTransparent ? 'p-0 text-slate-900 dark:text-white' : 'text-slate-800'} 
                     ${isStickyNote ? 'p-5 flex flex-col justify-start overflow-hidden' : ''}
                     ${isCopyDisabled ? 'select-none' : 'select-text'}
-                    ${note.isWatermarked ? 'font-glitch tracking-[0.2em] text-lg' : ''}
+                    ${note.is_watermarked ? 'font-glitch tracking-[0.2em] text-lg' : ''}
                 `} 
                 style={{ 
                     color: !isTransparent && contentTextColor ? contentTextColor : undefined,
@@ -394,10 +394,10 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
                 onContextMenu={onContextMenu}
             >
                 {note.title && (
-                    <div className={`font-bold mb-3 leading-tight break-words whitespace-pre-wrap ${isTransparent ? 'text-2xl' : 'text-xl'} ${note.isWatermarked ? 'mb-4' : ''}`}>
+                    <div className={`font-bold mb-3 leading-tight break-words whitespace-pre-wrap ${isTransparent ? 'text-2xl' : 'text-xl'} ${note.is_watermarked ? 'mb-4' : ''}`}>
                         {isExitTicket && <CheckSquare className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {note.type === 'drawing' && <PenTool className="text-slate-700 shrink-0 inline mr-2" size={16} />}
-                        {note.isWatermarked ? poisonText(note.title) : note.title}
+                        {note.is_watermarked ? poisonText(note.title) : note.title}
                     </div>
                 )}
 

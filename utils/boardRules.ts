@@ -1,4 +1,3 @@
-
 import { Board, Note, Comment } from '../types';
 
 /**
@@ -127,7 +126,7 @@ export const BoardRules = {
         // Check collaborators too if available
         const isCollaborator = board.collaborators?.includes(note.author_id || '');
         
-        const isTeacherNote = note.authorRole === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
+        const isTeacherNote = note.author_role === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
         
         if (isTeacherNote) {
             // Only blur teacher posts if explicitly configured (default: visible)
@@ -157,7 +156,7 @@ export const BoardRules = {
         // 2. Teacher posts are never anonymous to students (unless specifically requested in future)
         const isOwner = note.author_id === board.owner_id;
         const isCollaborator = board.collaborators?.includes(note.author_id || '');
-        const isTeacherNote = note.authorRole === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
+        const isTeacherNote = note.author_role === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
         
         if (isTeacherNote) return false;
 
@@ -181,9 +180,9 @@ export const BoardRules = {
     ): boolean => {
         if (!isStudent && !isPresentationMode) return false;
 
-        const isOwner = comment.authorId === board.owner_id;
-        const isCollaborator = board.collaborators?.includes(comment.authorId || '');
-        const isTeacherComment = comment.authorRole === 'teacher' || isOwner || isCollaborator;
+        const isOwner = comment.author_id === board.owner_id;
+        const isCollaborator = board.collaborators?.includes(comment.author_id || '');
+        const isTeacherComment = comment.author_role === 'teacher' || isOwner || isCollaborator;
         
         if (isTeacherComment) return false;
 

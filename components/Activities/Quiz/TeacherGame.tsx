@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { QuizState, QuizQuestion, Board } from '../../../types';
 import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass } from 'lucide-react';
@@ -35,7 +34,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const currentMusicId = (board.settings?.quizMusic as string) || 'lofi';
+    const currentMusicId = (board.settings?.quiz_music as string) || 'lofi';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -79,7 +78,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
         onUpdateBoard({
             settings: {
                 ...board.settings,
-                quizMusic: trackId
+                quiz_music: trackId
             }
         });
     };
@@ -216,7 +215,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     {state === 'question' && (
                         <div className="w-full h-2 bg-white/5 relative overflow-hidden">
                             <div 
-                                className={`h-full transition-all duration-200 ease-linear ${Number(timeLeft) <= 5 ? 'bg-red-500 shadow-[0_0_20px_#ef4444]' : 'bg-blue-500 shadow-[0_0_20px_#3b82f6]'}`}
+                                className={`h-full transition-all duration-200 ease-linear ${timeLeft <= 5 ? 'bg-red-500 shadow-[0_0_20px_#ef4444]' : 'bg-blue-500 shadow-[0_0_20px_#3b82f6]'}`}
                                 style={{ width: `${(timeLeft / (currentQ.time_limit || 30)) * 100}%` }}
                             ></div>
                         </div>
@@ -231,7 +230,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                         </div>
                         {state === 'question' ? (
                             <div className="flex items-center gap-2 text-white font-mono font-bold bg-white/5 px-4 py-1 rounded-full border border-white/10">
-                                <Hourglass size={16} className={Number(timeLeft) <= 5 ? 'text-red-500 animate-pulse' : 'text-blue-400'} />
+                                <Hourglass size={16} className={timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-blue-400'} />
                                 {timeLeft}s
                             </div>
                         ) : (

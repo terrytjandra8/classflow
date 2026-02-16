@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useBoard } from '../BoardContext';
 import { classService } from '../../../services/classService';
@@ -15,7 +14,7 @@ export const useHeaderLogic = () => {
 
     const activeCount = onlineUsers?.length || 0;
     const userPreviews = onlineUsers?.slice(0, 10) || [];
-    const isLive = board.is_published;
+    const isLive = board.isPublished;
 
     const formatDate = (ts?: number | string) => {
         if (!ts) return '';
@@ -34,7 +33,7 @@ export const useHeaderLogic = () => {
         if (name && name.trim()) {
             const newClass = await classService.createClass(name.trim());
             if (newClass) {
-                updateBoard({ target_grade: newClass.name });
+                updateBoard({ targetGrade: newClass.name });
                 setIsClassMenuOpen(false);
             } else {
                 alert("Failed to create class. Please try again.");

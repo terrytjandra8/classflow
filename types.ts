@@ -309,12 +309,14 @@ export interface ColumnAnalyticsData {
   // Define properties based on usage
 }
 
+export type ParticipantStatus = 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready' | 'Disqualified';
+
 export interface Participant {
     id: string;
     name: string;
     role: UserRole;
     disqualified: boolean;
-    status: 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready';
+    status: ParticipantStatus;
     violations: any;
     hasLowWordCount: any;
     progress: number;
@@ -322,4 +324,5 @@ export interface Participant {
     noteId: string;
     data: any;
     submittedAt: string;
+    lastActivity: string;
 }

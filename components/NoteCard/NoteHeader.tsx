@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { ShieldCheck, MoreVertical, X, Pin, Ghost } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
@@ -8,6 +7,7 @@ import { Avatar } from '../ui/Avatar';
 import { useBoard } from '../BoardView/BoardContext';
 import { getAnonymousIdentity } from '../../utils/anonymizer';
 import { BoardRules } from '../../utils/boardRules';
+import { NOTE_COLORS } from '../../utils/theme';
 
 interface NoteHeaderProps {
     note: Note;
@@ -35,7 +35,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     const { board, isStudent, userId, isPresentationMode } = useBoard();
     const triggerRef = useRef<HTMLButtonElement>(null);
 
-    const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
+    const isTeacher = note.author_role === 'teacher' || note.author === 'Teacher';
     const isAuthor = userId === note.author_id;
     
     // --- CENTRALIZED ANONYMITY LOGIC ---
@@ -45,7 +45,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     // Display Logic with Fallback for empty strings
     const rawName = note.author && note.author.trim() !== '' ? note.author : 'Anonymous';
     const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : rawName;
-    const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.authorAvatar;
+    const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.author_avatar;
 
     // VISIBILITY FIX:
     // Transparent -> Adaptive (Dark on Light, White on Dark)
@@ -76,7 +76,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
         <div className={`p-4 pb-2 flex items-start justify-between relative ${isTransparent ? 'pl-0' : ''}`}>
             <div className="flex items-center gap-3">
                 <Avatar 
-                    src={displayAvatar} 
+                    src={displayAvatar as string} 
                     name={displayName} 
                     size="md" 
                     isTeacher={isTeacher}
@@ -87,9 +87,9 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {shouldMask && isAuthor && <span className="opacity-60 text-[10px] ml-0.5">(You)</span>}
                         {shouldMask && <Ghost size={10} className="text-gray-400" />}
                         {isTeacher && <ShieldCheck size={12} className="text-pink-600 fill-pink-100" />}
-                        {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
+                        {note.is_pinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
                     </span>
-                    <span className={`text-[10px] font-medium ${subTextColor}`}>{formatTime(note.createdAt)}</span>
+                    <span className={`text-[10px] font-medium ${subTextColor}`}>{formatTime(note.created_at)}</span>
                 </div>
             </div>
             

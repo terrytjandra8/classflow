@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Plus, FolderPlus, Lock, Unlock, Wand2, X, Eye, EyeOff, Ghost, VenetianMask, Move } from 'lucide-react';
 import { NoteCard } from '../../NoteCard/index';
@@ -79,14 +78,14 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
 
         let newCreatedAt = Date.now();
         if (prevNote && nextNote) {
-            newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
+            newCreatedAt = (new Date(prevNote.createdAt).getTime() + new Date(nextNote.createdAt).getTime()) / 2;
         } else if (prevNote) {
-            newCreatedAt = prevNote.createdAt - 60000;
+            newCreatedAt = new Date(prevNote.createdAt).getTime() - 60000;
         } else if (nextNote) {
-            newCreatedAt = nextNote.createdAt + 60000;
+            newCreatedAt = new Date(nextNote.createdAt).getTime() + 60000;
         }
 
-        updateNote(draggedId, { createdAt: newCreatedAt });
+        updateNote(draggedId, { createdAt: new Date(newCreatedAt).toISOString() });
         setDraggingId(null);
         dragItemRef.current = null;
     };
@@ -103,7 +102,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
     
     const handleAddRelative = useCallback((noteId: string, position: 'before' | 'after') => {
         const note = localNotes.find((n: any) => n.id === noteId);
-        if(note) openAddNote({ sectionId: note.sectionId, relativeId: note.id, position } as any);
+        if(note) openAddNote({ section_id: note.section_id, relativeId: note.id, position } as any);
     }, [localNotes, openAddNote]);
 
     const handleMoveNote = useCallback((noteId: string, direction: 'up' | 'down') => {
@@ -123,8 +122,8 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                 if (section.isHidden && isStudent) return null;
 
                 const sectionNotes = sectionIdFilter 
-                    ? localNotes.filter((n: any) => n.sectionId === section.id) 
-                    : localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && section.id === sections[0].id));
+                    ? localNotes.filter((n: any) => n.section_id === section.id) 
+                    : localNotes.filter((n: any) => n.section_id === section.id || (!n.section_id && section.id === sections[0].id));
                 
                 const isSectionLocked = section.locked;
                 const canAddToSection = canManageBoard || (!isLocked && !isSectionLocked);

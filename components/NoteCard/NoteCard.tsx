@@ -3,6 +3,7 @@ import { EyeOff, X } from 'lucide-react';
 import { Note, CommentAttachment, NoteColor } from '../../types';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
+import { NOTE_COLORS } from '../../utils/theme';
 
 // Import Modular Components
 import { NoteHeader } from './NoteHeader';
@@ -63,9 +64,9 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   // --- Logic & Permissions (Engine) ---
   const canEdit = BoardRules.canEditNote(note, effectiveUserId, isStudentBool, isLockedBool);
   const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, isStudentBool, isLockedBool);
-  const canCopy = BoardRules.canCopyContent(board, note.sectionId, isStudentBool);
+  const canCopy = BoardRules.canCopyContent(board, note.section_id, isStudentBool);
   
-  const isTransparent = note.color === NoteColor.TRANSPARENT;
+  const isTransparent = note.color === NOTE_COLORS.TRANSPARENT;
   const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
   const isCustomColor = isHexColor(note.color);
 
@@ -175,7 +176,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                 onDelete={(id) => onDelete && onDelete(id)}
                 onEdit={() => openEditNote(note)}
                 onColorChange={(color) => onUpdate && onUpdate(note.id, { color })}
-                onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined}
+                onPin={canEdit && onUpdate ? (id) => onUpdate(id, { is_pinned: !note.is_pinned }) : undefined}
                 onDuplicate={(n) => {}} 
                 onAddBefore={onAddBefore}
                 onAddAfter={onAddAfter}

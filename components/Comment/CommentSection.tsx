@@ -7,6 +7,7 @@ import { CommentItem } from './CommentItem';
 import { DynamicTextarea } from './DynamicTextarea';
 import { useBoard } from '../BoardView/BoardContext';
 import { isValidUrl } from '../../utils/validation';
+import { NOTE_COLORS } from '../../utils/theme';
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👏", "✅", "💯"];
 
@@ -38,7 +39,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
     const [pasteError, setPasteError] = useState(false);
     
     // Determine card background type for input contrast
-    const isSolidCard = noteColor !== NoteColor.TRANSPARENT && noteColor !== NoteColor.WHITE;
+    const isSolidCard = noteColor !== NOTE_COLORS.TRANSPARENT && noteColor !== NOTE_COLORS.WHITE;
     const isTeacher = !isStudent;
 
     const updateCommentInTree = (list: Comment[], targetId: string, updater: (c: Comment) => Comment | null): Comment[] => {
@@ -89,14 +90,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
         if (!reactionsEnabled || !userId || !onUpdateNote || isReadOnly) return;
         
         const updater = (c: Comment) => {
-            const isLiked = c.likedBy?.includes(userId);
+            const isLiked = c.liked_by?.includes(userId);
             const newLikedBy = isLiked 
-                ? (c.likedBy || []).filter(uid => uid !== userId) 
-                : [...(c.likedBy || []), userId];
+                ? (c.liked_by || []).filter(uid => uid !== userId) 
+                : [...(c.liked_by || []), userId];
             const newLikes = isLiked 
                 ? Math.max(0, (c.likes || 0) - 1) 
                 : (c.likes || 0) + 1;
-            return { ...c, likes: newLikes, likedBy: newLikedBy };
+            return { ...c, likes: newLikes, liked_by: newLikedBy };
         };
 
         const updatedComments = updateCommentInTree(comments, commentId, updater);
@@ -122,14 +123,15 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
         const newReply: Comment = {
             id: Math.random().toString(36).substr(2, 9),
             text,
-            authorId: userId,
-            author: username || 'Student', 
-            authorRole: isTeacher ? 'teacher' : 'student',
-            authorAvatar: contextAvatar || undefined,
-            createdAt: Date.now(),
+            author_id: userId,
+            author_name: username || 'Student', 
+            author_role: isTeacher ? 'teacher' : 'student',
+            author_avatar: contextAvatar || undefined,
+            createdAt: new Date().toString(),
             likes: 0,
-            likedBy: [],
-            replies: []
+            liked_by: [],
+            replies: [],
+            content: ''
         };
 
         const updatedComments = addReplyToTree(comments, parentId, newReply);
@@ -183,7 +185,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
                             handleDeleteComment={handleDeleteComment}
                             handleEditComment={handleEditComment}
                             handleReplyComment={handleReplyComment}
-                            isColoredCard={noteColor !== NoteColor.TRANSPARENT} // For internal styling of bubbles
+                            isColoredCard={noteColor !== NOTE_COLORS.TRANSPARENT} // For internal styling of bubbles
                             isTeacher={isTeacher}
                             disablePaste={disablePaste}
                             allowLinks={allowLinks} 

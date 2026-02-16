@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { QuizQuestion, Board } from '../../types';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
@@ -17,21 +16,21 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
             id: Math.random().toString(36).substr(2, 9),
             question: "New Question",
             options: ["Option 1", "Option 2", "Option 3", "Option 4"],
-            correct_answer: "Option 1",
+            correctAnswer: "Option 1",
             time_limit: 20
         };
-        onUpdateBoard({ quiz_questions: [...questions, newQ] });
+        onUpdateBoard({ quizQuestions: [...questions, newQ] });
         setEditingQuestion(newQ);
     };
 
     const updateQuestion = (q: QuizQuestion) => {
         const newQuestions = questions.map(exist => exist.id === q.id ? q : exist);
-        onUpdateBoard({ quiz_questions: newQuestions });
+        onUpdateBoard({ quizQuestions: newQuestions });
         setEditingQuestion(null);
     };
 
     const deleteQuestion = (id: string) => {
-        onUpdateBoard({ quiz_questions: questions.filter(q => q.id !== id) });
+        onUpdateBoard({ quizQuestions: questions.filter(q => q.id !== id) });
         if (editingQuestion?.id === id) setEditingQuestion(null);
     };
 
@@ -62,8 +61,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                     <input 
                                         type="radio" 
                                         name="correct"
-                                        checked={editingQuestion.correct_answer === opt} 
-                                        onChange={() => setEditingQuestion({...editingQuestion, correct_answer: opt})}
+                                        checked={editingQuestion.correctAnswer === opt} 
+                                        onChange={() => setEditingQuestion({...editingQuestion, correctAnswer: opt})}
                                         className="accent-green-500 w-4 h-4 cursor-pointer shrink-0"
                                     />
                                     <input 
@@ -73,7 +72,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                             newOpts[i] = e.target.value;
                                             setEditingQuestion({...editingQuestion, options: newOpts});
                                         }}
-                                        className={`flex-1 bg-[#111] border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-500 ${editingQuestion.correct_answer === opt ? 'border-green-500 text-green-400 font-bold' : 'border-white/10'}`}
+                                        className={`flex-1 bg-[#111] border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-500 ${editingQuestion.correctAnswer === opt ? 'border-green-500 text-green-400 font-bold' : 'border-white/10'}`}
                                     />
                                 </div>
                             ))}

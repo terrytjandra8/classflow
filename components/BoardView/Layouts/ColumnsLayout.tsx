@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { NoteCard } from '../../NoteCard/index';
 import { EditableInput } from '../../ui/EditableInput';
@@ -125,7 +124,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const handleAddRelative = useCallback((noteId: string, position: 'before' | 'after') => {
         const note = localNotes.find(n => n.id === noteId);
         if (note) {
-            openAddNote({ sectionId: note.sectionId, relativeId: note.id, position } as any);
+            openAddNote({ section_id: note.section_id, relativeId: note.id, position } as any);
         }
     }, [localNotes, openAddNote]);
 
@@ -155,17 +154,17 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         const type = dragTypeRef.current;
         if (!draggedId || type !== 'NOTE') return;
         
-        const sectionNotes = localNotes.filter(n => n.sectionId === sectionId);
+        const sectionNotes = localNotes.filter(n => n.section_id === sectionId);
         const newIndex = sectionNotes.findIndex(n => n.id === draggedId);
         const prevNote = newIndex > 0 ? sectionNotes[newIndex - 1] : null;
         const nextNote = newIndex < sectionNotes.length - 1 ? sectionNotes[newIndex + 1] : null;
         
         let newCreatedAt = Date.now();
-        if (prevNote && nextNote) newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
-        else if (prevNote) newCreatedAt = prevNote.createdAt - 60000; 
-        else if (nextNote) newCreatedAt = nextNote.createdAt + 60000; 
+        if (prevNote && nextNote) newCreatedAt = (new Date(prevNote.createdAt).getTime() + new Date(nextNote.createdAt).getTime()) / 2;
+        else if (prevNote) newCreatedAt = new Date(prevNote.createdAt).getTime() - 60000; 
+        else if (nextNote) newCreatedAt = new Date(nextNote.createdAt).getTime() + 60000; 
         
-        await updateNote(draggedId, { sectionId: sectionId, createdAt: newCreatedAt });
+        await updateNote(draggedId, { section_id: sectionId, createdAt: new Date(newCreatedAt).toISOString() });
 
         setDraggingId(null);
         setDraggingType(null);
@@ -178,7 +177,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const renderColumn = (section: Section, idx: number) => {
         if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
 
-        const sectionNotes = localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && idx === 0));
+        const sectionNotes = localNotes.filter((n: any) => n.section_id === section.id || (!n.section_id && idx === 0));
         const canAdd = canManageBoard || (!isLocked && !section.locked);
         const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
         const repliesOn = section.repliesEnabled !== undefined ? section.repliesEnabled : (board.repliesEnabled !== false);
@@ -227,7 +226,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     };
 
     const renderLayout = () => {
-        const elements = [];
+        const elements: any[] = [];
         let sectionCursor = 0;
 
         if (board.sectionGroups && board.sectionGroups.length > 0) {

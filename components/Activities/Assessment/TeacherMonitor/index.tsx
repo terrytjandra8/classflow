@@ -1,6 +1,5 @@
-
 import React, { useMemo, useState, useCallback } from 'react';
-import { AssessmentQuestion, Note, AssessmentConfig, NoteColor, Board } from '../../../../types';
+import { AssessmentQuestion, Note, AssessmentConfig, NoteColor, Board, UserRole, Participant } from '../../../../types';
 import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView } from '../AssessmentPrintView';
 import { mapNote } from '../../../../utils/mappers';
@@ -12,25 +11,10 @@ import { ParticipantsSection } from './ParticipantsSection';
 import { GradingModal } from './GradingModal';
 import { RetryModal } from './RetryModal';
 
-interface Participant {
-    id: string;
-    noteId: string | null;
-    name: string;
-    role: string;
-    violations: number;
-    score: number;
-    status: string;
-    progress: number;
-    disqualified: boolean;
-    hasLowWordCount: boolean;
-    data: any;
-    submittedAt: string;
-}
-
 interface ActiveStudent {
     id: string;
     user?: string;
-    role?: string;
+    role?: UserRole;
 }
 
 interface TeacherMonitorProps {
@@ -96,7 +80,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             });
         };
 
-        const rawParticipants = submissions.map(sub => {
+        const rawParticipants: Participant[] = submissions.map(sub => {
             let data = sub.connections as any; 
             if (Array.isArray(data)) {
                 data = {}; 
@@ -106,7 +90,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             const score = isDQ ? 0 : (data?.score || 0);
             const hasLowWordCount = checkWordCounts(data?.answers || {});
             
-            let status = 'In Progress';
+            let status: Participant['status'] = 'In Progress';
             if (isDQ) status = 'Disqualified';
             else if (data?.graded || data?.released) status = 'Graded';
             else if (data?.submitted) status = 'Submitted';
@@ -116,9 +100,9 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             const totalQuestions = questions.filter(q => q.type !== 'section').length || 1;
 
             return {
-                id: sub.author_id,
+                id: sub.author_id as string,
                 noteId: sub.id, 
-                name: sub.author_name,
+                name: sub.author_name as string,
                 role: sub.author_role || 'student',
                 violations: data?.violations || 0,
                 score: score,
@@ -127,7 +111,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 disqualified: isDQ,
                 hasLowWordCount: hasLowWordCount && !isDQ && data?.submitted,
                 data: data,
-                submittedAt: sub.created_at 
+                submittedAt: sub.created_at, 
+                lastActivity: new Date(sub.updated_at || sub.created_at).getTime()
             };
         });
 
@@ -156,14 +141,15 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 disqualified: false,
                 hasLowWordCount: false,
                 data: {},
-                submittedAt: new Date().toISOString()
+                submittedAt: new Date().toISOString(),
+                lastActivity: Date.now()
             }));
 
         const all: Participant[] = [...mappedSubmissions, ...pendingStudents];
 
         return {
             teachers: all.filter((p: Participant) => p.role === 'teacher'),
-            students: all.filter((p: Participant) => p.role !== 'teacher').sort((a: Participant, b: Participant) => a.name.localeCompare(b.name))
+            students: all.filter((p: Participant) => p.role !== 'teacher').sort((a: Participant, b: Participant) => (a.name || '').localeCompare(b.name || ''))
         };
     }, [submissions, questions, activeStudents]); 
 
@@ -227,7 +213,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             submitted: false,
             graded: false,
             released: false,
-            retryQuestions: [] 
+            retry_questions: [] 
         };
 
         setSubmissions(prev => prev.map(sub => 
@@ -264,7 +250,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                     submitted: false,
                     graded: false,
                     released: false,
-                    retryQuestions: [] 
+                    retry_questions: [] 
                 };
                 return {
                     ...sub,
@@ -284,7 +270,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                     submitted: false,
                     graded: false,
                     released: false,
-                    retryQuestions: [] 
+                    retry_questions: [] 
                 };
                 return supabase.from('notes').update({
                     connections: updatedData,
@@ -312,7 +298,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             disqualified: false,
             graded: false,
             released: false,
-            retryQuestions: []
+            retry_questions: []
         };
 
         setSubmissions(prev => prev.map(sub => 
@@ -389,8 +375,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             graded: true, 
             submitted: true,
             ...(updatedAnswers && { answers: updatedAnswers }),
-            ...(retryQuestions && { retryQuestions }),
-            ...(teacherOverrides && { teacherOverrides })
+            ...(retryQuestions && { retry_questions: retryQuestions }),
+            ...(teacherOverrides && { teacher_overrides: teacherOverrides })
         };
 
         const { error } = await supabase.from('notes').update({ 
@@ -468,7 +454,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const handlePrintMaster = (withKey: boolean) => {
         setPrintKeyMode(withKey);
         setPrintWithFeedback(false);
-        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: 0, hasLowWordCount: false, progress: 1, score: 100, noteId: null, submittedAt: new Date().toISOString(), data: { answers: {} } }]);
+        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: 0, hasLowWordCount: false, progress: 1, score: 100, noteId: null, submittedAt: new Date().toISOString(), data: { answers: {} }, lastActivity: Date.now() }]);
     };
 
     return (

@@ -5,7 +5,7 @@ import { NoteColor, NoteType, Note } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { RichTextEditor } from './RichTextEditor';
 import { DrawingCanvas } from './ui/DrawingCanvas';
-import { getColorName } from '../utils/theme';
+import { getColorName, NOTE_COLORS } from '../utils/theme';
 import { useBoard } from './BoardView/BoardContext'; // Import context
 import { usePasteProtection } from '../hooks/useSecurity'; // Import security hook
 
@@ -18,11 +18,11 @@ interface CreateNoteModalProps {
   disablePaste?: boolean; 
   allowLinks?: boolean; 
   isStudent?: boolean; 
-  noteToEdit?: Note | null; 
+  noteToEdit?: Note | null;
 }
 
 // Exclude transparent from user selection
-const COLORS = Object.values(NoteColor).filter(c => c !== NoteColor.TRANSPARENT);
+const COLORS = Object.values(NOTE_COLORS).filter(c => c !== NOTE_COLORS.TRANSPARENT);
 
 // --- Sub-Components (Memoized) ---
 
@@ -90,7 +90,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   // Random color from solid colors only - Safely initialized
   const [selectedColor, setSelectedColor] = useState<NoteColor>(() => {
       if (COLORS.length > 0) return COLORS[Math.floor(Math.random() * COLORS.length)];
-      return NoteColor.YELLOW; // Fallback
+      return NOTE_COLORS.YELLOW; // Fallback
   });
   
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -133,7 +133,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           }
       };
       if (isOpen && !isEditing) fetchIdentity(); // Only fetch if creating new
-      if (isOpen && isEditing && noteToEdit) setAuthor(noteToEdit.author); // Preserve author on edit
+      if (isOpen && isEditing && noteToEdit) setAuthor(noteToEdit.author);
   }, [isOpen, defaultAuthor, isEditing, noteToEdit]);
 
   useEffect(() => {
@@ -145,7 +145,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           // Pre-fill for Editing
           setTitle(noteToEdit.title || '');
           setContent(noteToEdit.content || '');
-          setSelectedColor(noteToEdit.color);
+          setSelectedColor(noteToEdit.color as NoteColor);
           
           if (noteToEdit.type === 'image') {
               setActiveMode('image');
@@ -174,9 +174,9 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           setActiveMode('text');
           // Pick a random solid color for new notes
           if (COLORS.length > 0) {
-              setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)]);
+              setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)] as NoteColor);
           } else {
-              setSelectedColor(NoteColor.YELLOW);
+              setSelectedColor(NOTE_COLORS.YELLOW as NoteColor);
           }
       }
     } else {
@@ -466,7 +466,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                             width={600}
                             height={300}
                             className="w-full h-full"
-                            strokeColor={selectedColor === NoteColor.TRANSPARENT ? '#ffffff' : '#000000'}
+                            strokeColor={selectedColor === NOTE_COLORS.TRANSPARENT ? '#ffffff' : '#000000'}
                         />
                     </div>
                 )}
@@ -515,10 +515,10 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                     <div className="flex flex-wrap gap-2 justify-start py-3">
                         {COLORS.map(color => (
                             <ColorOrb 
-                                key={color} 
-                                color={color} 
+                                key={color}
+                                color={color as NoteColor}
                                 selected={selectedColor === color} 
-                                onClick={() => setSelectedColor(color)} 
+                                onClick={() => setSelectedColor(color as NoteColor)} 
                             />
                         ))}
                     </div>

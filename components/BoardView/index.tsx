@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Board, Note, LockMode } from '../../types';
+import { Board, Note, LockMode, Section } from '../../types';
 import { useBoardData } from './logic/useBoardData';
 import { useNoteActions } from '../../hooks/useNoteActions';
 import { BoardLayout } from './Board';
@@ -187,8 +187,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         });
     }, [notes, board.sort_order, board.sections, canManageBoard]);
 
-    const backgroundStyle = resolveBackgroundStyle(board.wallpaper, theme);
-    const fontClass = board.font === 'serif' ? 'font-serif' : board.font === 'mono' ? 'font-mono' : board.font === 'hand' ? 'font-hand' : 'font-sans';
+    const backgroundStyle = resolveBackgroundStyle(board.wallpaper || 'default', theme);
+    const fontClass = board.font || 'font-sans';
 
     const openAddNoteModal = useCallback((location?: string | { x: number; y: number; section_id?: string }) => {
         if (isPresentationMode) return;
@@ -227,7 +227,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         window.open(url, 'ClassBoardProjector', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no');
     }, [board.id]);
 
-    const getEffectiveSections = useCallback(() => {
+    const getEffectiveSections = useCallback((): Section[] => {
         if (board.sections && board.sections.length > 0) return board.sections;
         return [{ 
             id: 'default', 
@@ -238,7 +238,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
             is_anonymous: false,
             comments_enabled: true,
             replies_enabled: true,
-            students_can_drag: false
+            students_can_drag: false,
+            is_published: true,
         }];
     }, [board.sections]);
 
@@ -325,8 +326,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         openSettings: () => setIsSettingsOpen(true),
         openShare: () => setIsShareModalOpen(true),
         openBoardAnalysis: () => {}, 
-        isSimulatingStudent,
-        toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
+        isSimulating: isSimulatingStudent,
+        toggleSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
         isAiLoading: false,
         summarize: () => {},
         backgroundStyle,
@@ -399,7 +400,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                 >
-                    <ViewComponent {...commonProps} />
+                    <ViewComponent {...commonProps as any} />
                     
                     <BoardOverlays 
                         board={board} 

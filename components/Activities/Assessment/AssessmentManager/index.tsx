@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Board, Note, AssessmentConfig, AssessmentState } from '../../../../types';
 import { Editor } from '../Editor';
@@ -176,7 +175,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
-                    className={board.target_grade}
+                    className={board.targetGrade}
                     onAfterPrint={() => setIsPrinting(false)}
                 />
             )}
@@ -186,10 +185,10 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                 status={effectiveStatus}
                 timeLeft={timeLeft}
                 config={config}
-                isPublished={!!board.is_published}
+                isPublished={!!board.isPublished}
                 onBack={onBack}
                 onTransition={handleTransition}
-                onTogglePublish={() => onUpdateBoard({ is_published: !board.is_published })}
+                onTogglePublish={() => onUpdateBoard({ isPublished: !board.isPublished })}
                 view={view}
                 setView={setViewWithPersistence}
                 onPreview={() => setIsPreviewMode(true)}
@@ -197,8 +196,8 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                 onOpenShare={onOpenShare}
                 onPrint={() => setIsPrinting(true)}
                 classList={classList}
-                currentClass={board.target_grade}
-                onUpdateClass={(cls) => onUpdateBoard({ target_grade: cls })}
+                currentClass={board.targetGrade}
+                onUpdateClass={(cls) => onUpdateBoard({ targetGrade: cls })}
             />
 
             <div className="flex-1 overflow-hidden no-print">
@@ -214,7 +213,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                         onUpdateConfig={(newConfig) => {
                             onUpdateBoard({ assessmentConfig: { ...config, ...newConfig } });
                         }}
-                        className={board.target_grade}
+                        className={board.targetGrade}
                         onForceRefresh={() => {}}
                     />
                 )}

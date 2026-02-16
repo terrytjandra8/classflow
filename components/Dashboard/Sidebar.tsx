@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Search, Hash, Clock, User, Trash2, Heart, Database, Quote, Folder, GripVertical, Globe, ShieldCheck } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
@@ -81,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <nav className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-2">
                 {/* Default Categories */}
-                {(['recents', 'made_by_me', 'favourites', 'trashed'] as const).map(f => (
+                {(['recents', 'madeByMe', 'favourites', 'trashed'] as const).map(f => (
                     <button 
                         key={f}
                         onClick={() => setSidebarFilter(f)} 
@@ -92,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }`}
                     >
                         {f === 'recents' && <Clock size={16} />}
-                        {f === 'made_by_me' && <User size={16} />}
+                        {f === 'madeByMe' && <User size={16} />}
                         {f === 'favourites' && <Heart size={16} />}
                         {f === 'trashed' && <Trash2 size={16} />}
                         <span className="hidden md:inline capitalize">{f === 'trashed' ? 'My Trash' : f.replace(/_/g, ' ')}</span>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Board, Note } from '../../types';
 import { Volume2, VolumeX, ArrowLeft, MonitorPlay } from 'lucide-react';
@@ -113,7 +112,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                         </button>
                         <div className="flex items-center gap-2">
                             <h2 className="font-bold text-lg text-purple-400">Live Quiz</h2>
-                            {board.is_published && (
+                            {board.isPublished && (
                                 <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded border border-green-500/30 animate-pulse flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
                                 </span>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { NoteCard } from '../../NoteCard/index';
@@ -14,7 +13,7 @@ export const StreamLayout: React.FC<any> = () => {
     const canAdd = canManageBoard || !isLocked;
     
     const displayNotes = sectionIdFilter 
-        ? notes.filter(n => n.sectionId === sectionIdFilter)
+        ? notes.filter(n => n.section_id === sectionIdFilter)
         : notes;
 
     return (

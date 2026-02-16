@@ -1,22 +1,11 @@
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { AssessmentQuestion, Board, AssessmentConfig } from '../../../../types';
+import { AssessmentQuestion, Board, AssessmentConfig, SubmissionData } from '../../../../types';
 import { useFocusMode } from '../../../../hooks/useFocusMode';
 import { supabase } from '../../../../services/supabaseClient';
 import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
 import { Cloud, Loader2, AlertCircle } from 'lucide-react';
-
-interface SubmissionData {
-    answers: Record<string, string>;
-    violations?: number;
-    score?: number;
-    submitted?: boolean;
-    disqualified?: boolean;
-    retryQuestions?: string[];
-    released?: boolean;
-}
 
 interface BackupData extends SubmissionData {
     timestamp: number;
@@ -58,7 +47,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return () => clearInterval(interval);
     }, []);
 
-    const isTimeExpired = board.autoLockTime ? now >= board.autoLockTime : false;
+    const isTimeExpired = board.auto_lock_time ? now >= board.auto_lock_time : false;
     const isClosed = config.status === 'finished' || isTimeExpired;
 
     const isReadingMode = config.status === 'reading' && !isTimeExpired;
@@ -94,7 +83,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             });
         }
         
-        const existingRetries = submissionData?.retryQuestions || [];
+        const existingRetries = submissionData?.retry_questions || [];
 
         const newSubmissionData: SubmissionData = {
             ...submissionData,
@@ -103,7 +92,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             score: autoScore,
             submitted: isFinalSubmit || disqualified, 
             disqualified: disqualified,
-            retryQuestions: existingRetries
+            retry_questions: existingRetries
         };
 
         const payload = {
@@ -161,14 +150,15 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
         let finalAnswers: Record<string, string> = {};
         let finalViolations = 0;
-        let finalData: SubmissionData = {};
+        let finalData: SubmissionData = { answers: {} };
 
         if (data) {
             submissionIdRef.current = data.id;
             
             if (data.connections) {
                 const submission = data.connections as SubmissionData;
-                finalData = Array.isArray(submission) ? {} : submission;
+                const loadedData = Array.isArray(submission) ? { answers: {} } : submission;
+                finalData = { answers: {}, ...loadedData };
                 
                 if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
                     setSubmissionData(finalData);
@@ -176,7 +166,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     answersRef.current = finalData.answers || {};
                     setViolationCount(finalData.violations || 0);
                     
-                    const retries = finalData.retryQuestions || [];
+                    const retries = finalData.retry_questions || [];
                     setRetryQuestions(retries);
 
                     if (retries.length > 0) {

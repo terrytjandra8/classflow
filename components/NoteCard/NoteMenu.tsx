@@ -1,9 +1,8 @@
-
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Edit3, Palette, Pin, ArrowUp, ArrowDown, Link as LinkIcon, Layers, MoveUp, MoveDown, Check, CameraOff } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
-import { getColorName } from '../../utils/theme';
+import { getColorName, NOTE_COLORS } from '../../utils/theme';
 import { supabase } from '../../services/supabaseClient';
 
 interface NoteMenuProps {
@@ -87,7 +86,7 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
     };
 
     const handleToggleWatermark = async () => {
-        const newValue = !note.isWatermarked;
+        const newValue = !note.is_watermarked;
         await supabase.from('notes').update({ is_watermarked: newValue }).eq('id', note.id);
         onClose();
     };
@@ -117,7 +116,7 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                                 <Palette size={10} /> Color
                             </div>
                             <div className="flex flex-wrap gap-1.5 justify-start w-full">
-                                {Object.values(NoteColor).filter(c => c !== NoteColor.TRANSPARENT).map((color) => (
+                                {Object.values(NOTE_COLORS).filter(c => c !== NOTE_COLORS.TRANSPARENT).map((color) => (
                                     <div key={color} className="group relative flex flex-col items-center">
                                         {/* Styled Tooltip on Hover */}
                                         <div className="absolute -top-10 z-50 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap">
@@ -129,7 +128,7 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                                         </div>
 
                                         <button
-                                            onClick={() => onColorChange(color)}
+                                            onClick={() => onColorChange(color as NoteColor)}
                                             className={`
                                                 w-6 h-6 rounded-full border border-white/10 transition-all duration-200 relative shrink-0
                                                 ${color} 
@@ -163,8 +162,8 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                                 onClick={handleToggleWatermark}
                                 className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/10 rounded-lg flex items-center gap-2 transition-colors"
                             >
-                                <CameraOff size={14} className={note.isWatermarked ? "text-yellow-500" : ""} /> 
-                                {note.isWatermarked ? 'Remove Watermark' : 'Apply Watermark'}
+                                <CameraOff size={14} className={note.is_watermarked ? "text-yellow-500" : ""} /> 
+                                {note.is_watermarked ? 'Remove Watermark' : 'Apply Watermark'}
                             </button>
                         )}
 
@@ -222,7 +221,7 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                                 onClick={() => { onPin(note.id); onClose(); }}
                                 className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/10 rounded-lg flex items-center gap-2 transition-colors"
                             >
-                                <Pin size={14} className={note.isPinned ? "fill-white" : ""} /> {note.isPinned ? 'Unpin post' : 'Pin post'}
+                                <Pin size={14} className={note.is_pinned ? "fill-white" : ""} /> {note.is_pinned ? 'Unpin post' : 'Pin post'}
                             </button>
                         )}
                     </>

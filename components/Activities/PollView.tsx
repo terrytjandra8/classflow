@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Board, Note } from '../../types';
 import { BarChart2, Cloud, RefreshCw, Send, Check, Settings, Plus, X, MonitorPlay, Minimize2, Radio, EyeOff, ChevronRight, ChevronLeft, Trash2, Users, ChevronDown, Share2, Edit2, ArrowLeft } from 'lucide-react';

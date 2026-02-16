@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Board, Note, ColumnAnalyticsData } from '../../types';
 import { BoardSettingsDrawer } from '../BoardSettingsDrawer';
@@ -79,7 +78,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                          </div>
                      </div>
                      <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161616] flex items-center justify-between">
-                         <button onClick={() => { setIsGuideOpen(false); onUpdateBoard({ guide_dismissed: true }); }} className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-white font-medium">Don't show again</button>
+                         <button onClick={() => { setIsGuideOpen(false); onUpdateBoard({ guideDismissed: true }); }} className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-white font-medium">Don't show again</button>
                          <button onClick={() => setIsGuideOpen(false)} className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-full font-bold text-sm transition-colors">Done</button>
                      </div>
                  </div>
@@ -106,8 +105,8 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                 onSubmit={onAddNote}
                 initialImage={pendingPasteImage}
                 defaultAuthor={username}
-                disablePaste={board.disable_paste}
-                allowLinks={board.allow_links}
+                disablePaste={board.disablePaste}
+                allowLinks={board.allowLinks}
                 isStudent={isStudent}
                 noteToEdit={editingNote}
             />

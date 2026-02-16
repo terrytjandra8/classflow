@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AssessmentQuestion } from '../../../types';
@@ -15,13 +14,13 @@ interface GradingInfo {
   is_correct?: boolean;
 }
 
-interface PrintViewParticipant {
+export interface PrintViewParticipant {
     id?: string;
-    name: string;
+    name?: string;
     score?: number;
     data: {
         answers: Record<string, Answer>;
-        grading?: Record<string, GradingInfo>;
+        grading?: Record<string, GradingInfo | null>;
     };
 }
 
@@ -30,19 +29,19 @@ interface AssessmentPrintViewProps {
     questions: AssessmentQuestion[];
     ipekaLogoUrl: string;
     ibLogoUrl: string;
-    className?: string; 
+    className?: string;
     onAfterPrint: () => void;
-    showAnswerKey?: boolean; 
+    showAnswerKey?: boolean;
     includeFeedback?: boolean;
 }
 
-export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({ 
-    participants, 
-    questions, 
-    ipekaLogoUrl, 
-    ibLogoUrl, 
-    className, 
-    onAfterPrint, 
+export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
+    participants,
+    questions,
+    ipekaLogoUrl,
+    ibLogoUrl,
+    className,
+    onAfterPrint,
     showAnswerKey = false,
     includeFeedback = true
 }) => {
@@ -68,7 +67,7 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
     return createPortal(
         <div id="assessment-print-view">
             <PrintStyles />
-            
+
             {participants.map((participant, pIndex) => {
                 const isRealStudent = !!participant.id && participant.id !== 'master-copy';
                 const isMasterKey = !isRealStudent && showAnswerKey;
@@ -76,14 +75,14 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
 
                 return (
                     <div key={participant.id || pIndex} className="print-student-container">
-                        <PrintHeader 
+                        <PrintHeader
                             ipekaLogoUrl={ipekaLogoUrl}
                             ibLogoUrl={ibLogoUrl}
                             isMasterKey={isMasterKey}
                             isRealStudent={isRealStudent}
-                            participantName={participant.name}
-                            className={className}
-                            score={participant.score}
+                            participantName={participant.name || ''}
+                            className={className || ''}
+                            score={participant.score || 0}
                             totalPoints={totalPoints}
                         />
 
@@ -98,12 +97,12 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
                                 const gradeInfo = participant.data?.grading?.[q.id];
 
                                 return (
-                                    <PrintQuestion 
+                                    <PrintQuestion
                                         key={q.id}
                                         q={q}
                                         qNum={qNum}
-                                        answer={answer}
-                                        gradeInfo={gradeInfo}
+                                        answer={String(answer ?? '')}
+                                        gradeInfo={gradeInfo ?? null}
                                         isMasterKey={isMasterKey}
                                         isRealStudent={isRealStudent}
                                         isBlankCopy={isBlankCopy}
