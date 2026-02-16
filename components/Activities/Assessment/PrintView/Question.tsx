@@ -17,8 +17,8 @@ interface PrintQuestionProps {
 export const PrintQuestion: React.FC<PrintQuestionProps> = ({
     q, qNum, answer, gradeInfo, isMasterKey, isRealStudent, isBlankCopy, includeFeedback = true
 }) => {
-    const isMCQ = q.type === 'mcq';
-    const obtained = gradeInfo?.score !== undefined ? gradeInfo.score : (isMCQ && answer === q.correctAnswer ? q.points : 0);
+    const isMCQ = q.type === 'mcq' || q.type === 'multiple_choice';
+    const obtained = gradeInfo?.score !== undefined ? gradeInfo.score : (isMCQ && answer === q.answer ? q.points : 0);
 
     const isImageAnswer = (text: string) => {
         return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
@@ -26,13 +26,12 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
 
     return (
         <div className="question-block">
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
                     <span style={{ fontWeight: 'bold', marginRight: '8px', fontSize: '11pt' }}>{qNum}.</span>
                     <div 
                         className="rich-text-content"
-                        dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} 
+                        dangerouslySetInnerHTML={{ __html: parseMath(q.question) }} 
                     />
                 </div>
                 <div style={{ fontSize: '10pt', fontWeight: 'bold', border: '1px solid black', padding: '2px 8px', borderRadius: '4px', height: 'fit-content', whiteSpace: 'nowrap', marginLeft: '10px' }}>
@@ -40,14 +39,13 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
                 </div>
             </div>
 
-            {/* Content */}
             <div style={{ paddingLeft: '20px' }}>
                 {isMCQ ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {q.options?.map((opt, optIdx) => {
                             const idxStr = optIdx.toString();
                             const isSelected = answer === idxStr;
-                            const isCorrectOption = q.correctAnswer === idxStr;
+                            const isCorrectOption = q.answer === idxStr;
                             
                             const shouldMarkCorrect = !isBlankCopy && ((isMasterKey && isCorrectOption) || (isRealStudent && isCorrectOption && isSelected));
                             const shouldMarkWrong = !isBlankCopy && (isRealStudent && isSelected && !isCorrectOption);
@@ -100,7 +98,6 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
                     </div>
                 )}
                 
-                {/* Feedback Section - Renders for both MCQ and Essay if available */}
                 {isRealStudent && includeFeedback && gradeInfo?.feedback && (
                     <div style={{ marginTop: '8px', paddingLeft: '8px', borderLeft: '2px solid black', fontSize: '10pt', paddingTop: '2px', paddingBottom: '2px' }}>
                         <strong>Feedback:</strong> <span dangerouslySetInnerHTML={{ __html: gradeInfo.feedback }} />

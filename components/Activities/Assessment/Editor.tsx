@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AssessmentQuestion, Board } from '../../../types';
+import { AssessmentQuestion, Board, AssessmentQuestionType } from '../../../types';
 import { Plus, Trash2, CheckCircle, Type, List, Save, X, Layout, GripVertical, AlignLeft, Bold, Italic, List as ListIcon, Calculator, AlertCircle, PenTool, Image } from 'lucide-react';
 import { useSortableList } from '../../../src/logic/dnd/useSortableList';
 import { RichTextEditor } from '../../RichTextEditor';
@@ -12,12 +12,9 @@ interface EditorProps {
     onUpdateBoard: (updates: Partial<Board>) => void;
 }
 
-// --- Helper Components for Performance ---
-
 const DebouncedRichTextEditor = ({ value, onChange, className, placeholder }: any) => {
     const [localValue, setLocalValue] = useState(value);
     
-    // Fix: Sync local state when external value changes (e.g. switching questions)
     useEffect(() => {
         setLocalValue(value);
     }, [value]);
@@ -70,12 +67,9 @@ const DebouncedRichTextEditor = ({ value, onChange, className, placeholder }: an
     );
 };
 
-// --- Main Component ---
-
 export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    // Drag and Drop Logic
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
         onReorder: (newItems: any) => {
@@ -83,7 +77,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         }
     });
 
-    // Calculate Totals
     const { totalMarks, sectionScores } = useMemo(() => {
         let total = 0;
         const sScores: Record<string, number> = {};
@@ -105,16 +98,16 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         return { totalMarks: total, sectionScores: sScores };
     }, [questions]);
 
-    const addQuestion = (type: 'mcq' | 'essay' | 'section') => {
+    const addQuestion = (type: AssessmentQuestionType) => {
         const newQ: AssessmentQuestion = {
             id: Math.random().toString(36).substr(2, 9),
             type,
-            text: type === 'section' ? 'New Section' : (type === 'mcq' ? 'New Multiple Choice Question' : 'New Essay Question'),
-            options: type === 'mcq' ? ['Option 1', 'Option 2', 'Option 3', 'Option 4'] : undefined,
-            correctAnswer: type === 'mcq' ? '0' : undefined,
+            question: type === 'section' ? 'New Section' : (type === 'mcq' ? 'New Multiple Choice Question' : 'New Essay Question'),
+            options: type === 'mcq' ? ['Option 1', 'Option 2', 'Option 3', 'Option 4'] : [],
+            answer: type === 'mcq' ? '0' : '',
             points: type === 'section' ? 0 : (type === 'mcq' ? 1 : 5),
             minWords: type === 'essay' ? 0 : undefined,
-            responseType: 'text' // Default
+            responseType: 'text'
         };
         const newQuestions = [...questions, newQ];
         onUpdateBoard({ assessmentQuestions: newQuestions });
@@ -132,16 +125,13 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         if (editingId === id) setEditingId(null);
     };
 
-    // Calculate dynamic question number (skipping sections)
     const getQuestionNumber = (index: number) => {
         return questions.filter((q, i) => i <= index && q.type !== 'section').length;
     };
 
     return (
         <div className="flex h-full bg-[#111] overflow-hidden">
-            {/* Sidebar List */}
             <div className="w-80 bg-[#161616] border-r border-white/10 flex flex-col shrink-0">
-                {/* Header Stats */}
                 <div className="p-4 border-b border-white/10 bg-[#1a1a1a] flex justify-between items-center">
                     <h3 className="font-bold text-gray-300 text-xs uppercase tracking-wider">Structure</h3>
                     <div className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs font-bold border border-blue-500/30 flex items-center gap-1">
@@ -203,7 +193,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                 </div>
                                 <div 
                                     className={`text-xs truncate ml-6 pr-2 leading-relaxed ${isSection ? 'font-bold text-yellow-100 uppercase tracking-wide' : 'text-gray-300'}`}
-                                    dangerouslySetInnerHTML={{ __html: parseMath(q.text) }}
+                                    dangerouslySetInnerHTML={{ __html: parseMath(q.question) }}
                                 />
                             </div>
                         );
@@ -229,7 +219,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                 </div>
             </div>
 
-            {/* Main Editor */}
             <div className="flex-1 bg-[#111] p-6 md:p-10 overflow-y-auto">
                 {editingId ? (() => {
                     const q = questions.find(qu => qu.id === editingId);
@@ -239,7 +228,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                     return (
                         <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             
-                            {/* Editor Header */}
                             <div className="flex justify-between items-center mb-2">
                                 <h2 className={`text-xl font-bold flex items-center gap-3 ${isSection ? 'text-yellow-500' : 'text-white'}`}>
                                     <div className={`p-2 rounded-lg ${isSection ? 'bg-yellow-500/20' : (q.type === 'mcq' ? 'bg-blue-500/20' : 'bg-purple-500/20')}`}>
@@ -253,7 +241,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                             </div>
 
                             <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 shadow-xl space-y-6">
-                                {/* Prompt Input */}
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex justify-between">
                                         {isSection ? 'Section Title' : 'Question Prompt'}
@@ -262,16 +249,16 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     {isSection ? (
                                         <DebouncedInput 
                                             key={q.id}
-                                            value={q.text}
-                                            onChange={(val: string) => updateQuestion(q.id, { text: val })}
+                                            value={q.question}
+                                            onChange={(val: string) => updateQuestion(q.id, { question: val })}
                                             className="w-full bg-[#111] border border-white/10 rounded-xl p-4 text-white outline-none focus:border-yellow-500 text-2xl font-bold placeholder-gray-600 transition-colors"
                                             placeholder="e.g. Part A: Multiple Choice"
                                         />
                                     ) : (
                                         <DebouncedRichTextEditor 
                                             key={q.id}
-                                            value={q.text}
-                                            onChange={(val: string) => updateQuestion(q.id, { text: val })}
+                                            value={q.question}
+                                            onChange={(val: string) => updateQuestion(q.id, { question: val })}
                                             className="w-full bg-[#111] border border-white/10 rounded-xl p-4 text-white focus-within:border-blue-500 transition-colors min-h-[120px]"
                                             placeholder="Type your question here. Use ($Y_{FE}$) for subscript and ($X^{2}$) for superscript."
                                         />
@@ -294,7 +281,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                             </div>
                                         </div>
 
-                                        {/* Essay Specific Options */}
                                         {q.type === 'essay' && (
                                             <div className="space-y-4">
                                                 <div className="space-y-2">
@@ -318,7 +304,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     <div className="flex gap-1 bg-[#222] p-1 rounded-lg">
                                                         <button 
                                                             onClick={() => updateQuestion(q.id, { responseType: 'text' })}
-                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.responseType === 'text' || (!q.responseType && !q.allowDrawing) ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.responseType === 'text' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
                                                         >
                                                             <Type size={12} /> Text
                                                         </button>
@@ -330,7 +316,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                         </button>
                                                         <button 
                                                             onClick={() => updateQuestion(q.id, { responseType: 'both' })}
-                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${(q.responseType === 'both' || q.allowDrawing) && q.responseType !== 'drawing' && q.responseType !== 'text' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.responseType === 'both' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
                                                         >
                                                             <Image size={12} /> Both
                                                         </button>
@@ -341,7 +327,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     </div>
                                 )}
 
-                                {q.type === 'mcq' && (
+                                {(q.type === 'mcq' || q.type === 'multiple_choice') && (
                                     <div className="space-y-4 pt-2">
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                             <span>Answer Options</span>
@@ -351,8 +337,8 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                             {q.options?.map((opt, idx) => (
                                                 <div key={idx} className="flex items-center gap-3 group relative">
                                                     <button 
-                                                        onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })}
-                                                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}
+                                                        onClick={() => updateQuestion(q.id, { answer: idx.toString() })}
+                                                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${q.answer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}
                                                     >
                                                         <CheckCircle size={16}/>
                                                     </button>
@@ -364,7 +350,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                             newOpts[idx] = val;
                                                             updateQuestion(q.id, { options: newOpts });
                                                         }}
-                                                        className={`flex-1 bg-[#111] border rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'}`}
+                                                        className={`flex-1 bg-[#111] border rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors ${q.answer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'}`}
                                                     />
                                                     <button 
                                                         onClick={() => {

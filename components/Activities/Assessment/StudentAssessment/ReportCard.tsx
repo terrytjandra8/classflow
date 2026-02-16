@@ -22,7 +22,6 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     const { username } = useBoard();
     const [isPrinting, setIsPrinting] = useState(false);
     
-    // Logos for print
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
     const ibLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/IB.png').data.publicUrl;
 
@@ -53,7 +52,6 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 </div>
             )}
 
-            {/* Print Portal */}
             {isPrinting && (
                 <AssessmentPrintView 
                     participants={[{
@@ -65,13 +63,12 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
-                    className={board.targetGrade}
+                    className={board.target_grade}
                     onAfterPrint={() => setIsPrinting(false)}
                 />
             )}
 
             <div className="max-w-4xl mx-auto space-y-8 pb-20">
-                {/* Header Controls */}
                 <div className="flex justify-between items-center pt-4">
                         <button 
                         onClick={onReturnHome}
@@ -87,7 +84,6 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     </button>
                 </div>
 
-                {/* Standard Web View Header */}
                 <div className="text-center space-y-4 pt-4 border-b border-white/10 pb-8">
                     <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-black shadow-lg">
                         <CheckCircle size={40} />
@@ -99,20 +95,17 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     <p className="text-gray-400">Assessment Graded & Released</p>
                 </div>
 
-                {/* Questions Loop */}
                 {questions.map((q, idx) => {
-                    // SECTION HEADER
                     if (q.type === 'section') {
-                        return <h3 key={q.id} className="text-xl font-bold border-b border-white/10 pb-2 mt-8 text-yellow-500 uppercase">{q.text}</h3>;
+                        return <h3 key={q.id} className="text-xl font-bold border-b border-white/10 pb-2 mt-8 text-yellow-500 uppercase">{q.question}</h3>;
                     }
 
                     const grading = submissionData?.grading?.[q.id];
-                    const score = grading?.score ?? (q.type === 'mcq' && q.correctAnswer === answers[q.id] ? q.points : 0);
+                    const score = grading?.score ?? ((q.type === 'mcq' || q.type === 'multiple_choice') && q.answer === answers[q.id] ? q.points : 0);
                     const feedback = grading?.feedback;
                     const answer = answers[q.id];
                     const qNum = questions.filter((item, i) => i <= idx && item.type !== 'section').length;
 
-                    // STANDARD QUESTION CARD
                     return (
                         <div key={q.id} className="bg-[#1a1a1a] rounded-xl border border-white/10 overflow-hidden">
                             <div className="p-4 bg-[#222] border-b border-white/5 flex justify-between items-center">
@@ -124,15 +117,15 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                             <div className="p-6 space-y-4">
                                 <div 
                                     className="font-medium text-lg rich-text-content"
-                                    dangerouslySetInnerHTML={{ __html: parseMath(q.text) }}
+                                    dangerouslySetInnerHTML={{ __html: parseMath(q.question) }}
                                 />
                                 <div className="bg-black/30 p-4 rounded-lg border border-white/5">
                                     <span className="block text-xs font-bold text-gray-500 uppercase mb-2">Your Answer</span>
-                                    {q.type === 'mcq' ? (
+                                    {(q.type === 'mcq' || q.type === 'multiple_choice') ? (
                                         <div className="text-gray-300">
                                             {q.options && answer ? q.options[parseInt(answer)] : <span className="italic text-gray-500">No Answer</span>}
-                                            {q.type === 'mcq' && q.correctAnswer && (
-                                                <span className="ml-2 text-xs text-gray-500">(Correct: {q.options?.[parseInt(q.correctAnswer)]})</span>
+                                            {q.answer && (
+                                                <span className="ml-2 text-xs text-gray-500">(Correct: {q.options?.[parseInt(q.answer)]})</span>
                                             )}
                                         </div>
                                     ) : (
@@ -144,7 +137,6 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                                     )}
                                 </div>
 
-                                {/* Teacher Feedback Section */}
                                 {feedback && (
                                     <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg flex gap-3 animate-in fade-in slide-in-from-top-2">
                                         <MessageSquare size={18} className="text-blue-400 shrink-0 mt-1" />

@@ -22,7 +22,7 @@ interface ActiveTestProps {
     onExitPreview?: () => void;
     isReadingMode: boolean;
     isPracticeMode?: boolean;
-    retryQuestions?: string[]; // New prop for revision mode
+    retryQuestions?: string[];
 }
 
 const formatTime = (seconds: number) => {
@@ -31,7 +31,6 @@ const formatTime = (seconds: number) => {
     return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-// --- MEMOIZED QUESTION COMPONENT FOR PERFORMANCE ---
 const QuestionItem = memo(({ 
     q, idx, answer, onAnswerChange, isReadingMode, allowInteractions, setActiveDrawingQId, questionNumber, isReadOnly
 }: {
@@ -45,30 +44,26 @@ const QuestionItem = memo(({
     questionNumber: number;
     isReadOnly: boolean;
 }) => {
-    // Section Header Logic
+
     if (q.type === 'section') {
         return (
             <div className="pt-8 pb-2 border-b border-white/10 mb-4">
-                <h3 className="text-2xl font-bold text-white uppercase tracking-tight">{q.text}</h3>
+                <h3 className="text-2xl font-bold text-white uppercase tracking-tight">{q.question}</h3>
             </div>
         );
     }
 
-    // Question Card Logic
     const isEssay = q.type === 'essay';
     const isDrawing = isEssay && answer && answer.startsWith('http');
     
-    // SPAM CHECK LOGIC
     const wc = isEssay && !isDrawing ? countQualityWords(answer || '') : 0;
     const rawWc = isEssay && !isDrawing ? (answer || '').trim().split(/\s+/).filter(w => w.length > 0).length : 0;
-    const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5); // If >5 garbage words detected
+    const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5);
     
     const isUnderWordLimit = isEssay && q.minWords && wc < q.minWords && !isDrawing;
     
-    // Parse Math Symbols in Question Text
-    const renderedText = parseMath(q.text);
+    const renderedText = parseMath(q.question);
 
-    // Response Capability Logic
     const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
@@ -85,7 +80,7 @@ const QuestionItem = memo(({
                 dangerouslySetInnerHTML={{ __html: renderedText }}
             />
 
-            {q.type === 'mcq' && (
+            {(q.type === 'mcq' || q.type === 'multiple_choice') && (
                 <div className="space-y-3">
                     {q.options?.map((opt, optIdx) => (
                         <label 
@@ -184,7 +179,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
 
-    // In Practice Mode, we relax security restrictions
     const allowInteractions = !!isPracticeMode;
     const isRevision = retryQuestions && retryQuestions.length > 0;
 
@@ -210,7 +204,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
             
-            // FORCE IMMEDIATE SAVE for image uploads
             onAnswerChange(activeDrawingQId, publicUrl, true);
             setActiveDrawingQId(null);
         } catch (e) {
@@ -232,19 +225,16 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             )}
             
-            {/* Revision Banner */}
             {isRevision && (
                 <div className="bg-orange-600 text-white px-4 py-2 flex justify-center items-center z-50 sticky top-0 shadow-md shrink-0 text-xs font-bold uppercase tracking-wider gap-2">
                     <Unlock size={14} /> Revision Mode: Only unlocked questions can be edited
                 </div>
             )}
 
-            {/* STICKY HEADER WITH TIMER */}
             <div className={`h-16 shrink-0 flex items-center justify-between px-6 border-b z-20 ${isReadingMode ? 'bg-blue-900/20 border-blue-500/30' : (isPracticeMode ? 'bg-teal-900/20 border-teal-500/30' : 'bg-[#161616] border-white/10')}`}>
                 <div className="flex items-center gap-4">
                     <div className="font-bold truncate max-w-[200px]">{boardTitle}</div>
                     
-                    {/* Manual Sync Button */}
                     <button 
                         onClick={handleSync}
                         disabled={isSyncing}
@@ -254,7 +244,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                         <RefreshCcw size={14} />
                     </button>
 
-                    {/* Deadline Display (Hide for Practice) */}
                     {config.autoLockTime && !isPracticeMode && (
                         <div className="text-xs text-red-300 font-bold flex items-center gap-1 bg-red-900/20 px-2 py-1 rounded border border-red-500/20 shadow-sm">
                             <Clock size={12} /> Due: {new Date(config.autoLockTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -288,7 +277,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             </div>
 
-            {/* READING MODE WARNING OVERLAY (Non-intrusive) */}
             {isReadingMode && (
                 <div className="bg-blue-600/20 border-b border-blue-500/30 p-2 text-center text-blue-200 text-xs font-bold">
                     <AlertCircle size={12} className="inline mr-2" />
@@ -300,7 +288,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 <div className="max-w-3xl mx-auto space-y-8 pb-20">
                     {questions.map((q, idx) => {
                         const questionNumber = questions.filter((item, i) => i <= idx && item.type !== 'section').length;
-                        // If in revision mode, only allow editing if q.id is in retryQuestions
                         const isQuestionReadOnly = isRevision && !retryQuestions?.includes(q.id);
 
                         return (
@@ -309,7 +296,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 q={q}
                                 idx={idx}
                                 answer={answers[q.id]}
-                                onAnswerChange={(id, val) => onAnswerChange(id, val, false)} // Text uses debounce (false)
+                                onAnswerChange={(id, val) => onAnswerChange(id, val, false)}
                                 isReadingMode={isReadingMode}
                                 allowInteractions={allowInteractions}
                                 setActiveDrawingQId={setActiveDrawingQId}
@@ -338,7 +325,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             </div>
 
-            {/* Custom Confirm Modal */}
             {showSubmitModal && (
                 <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -374,7 +360,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             )}
 
-            {/* Drawing Modal */}
             {activeDrawingQId && (
                 <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
                      <div className="w-full max-w-5xl h-[80vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative">
@@ -390,7 +375,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 height={800}
                                 onSave={handleSaveDrawing}
                                 className="w-full h-full"
-                                manualSave={true} // IMPORTANT: Only save when user clicks Done
+                                manualSave={true}
                              />
                          </div>
                      </div>

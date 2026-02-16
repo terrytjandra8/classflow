@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Board, Note, AssessmentConfig, AssessmentState } from '../../../../types';
+import { Board, Note, AssessmentConfig, AssessmentState, BoardSettings } from '../../../../types';
 import { Editor } from '../Editor';
 import { StudentAssessment } from '../StudentAssessment/index';
 import { TeacherMonitor } from '../TeacherMonitor';
@@ -27,24 +27,18 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
 }) => {
     const questions = board.assessmentQuestions || [];
     
-    // Load config or defaults
     const config: AssessmentConfig = board.settings?.assessmentConfig || {
-        durationMinutes: 60,
-        readingMinutes: 0,
-        startTime: null,
-        status: 'setup'
+        status: 'setup',
+        startTime: 0,
     };
 
-    // Persist view state
     const [view, setView] = useState<'editor' | 'monitor'>(() => {
         return (localStorage.getItem('cb_assessment_view') as 'editor' | 'monitor') || 'editor';
     });
 
-    // Preview Mode State
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
 
-    // Class List State
     const [classList, setClassList] = useState<string[]>([]);
 
     useEffect(() => {
@@ -69,51 +63,43 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [now, setNow] = useState(Date.now());
 
-    // Filter notes for submissions
     const submissions = notes.filter(n => n.type === 'assessment_submission');
 
-    // Logos for printing
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
     const ibLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/IB.png').data.publicUrl;
 
-    // --- TIMER & AUTO-LOGIC ---
     useEffect(() => {
         const tick = () => {
             const currentTime = Date.now();
-            setNow(currentTime); // Update local state to force re-renders for visual feedback
+            setNow(currentTime);
             
-            // 1. AUTO-LIVE CHECK (Teacher Only)
-            if (!isStudent && config.status === 'setup' && config.autoLiveTime && currentTime >= config.autoLiveTime) {
-                handleTransition('active');
+            if (!isStudent && config.status === 'setup' && board.autoLiveTime && currentTime >= board.autoLiveTime) {
+                handleTransition('inprogress');
                 return;
             }
 
-            // 2. ACTIVE TIMER LOGIC
-            if (config.startTime && (config.status === 'active' || config.status === 'reading')) {
+            if (config.startTime && (config.status === 'inprogress' || config.status === 'reading')) {
                 const elapsedSeconds = Math.floor((currentTime - config.startTime) / 1000);
                 
-                // Standard Duration
                 const durationMins = config.status === 'reading' ? (config.readingMinutes || 0) : (config.durationMinutes || 60);
                 const totalDurationSeconds = durationMins * 60;
                 const durationRemaining = Math.max(0, totalDurationSeconds - elapsedSeconds);
                 
-                // Hard Deadline (Auto-Close)
                 let deadlineRemaining = Infinity;
-                if (config.autoLockTime) {
-                    deadlineRemaining = Math.max(0, Math.floor((config.autoLockTime - currentTime) / 1000));
+                if (board.autoLockTime) {
+                    deadlineRemaining = Math.max(0, Math.floor((board.autoLockTime - currentTime) / 1000));
                 }
 
                 const actualRemaining = Math.min(durationRemaining, deadlineRemaining);
                 setTimeLeft(actualRemaining);
 
-                // Auto-Transitions (Teacher Only)
                 if (actualRemaining <= 0 && !isStudent && !isPreviewMode) {
-                    if (deadlineRemaining === 0 && config.autoLockTime) {
-                         handleTransition('closed');
+                    if (deadlineRemaining === 0 && board.autoLockTime) {
+                         handleTransition('finished');
                     } else if (config.status === 'reading') {
-                        handleTransition('active');
-                    } else if (config.status === 'active') {
-                        handleTransition('closed');
+                        handleTransition('inprogress');
+                    } else if (config.status === 'inprogress') {
+                        handleTransition('finished');
                     }
                 }
             } else {
@@ -121,39 +107,33 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
             }
         };
 
-        tick(); // Initial call
+        tick();
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [config.startTime, config.status, config.durationMinutes, config.readingMinutes, config.autoLockTime, config.autoLiveTime, isStudent, isPreviewMode]);
-
-    // --- ACTIONS ---
+    }, [config, board.autoLiveTime, board.autoLockTime, isStudent, isPreviewMode]);
 
     const handleTransition = (newStatus: AssessmentState) => {
-        const newConfig = { 
+        const newConfig: AssessmentConfig = { 
             ...config, 
             status: newStatus, 
             startTime: Date.now(),
-            durationMinutes: config.durationMinutes || 60,
-            readingMinutes: config.readingMinutes || 0
         };
         
-        // If transitioning from auto-live trigger, clear the trigger so it doesn't loop
-        if (config.status === 'setup' && newStatus === 'active' && config.autoLiveTime) {
-            newConfig.autoLiveTime = null; 
-        }
-        
+        const newBoardSettings: BoardSettings = {
+            ...board.settings,
+            assessmentConfig: newConfig,
+        };
+
         onUpdateBoard({ 
-            settings: { ...board.settings, assessmentConfig: newConfig },
+            settings: newBoardSettings,
             assessmentState: newStatus 
         });
     };
 
-    // Calculate effective status for Teacher View (visual override if auto-lock passed)
-    const effectiveStatus = (config.autoLockTime && now >= config.autoLockTime && config.status !== 'closed') 
-        ? 'closed' 
+    const effectiveStatus = (board.autoLockTime && now >= board.autoLockTime && config.status !== 'finished') 
+        ? 'finished' 
         : config.status;
 
-    // -- STUDENT VIEW --
     if (isStudent) {
         return (
             <StudentAssessment 
@@ -167,12 +147,10 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
         );
     }
 
-    // -- TEACHER PREVIEW MODE --
     if (isPreviewMode) {
-        // If in setup, simulate Active. If in practice, stay practice.
-        const simulatedStatus = config.status === 'setup' ? 'active' : config.status;
+        const simulatedStatus = config.status === 'setup' ? 'inprogress' : config.status;
         
-        const previewConfig = { 
+        const previewConfig: AssessmentConfig = { 
             ...config, 
             status: simulatedStatus, 
             startTime: Date.now() 
@@ -185,8 +163,8 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                     questions={questions}
                     userId={userId || 'teacher-preview'}
                     onUpdateBoard={() => {}} 
-                    config={previewConfig as AssessmentConfig}
-                    timeLeft={config.status === 'practice' ? null : (previewConfig.durationMinutes * 60)} 
+                    config={previewConfig}
+                    timeLeft={(config.durationMinutes || 60) * 60} 
                     isPreviewMode={true}
                     onExitPreview={() => setIsPreviewMode(false)}
                 />
@@ -194,18 +172,16 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
         );
     }
 
-    // -- TEACHER DASHBOARD VIEW --
     return (
         <div className="h-full flex flex-col bg-[#111] text-white overflow-hidden">
             
-            {/* Blank Print View (Hidden Overlay) */}
             {isPrinting && (
                 <AssessmentPrintView 
                     participants={[{ name: "____________________________", data: { answers: {} } }]}
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
-                    className={board.targetGrade}
+                    className={board.target_grade}
                     onAfterPrint={() => setIsPrinting(false)}
                 />
             )}
@@ -215,36 +191,40 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                 status={effectiveStatus}
                 timeLeft={timeLeft}
                 config={config}
-                isPublished={!!board.isPublished}
+                isPublished={!!board.is_published}
                 onBack={onBack}
                 onTransition={handleTransition}
-                onTogglePublish={() => onUpdateBoard({ isPublished: !board.isPublished })}
+                onTogglePublish={() => onUpdateBoard({ is_published: !board.is_published })}
                 view={view}
                 setView={setViewWithPersistence}
                 onPreview={() => setIsPreviewMode(true)}
                 onOpenSettings={onOpenSettings}
                 onOpenShare={onOpenShare}
                 onPrint={() => setIsPrinting(true)}
-                // Class Handling
                 classList={classList}
-                currentClass={board.targetGrade}
-                onUpdateClass={(cls) => onUpdateBoard({ targetGrade: cls })}
+                currentClass={board.target_grade}
+                onUpdateClass={(cls) => onUpdateBoard({ target_grade: cls })}
             />
 
-            {/* Content */}
             <div className="flex-1 overflow-hidden no-print">
                 {view === 'editor' ? (
                     <Editor questions={questions} onUpdateBoard={onUpdateBoard} />
                 ) : (
                     <TeacherMonitor 
-                        boardId={board.id} // Pass Board ID
+                        boardId={board.id}
                         questions={questions} 
                         submissions={submissions} 
                         activeStudents={onlineUsers || []}
                         config={config}
-                        onUpdateConfig={(newConfig) => onUpdateBoard({ settings: { ...board.settings, assessmentConfig: { ...config, ...newConfig } } })}
-                        className={board.targetGrade}
-                        onForceRefresh={() => { /* Triggered by Monitor internal logic */ }}
+                        onUpdateConfig={(newConfig) => {
+                            const newBoardSettings: BoardSettings = {
+                                ...board.settings,
+                                assessmentConfig: { ...config, ...newConfig }
+                            };
+                            onUpdateBoard({ settings: newBoardSettings });
+                        }}
+                        className={board.target_grade}
+                        onForceRefresh={() => {}}
                     />
                 )}
             </div>

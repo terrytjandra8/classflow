@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense, useRef, ReactNode, ErrorInfo, Component } from 'react';
 import { supabase } from './services/supabaseClient';
 import { AuthPage } from './components/AuthPage';
@@ -28,15 +29,10 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  declare props: Readonly<ErrorBoundaryProps>;
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null
   };
-
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-  }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -156,7 +152,7 @@ function AppContent() {
             const isPublic = board.is_public;
             const isLive = board.is_published;
             const settings = board.settings as any;
-            const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
+            const isQuizActive = board.format === 'quiz' && settings?.quizState?.status && settings?.quizState?.status !== 'setup';
             const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
@@ -203,9 +199,9 @@ function AppContent() {
         const profile = await profileService.getCurrentProfile();
         if (profile) {
             setUserRole(profile.role);
-            setUserClasses(profile.enrolledClasses || []);
-            setUsername(profile.fullName);
-            setUserAvatar(profile.avatarUrl);
+            setUserClasses(profile.enrolled_classes || []);
+            setUsername(profile.full_name);
+            setUserAvatar(profile.avatar_url);
         }
       } catch (e) {
           console.error("Failed to fetch profile", e);
@@ -259,8 +255,6 @@ function AppContent() {
               { event: 'UPDATE', schema: 'public', table: 'boards', filter: `id=eq.${activeBoardId}` },
               (payload) => {
                   if (payload.new) {
-                      // Immediately map and update the board in state using payload.new (No DB Call!)
-                      // This forces a re-render of the "isAllowed" check below
                       const updatedBoard = mapBoard(payload.new as any);
                       
                       setBoards((currentBoards) => {
@@ -272,10 +266,9 @@ function AppContent() {
                           }
                       });
                       
-                      // Also update access check status for guests immediately
-                      const isPublic = updatedBoard.isPublic;
-                      const isLive = updatedBoard.isPublished;
-                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
+                      const isPublic = updatedBoard.is_public;
+                      const isLive = updatedBoard.is_published;
+                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState.status !== 'setup';
                       
                       if (isPublic || isLive || isQuizActive) {
                           setAccessCheckStatus('allowed');
@@ -347,13 +340,11 @@ function AppContent() {
                       color: n.color,
                       x: n.x,
                       y: n.y,
-                      section_id: n.sectionId
+                      section_id: n.section_id
                   }));
                   await supabase.from('notes').insert(rawPayload);
               }
               
-              // Optimistic Add with correct ownership for filters
-              // Ensure we manually set owner_id if API response lags (though it shouldn't)
               const completeBoard = { ...newBoard, owner_id: user.id };
 
               setBoards(prev => [completeBoard, ...prev]);
@@ -383,7 +374,7 @@ function AppContent() {
   const handleDeleteBoard = async (id: string) => {
       try {
           setBoards(boards.filter(b => b.id !== id));
-          await boardService.updateBoard(id, { isTrashed: true, deletedAt: Date.now() });
+          await boardService.updateBoard(id, { isTrashed: true, deletedAt: new Date() });
       } catch (e) {
           console.error("Failed to delete board", e);
       }
@@ -415,17 +406,16 @@ function AppContent() {
 
       const overrideSettings: Partial<Board> = {
           title: `${boardToDup.title} (Copy)`,
-          isFavorite: false,
-          isPublished: false,
-          isPublic: false,
-          quizState: 'setup',
-          currentQuestionIndex: 0,
-          quizStartTime: undefined,
+          is_favorite: false,
+          is_published: false,
+          is_public: false,
+          quizState: { status: 'setup', currentQuestion: 0 },
+          current_step_index: 0,
           assessmentState: 'setup',
           assessmentConfig: boardToDup.assessmentConfig ? {
               ...boardToDup.assessmentConfig,
               status: 'setup',
-              startTime: null
+              startTime: 0
           } : undefined,
           currentPollIndex: 0
       };
@@ -436,14 +426,13 @@ function AppContent() {
               ...overrideSettings
           }, user.id);
 
-          // Add to local state immediately
           setBoards(prev => [newBoard, ...prev]);
 
           if (options.includeNotes) {
               const notes = await noteService.getNotes(boardId);
               const notesToCopy = notes.filter(n => {
                   if (n.author_id !== user.id) return false;
-                  if (options.onlyPinned && !n.isPinned) return false;
+                  if (options.onlyPinned && !n.is_pinned) return false;
                   return true;
               });
 
@@ -461,9 +450,9 @@ function AppContent() {
                       y: n.y,
                       width: n.width,
                       height: n.height,
-                      section_id: n.sectionId,
-                      attachment_url: n.attachmentUrl,
-                      is_pinned: n.isPinned,
+                      section_id: n.section_id,
+                      attachment_url: n.attachment_url,
+                      is_pinned: n.is_pinned,
                       likes: 0,
                       comments: [],
                       liked_by: [],
@@ -481,8 +470,8 @@ function AppContent() {
   const handleToggleFavorite = async (id: string) => {
       const board = boards.find(b => b.id === id);
       if (board) {
-          const newVal = !board.isFavorite;
-          handleUpdateBoard(id, { isFavorite: newVal });
+          const newVal = !board.is_favorite;
+          handleUpdateBoard(id, { is_favorite: newVal });
       }
   };
 
@@ -540,7 +529,6 @@ function AppContent() {
 
   if (loading) return <LoadingScreen />;
 
-  // 1. Auth / Guest Gate
   if (!session && !isGuest && view === 'auth') {
       return (
           <>
@@ -558,7 +546,6 @@ function AppContent() {
       );
   }
 
-  // 2. Board View
   if (view === 'board' && activeBoardId) {
       const activeBoard = boards.find(b => b.id === activeBoardId);
       
@@ -583,7 +570,6 @@ function AppContent() {
       }
 
       if (!activeBoard) {
-          // Only show loading if we haven't determined it's an error yet
           return <LoadingScreen />;
       }
 
@@ -593,11 +579,10 @@ function AppContent() {
       const effectiveRole = isGuest ? 'student' : userRole; 
       const isStudent = effectiveRole === 'student';
       
-      // SECURITY CHECK: Draft Boards
-      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
-      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'active' || activeBoard.assessmentConfig?.status === 'reading');
+      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState.status !== 'setup';
+      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
       
-      const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
+      const isAllowed = !isStudent || activeBoard.is_published || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
 
       if (!isAllowed) {
            return (
@@ -647,7 +632,6 @@ function AppContent() {
       );
   }
 
-  // 3. Dashboard View
   return (
       <Suspense fallback={<LoadingScreen />}>
           {userRole === 'student' || isGuest ? (

@@ -28,12 +28,9 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
     showAnswerKey = false,
     includeFeedback = true
 }) => {
-    const totalPoints = questions.reduce((a, q) => a + q.points, 0);
+    const totalPoints = questions.reduce((a, q) => a + (q.points || 0), 0);
 
     useEffect(() => {
-        // Reduced delay to 300ms. 
-        // This is just enough time for the React Portal to mount into the DOM 
-        // and for the browser to apply the styles before the print dialog freezes execution.
         const timer = setTimeout(() => {
             window.print();
         }, 300);
@@ -75,7 +72,7 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
                         <div style={{ flex: 1 }}>
                             {questions.map((q, i) => {
                                 if (q.type === 'section') {
-                                    return <SectionHeader key={q.id} title={q.text} />;
+                                    return <SectionHeader key={q.id} title={q.question} />;
                                 }
 
                                 const qNum = questions.slice(0, i + 1).filter(item => item.type !== 'section').length;

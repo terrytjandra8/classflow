@@ -1,47 +1,49 @@
 
 import { PostgrestError } from "@supabase/supabase-js";
 
-// Re-introducing all the missing types and fixing casing and properties
-// to resolve the widespread build errors.
+// A comprehensive overhaul of all type definitions to fix the build errors.
 
-export type BoardFormat = 'wall' | 'columns' | 'grid' | 'timeline' | 'quiz' | 'poll' | 'map' | 'canvas' | 'freeform' | 'lesson' | 'assessment';
+export type BoardFormat = 'wall' | 'columns' | 'grid' | 'timeline' | 'quiz' | 'poll' | 'map' | 'canvas' | 'freeform' | 'lesson' | 'assessment' | 'stream';
 export type LockMode = 'unlocked' | 'posts-only' | 'locked' | 'readonly' | 'comments_only';
 export type NoteColor = 'gray' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'pink' | 'purple';
-export type NoteType = 'text' | 'image' | 'video' | 'link' | 'doodle';
+export type NoteType = 'text' | 'image' | 'video' | 'link' | 'doodle' | 'drawing' | 'exit_ticket' | 'quiz_answer' | 'assessment_submission';
 export type UserRole = 'teacher' | 'student' | 'admin';
 
 export interface AiRecipe {
     id: string;
     title: string;
     description: string;
-    // other properties...
 }
 
 export interface BoardGuide {
     id: string;
+    title: string;
+    description: string;
     steps: any[];
 }
 
-export type LessonStepType = 'slide' | 'poll' | 'quiz' | 'discussion';
+export type LessonStepType = 'slide' | 'poll' | 'quiz' | 'discussion' | 'canva' | 'google_slide' | 'board' | 'canvas' | 'video' | 'image' | 'website';
 export interface LessonStep {
     id: string;
     type: LessonStepType;
     title: string;
     content: string;
-    // other properties...
+    options?: any[];
+    boardSettings?: any;
+    url?: string;
 }
 
 export interface QuizQuestion {
     id: string;
     question: string;
     options: string[];
-    correctAnswer: number;
+    correctIndex: number; // Changed from correctAnswer
     timeLimit?: number;
     [key: string]: any;
 }
 
 export interface QuizState {
-    status: 'lobby' | 'question' | 'leaderboard' | 'finished';
+    status: 'lobby' | 'question' | 'reveal' | 'leaderboard' | 'finished';
     currentQuestion: number;
     [key: string]: any;
 }
@@ -53,9 +55,10 @@ export interface PollQuestion {
     [key: string]: any;
 }
 
+export type AssessmentQuestionType = 'multiple_choice' | 'short_answer' | 'essay' | 'section' | 'mcq';
 export interface AssessmentQuestion {
     id: string;
-    type: 'multiple_choice' | 'short_answer' | 'essay';
+    type: AssessmentQuestionType;
     question: string;
     options?: string[];
     answer?: string;
@@ -63,46 +66,49 @@ export interface AssessmentQuestion {
 }
 
 export interface AssessmentConfig {
-    [key: string]: any;
+     status: AssessmentState;
+     startTime: number;
+     durationMinutes?: number;
+     readingMinutes?: number;
+     [key: string]: any;
 }
 
-export interface AssessmentState {
-    [key: string]: any;
-}
+export type AssessmentState = 'setup' | 'reading' | 'inprogress' | 'submitted' | 'finished' | 'grading';
 
 export interface Board {
     id: string;
-    created_at: string; // Reverting to snake_case as per original schema
+    created_at: string;
     updatedAt?: string;
     title: string;
     description?: string;
-    owner_id: string; // Reverting to snake_case
+    owner_id: string;
     format: BoardFormat;
     sections?: Section[];
     sectionGroups?: SectionGroup[];
     settings?: BoardSettings;
     wallpaper?: string;
-    class_code?: string; // Reverting to snake_case
-    is_public?: boolean; // Reverting to snake_case
-    is_published?: boolean; // Reverting to snake_case
-    target_grade?: string; // Reverting to snake_case
+    class_code?: string;
+    is_public?: boolean;
+    is_published?: boolean;
+    target_grade?: string;
     subject?: string;
     topic?: string;
     grading_type?: 'manual' | 'automatic' | 'none';
-    is_favorite?: boolean; // Reverting to snake_case
+    is_favorite?: boolean;
     lockMode?: LockMode;
     viewMode?: 'presentation' | 'collaboration';
     steps?: LessonStep[];
-    current_step_index?: number; // Reverting to snake_case
+    current_step_index?: number;
     notes?: Note[];
     grades?: Grade[];
+    deletedAt?: Date | null;
     isTrashed?: boolean;
     icon?: string;
     sortOrder?: 'manual' | 'date_desc' | 'date_asc' | 'likes';
     newPostPosition?: 'first' | 'last';
     customSlug?: string;
-    autoLiveTime?: string;
-    autoLockTime?: string;
+    autoLiveTime?: number | null;
+    autoLockTime?: number | null;
     colorScheme?: string;
     font?: string;
     textColor?: string;
@@ -138,27 +144,28 @@ export interface Board {
     recipeStatus?: string;
 }
 
+// Made all properties optional to avoid assignment errors with partial objects
 export interface BoardSettings {
-    allow_posts: boolean;
-    allow_reactions: boolean;
-    allow_comments: boolean;
-    allow_anonymous_posts: boolean;
-    allow_anonymous_comments: boolean;
-    allow_student_pins: boolean;
-    allow_embedding: boolean;
+    allow_posts?: boolean;
+    allow_reactions?: boolean;
+    allow_comments?: boolean;
+    allow_anonymous_posts?: boolean;
+    allow_anonymous_comments?: boolean;
+    allow_student_pins?: boolean;
+    allow_embedding?: boolean;
     default_note_color?: string;
     default_note_font?: string;
     max_posts_per_student?: number;
     max_comments_per_student?: number;
-    post_approval_required: boolean;
-    comment_approval_required: boolean;
-    show_authors: boolean;
-    show_posts_in_realtime: boolean;
-    show_header: boolean;
-    show_posts_count: boolean;
-    show_reactions_count: boolean;
-    show_comments_count: boolean;
-    post_order: 'newest_first' | 'oldest_first' | 'random';
+    post_approval_required?: boolean;
+    comment_approval_required?: boolean;
+    show_authors?: boolean;
+    show_posts_in_realtime?: boolean;
+    show_header?: boolean;
+    show_posts_count?: boolean;
+    show_reactions_count?: boolean;
+    show_comments_count?: boolean;
+    post_order?: 'newest_first' | 'oldest_first' | 'random';
     layout_columns?: number;
     layout_direction?: 'row' | 'column';
     layout_align?: 'start' | 'center' | 'end';
@@ -235,8 +242,9 @@ export interface Grade {
 
 export interface CommentAttachment {
     url: string;
-    type: 'image' | 'video' | 'file';
+    type: 'image' | 'video' | 'file' | 'drawing' | 'link';
     title?: string;
+    content?: any;
 }
 
 export interface Comment {
@@ -251,7 +259,7 @@ export interface Comment {
     is_anonymous?: boolean;
     likedBy?: string[];
     replies?: Comment[];
-    authorRole?: UserRole;
+    authorRole?: UserRole | string;
     author?: any;
     likes?: number;
     attachment?: CommentAttachment;
@@ -284,6 +292,7 @@ export type AppState = {
 export interface ClassGroup {
     id: string;
     name: string;
+    autoEnroll?: boolean;
 }
 export interface Class {
     id: string;
