@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Board, BoardFormat, SectionGroup } from '../../../types';
-import { IconPlus, IconClose } from '../../../Icons';
+import { Board, BoardFormat, SectionGroup } from '../../types';
+import { IconPlus, IconClose } from '../Icons';
 
 interface LayoutSectionProps {
     board: Board;
