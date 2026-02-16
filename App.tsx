@@ -5,7 +5,7 @@ import { AuthPage } from './components/AuthPage';
 import { GuestNameModal } from './components/GuestNameModal';
 import { CreateBoardModal } from './components/CreateBoardModal';
 import { DuplicateModal } from './components/DuplicateModal'; 
-import { Board, BoardFormat, Note } from './types';
+import { Board, BoardFormat, Note, UserProfile } from './types';
 import { Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { boardService } from './services/boardService';
 import { profileService } from './services/profileService';
@@ -13,12 +13,10 @@ import { noteService } from './services/noteService';
 import { mapBoard } from './utils/mappers';
 import './src/index.css';
 
-// Lazy load heavy views
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 const StudentDashboard = React.lazy(() => import('./components/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
 const BoardView = React.lazy(() => import('./components/BoardView').then(module => ({ default: module.BoardView })));
 
-// Error Boundary Component
 interface ErrorBoundaryProps {
   children?: ReactNode;
 }
@@ -87,29 +85,21 @@ function AppContent() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   
-  // Guest State
   const [isGuest, setIsGuest] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestAvatar, setGuestAvatar] = useState('');
   const [guestId, setGuestId] = useState<string>(''); 
 
-  // User Profile
-  const [userRole, setUserRole] = useState<string>('student');
-  const [userClasses, setUserClasses] = useState<string[]>([]);
-  const [username, setUsername] = useState('');
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
   const [boardError, setBoardError] = useState<string | null>(null);
   
-  // Duplicate Modal State
   const [duplicateModal, setDuplicateModal] = useState<{ isOpen: boolean; boardId: string | null }>({ isOpen: false, boardId: null });
 
-  // Access Check State for Guests
   const [accessCheckStatus, setAccessCheckStatus] = useState<'idle' | 'checking' | 'allowed' | 'denied'>('idle');
 
-  // Keep track of active board ID for realtime updates without breaking useEffect dependencies
   const activeBoardIdRef = useRef<string | null>(null);
   useEffect(() => { activeBoardIdRef.current = activeBoardId; }, [activeBoardId]);
 
@@ -130,7 +120,6 @@ function AppContent() {
             setActiveBoardId(boardId);
             setView('board');
           } else {
-            // Board not found or no access, redirect to dashboard
             setView('dashboard');
           }
         } else {
@@ -138,11 +127,10 @@ function AppContent() {
           setView('dashboard');
         }
       } else if (boardId) {
-        // Guest access logic
         setAccessCheckStatus('checking');
         const { data: board, error } = await supabase
             .from('boards')
-            .select('id, is_public, is_published, settings, format, owner_id, title, description, wallpaper')
+            .select('id, is_public, is_published, assessmentConfig, format, owner_id, title, description, wallpaper')
             .eq('id', boardId)
             .maybeSingle();
 
@@ -151,9 +139,9 @@ function AppContent() {
         } else {
             const isPublic = board.is_public;
             const isLive = board.is_published;
-            const settings = board.settings as any;
-            const isQuizActive = board.format === 'quiz' && settings?.quizState?.status && settings?.quizState?.status !== 'setup';
-            const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
+            const assessmentConfig = board.assessmentConfig as any;
+            const isQuizActive = board.format === 'quiz' && board.quizState && board.quizState !== 'setup';
+            const isAssessmentActive = board.format === 'assessment' && assessmentConfig?.status === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
                 setBoards([mapBoard(board as any)]);
@@ -192,17 +180,12 @@ function AppContent() {
     return () => {
         subscription.unsubscribe();
     };
-}, [isGuest]); // isGuest is a dependency to re-evaluate if the user becomes a guest
+}, [isGuest]);
 
   const fetchProfile = async () => {
       try {
         const profile = await profileService.getCurrentProfile();
-        if (profile) {
-            setUserRole(profile.role);
-            setUserClasses(profile.enrolled_classes || []);
-            setUsername(profile.full_name);
-            setUserAvatar(profile.avatar_url);
-        }
+        setUserProfile(profile);
       } catch (e) {
           console.error("Failed to fetch profile", e);
       }
@@ -217,7 +200,6 @@ function AppContent() {
     }
   };
 
-  // Sync theme to DOM
   useEffect(() => {
     if (theme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -226,7 +208,6 @@ function AppContent() {
     }
   }, [theme]);
 
-  // Handle Browser Back/Forward Navigation
   useEffect(() => {
       const handlePopState = () => {
           const params = new URLSearchParams(window.location.search);
@@ -245,7 +226,6 @@ function AppContent() {
       return () => window.removeEventListener('popstate', handlePopState);
   }, [session, isGuest]);
 
-  // REALTIME GATEKEEPER: Listen for Board Status Changes (Draft/Live)
   useEffect(() => {
       if (!activeBoardId) return;
 
@@ -257,18 +237,13 @@ function AppContent() {
                   if (payload.new) {
                       const updatedBoard = mapBoard(payload.new as any);
                       
-                      setBoards((currentBoards) => {
-                          const exists = currentBoards.find(b => b.id === updatedBoard.id);
-                          if (exists) {
-                              return currentBoards.map(b => b.id === updatedBoard.id ? updatedBoard : b);
-                          } else {
-                              return [updatedBoard, ...currentBoards];
-                          }
-                      });
+                      setBoards((currentBoards) => 
+                          currentBoards.map(b => b.id === updatedBoard.id ? updatedBoard : b)
+                      );
                       
                       const isPublic = updatedBoard.is_public;
                       const isLive = updatedBoard.is_published;
-                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState.status !== 'setup';
+                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
                       
                       if (isPublic || isLive || isQuizActive) {
                           setAccessCheckStatus('allowed');
@@ -283,7 +258,6 @@ function AppContent() {
       };
   }, [activeBoardId]);
 
-  // Global Boards listener (adds/removes from dashboard list)
    useEffect(() => {
       if (!session && !isGuest) return;
       const channel = supabase.channel('public:boards')
@@ -331,23 +305,14 @@ function AppContent() {
           if (newBoard) {
               if (initialNotes.length > 0) {
                   const rawPayload = initialNotes.map(n => ({
+                      ...n,
                       board_id: newBoard.id,
-                      content: n.content,
-                      title: n.title,
-                      author: n.author,
-                      author_id: n.author_id,
-                      type: n.type,
-                      color: n.color,
-                      x: n.x,
-                      y: n.y,
-                      section_id: n.section_id
+                      author_id: user.id,
                   }));
                   await supabase.from('notes').insert(rawPayload);
               }
               
-              const completeBoard = { ...newBoard, owner_id: user.id };
-
-              setBoards(prev => [completeBoard, ...prev]);
+              setBoards(prev => [newBoard, ...prev]);
               setActiveBoardId(newBoard.id);
               setView('board');
               
@@ -409,7 +374,7 @@ function AppContent() {
           is_favorite: false,
           is_published: false,
           is_public: false,
-          quizState: { status: 'setup', currentQuestion: 0 },
+          quizState: 'setup',
           current_step_index: 0,
           assessmentState: 'setup',
           assessmentConfig: boardToDup.assessmentConfig ? {
@@ -438,25 +403,13 @@ function AppContent() {
 
               if (notesToCopy.length > 0) {
                   const newNotesPayload = notesToCopy.map(n => ({
+                      ...n,
                       board_id: newBoard.id,
-                      content: n.content,
-                      title: n.title,
-                      author: n.author,
                       author_id: user.id,
-                      author_avatar: user.user_metadata?.avatar_url || userAvatar,
-                      type: n.type,
-                      color: n.color,
-                      x: n.x,
-                      y: n.y,
-                      width: n.width,
-                      height: n.height,
-                      section_id: n.section_id,
-                      attachment_url: n.attachment_url,
-                      is_pinned: n.is_pinned,
+                      author_avatar: userProfile?.avatar_url,
                       likes: 0,
                       comments: [],
                       liked_by: [],
-                      connections: []
                   }));
                   await supabase.from('notes').insert(newNotesPayload);
               }
@@ -573,13 +526,13 @@ function AppContent() {
           return <LoadingScreen />;
       }
 
-      const effectiveUsername = isGuest ? guestName : username;
-      const effectiveAvatar = isGuest ? guestAvatar : userAvatar;
+      const effectiveUsername = isGuest ? guestName : userProfile?.full_name;
+      const effectiveAvatar = isGuest ? guestAvatar : userProfile?.avatar_url;
       const effectiveUserId = isGuest ? guestId : (session?.user?.id);
-      const effectiveRole = isGuest ? 'student' : userRole; 
+      const effectiveRole = isGuest ? 'student' : userProfile?.role; 
       const isStudent = effectiveRole === 'student';
       
-      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState.status !== 'setup';
+      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
       const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
       
       const isAllowed = !isStudent || activeBoard.is_published || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
@@ -634,15 +587,15 @@ function AppContent() {
 
   return (
       <Suspense fallback={<LoadingScreen />}>
-          {userRole === 'student' || isGuest ? (
+          {userProfile?.role === 'student' || isGuest ? (
               <StudentDashboard 
                   boards={boards}
                   onSelectBoard={selectBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={isGuest ? guestName : username}
-                  userAvatar={isGuest ? guestAvatar : userAvatar}
-                  userClasses={userClasses}
+                  username={isGuest ? guestName : userProfile?.full_name}
+                  userAvatar={isGuest ? guestAvatar : userProfile?.avatar_url}
+                  userClasses={userProfile?.enrolled_classes}
               />
           ) : (
               <Dashboard 
@@ -656,8 +609,8 @@ function AppContent() {
                   onUpdateBoard={handleUpdateBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={username}
-                  userAvatar={userAvatar}
+                  username={userProfile?.full_name}
+                  userAvatar={userProfile?.avatar_url}
                   userId={session?.user?.id}
                   onJoinByCode={handleJoinByCode}
               />

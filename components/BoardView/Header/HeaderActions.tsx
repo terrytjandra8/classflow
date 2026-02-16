@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MonitorPlay, Settings, Share2, Layout, PenTool, Radio } from 'lucide-react';
+import { MonitorPlay, Settings, Share2, Layout } from 'lucide-react';
 import { useHeaderLogic } from './useHeaderLogic';
 import { Tooltip } from '../../Tooltip';
 import { Avatar } from '../../ui/Avatar';
@@ -10,13 +10,12 @@ export const HeaderActions: React.FC = () => {
     const { 
         board, canManageBoard, isSimulatingStudent, toggleStudentSimulation, 
         openSettings, openShare, onlineUsers, updateBoard, launchProjectorMode,
-        activeCount, userPreviews, typingUsers, userId // Destructure userId
+        activeCount, userPreviews, typingUsers, userId
     } = useHeaderLogic();
 
     const [showUserList, setShowUserList] = useState(false);
     const userListRef = useRef<HTMLDivElement>(null);
 
-    // Handle Click Outside to close user list
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (userListRef.current && !userListRef.current.contains(event.target as Node)) {
@@ -32,19 +31,19 @@ export const HeaderActions: React.FC = () => {
         };
     }, [showUserList]);
 
-    // Sort users: Current user first, then alphabetical
     const sortedOnlineUsers = useMemo(() => {
         if (!onlineUsers) return [];
         return [...onlineUsers].sort((a, b) => {
             if (a.id === userId) return -1;
             if (b.id === userId) return 1;
-            return (a.user || '').localeCompare(b.user || '');
+            const nameA = a.user || '';
+            const nameB = b.user || '';
+            return nameA.localeCompare(nameB);
         });
     }, [onlineUsers, userId]);
 
     return (
         <div className="flex items-center gap-4 pointer-events-auto ml-auto md:self-center self-end mt-4 md:mt-0 shrink-0">
-            {/* Highly Visible Typing Indicator */}
             {typingUsers && typingUsers.length > 0 && (
                 <div className="flex items-center gap-2 bg-pink-500 text-white px-4 py-1.5 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-lg shadow-pink-500/30 border border-pink-400">
                     <div className="flex gap-1 items-center">
@@ -61,7 +60,6 @@ export const HeaderActions: React.FC = () => {
                 </div>
             )}
 
-            {/* Live Presence Pill */}
             <div className="relative" ref={userListRef}>
                 <div 
                     onClick={() => setShowUserList(!showUserList)}
@@ -93,7 +91,6 @@ export const HeaderActions: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Detailed List Popover (Click to Toggle) */}
                 {showUserList && (
                     <div className="absolute top-full right-0 mt-3 w-64 bg-[#1a1a1a]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2 z-50">
                         <div className="px-3 py-2 border-b border-white/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex justify-between items-center">
@@ -118,10 +115,8 @@ export const HeaderActions: React.FC = () => {
 
             <div className="h-10 w-px bg-white/10 mx-1"></div>
 
-            {/* Control Bar */}
             <div className="bg-black/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 flex items-center gap-1 shadow-2xl">
                 
-                {/* Format Switcher */}
                 {canManageBoard && (
                     <div className="relative group hidden sm:block">
                         <button className="p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-2">
@@ -145,7 +140,6 @@ export const HeaderActions: React.FC = () => {
 
                 <div className="h-6 w-px bg-white/10 hidden sm:block mx-1"></div>
 
-                {/* Simulation Toggle */}
                 {(canManageBoard || isSimulatingStudent) && (
                     <Tooltip content={isSimulatingStudent ? "Exit Student View" : "View as Student"}>
                         <button 

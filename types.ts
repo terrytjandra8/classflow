@@ -5,8 +5,8 @@ import { PostgrestError } from "@supabase/supabase-js";
 
 export type BoardFormat = 'wall' | 'columns' | 'grid' | 'timeline' | 'quiz' | 'poll' | 'map' | 'canvas' | 'freeform' | 'lesson' | 'assessment' | 'stream';
 export type LockMode = 'unlocked' | 'posts-only' | 'locked' | 'readonly' | 'comments_only';
-export type NoteColor = 'gray' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'pink' | 'purple';
-export type NoteType = 'text' | 'image' | 'video' | 'link' | 'doodle' | 'drawing' | 'exit_ticket' | 'quiz_answer' | 'assessment_submission';
+export type NoteColor = 'gray' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'pink' | 'purple' | string;
+export type NoteType = 'text' | 'image' | 'video' | 'link' | 'doodle' | 'drawing' | 'exit_ticket' | 'quiz_answer' | 'assessment_submission' | 'section';
 export type UserRole = 'teacher' | 'student' | 'admin';
 
 export interface AiRecipe {
@@ -37,16 +37,12 @@ export interface QuizQuestion {
     id: string;
     question: string;
     options: string[];
-    correctIndex: number; // Changed from correctAnswer
+    correct_answer: number;
     timeLimit?: number;
     [key: string]: any;
 }
 
-export interface QuizState {
-    status: 'lobby' | 'question' | 'reveal' | 'leaderboard' | 'finished';
-    currentQuestion: number;
-    [key: string]: any;
-}
+export type QuizState = 'setup' | 'lobby' | 'question' | 'reveal' | 'leaderboard' | 'finished';
 
 export interface PollQuestion {
     id: string;
@@ -62,6 +58,9 @@ export interface AssessmentQuestion {
     question: string;
     options?: string[];
     answer?: string;
+    points?: number;
+    minWords?: number;
+    correctAnswer?: string;
     [key: string]: any;
 }
 
@@ -70,15 +69,16 @@ export interface AssessmentConfig {
      startTime: number;
      durationMinutes?: number;
      readingMinutes?: number;
+     autoLockTime?: number;
      [key: string]: any;
 }
 
-export type AssessmentState = 'setup' | 'reading' | 'inprogress' | 'submitted' | 'finished' | 'grading';
+export type AssessmentState = 'setup' | 'reading' | 'inprogress' | 'submitted' | 'finished' | 'grading' | 'active' | 'closed' | 'practice';
 
 export interface Board {
     id: string;
     created_at: string;
-    updatedAt?: string;
+    updated_at?: string;
     title: string;
     description?: string;
     owner_id: string;
@@ -132,6 +132,7 @@ export interface Board {
     quizQuestions?: QuizQuestion[];
     quizMusic?: string;
     quizStartTime?: number;
+    current_question_index?: number;
     assessmentConfig?: AssessmentConfig;
     assessmentState?: AssessmentState;
     assessmentQuestions?: AssessmentQuestion[];
@@ -144,7 +145,6 @@ export interface Board {
     recipeStatus?: string;
 }
 
-// Made all properties optional to avoid assignment errors with partial objects
 export interface BoardSettings {
     allow_posts?: boolean;
     allow_reactions?: boolean;
@@ -204,7 +204,7 @@ export interface Note {
     author_id: string;
     author_name?: string;
     author_avatar?: string;
-    color: NoteColor | string;
+    color: NoteColor;
     position_x: number;
     position_y: number;
     width: number;
@@ -257,15 +257,15 @@ export interface Comment {
     text: string;
     created_at: string;
     is_anonymous?: boolean;
-    likedBy?: string[];
+    liked_by?: string[];
     replies?: Comment[];
-    authorRole?: UserRole | string;
+    author_role?: UserRole | string;
     author?: any;
     likes?: number;
     attachment?: CommentAttachment;
 }
 
-export interface Profile {
+export interface UserProfile {
     id: string;
     updated_at: string;
     full_name: string;
@@ -286,7 +286,7 @@ export type AppState = {
     currentBoard: Board | null;
     currentBoardError: PostgrestError | null;
     notes: Note[];
-    profile: Profile | null;
+    profile: UserProfile | null;
 }
 
 export interface ClassGroup {

@@ -23,6 +23,11 @@ interface TeacherMonitorProps {
     onForceRefresh?: () => void;
 }
 
+const NOTE_COLORS: Record<string, NoteColor> = {
+    WHITE: 'gray',
+    GREEN: 'green',
+}
+
 export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({ 
     board, questions, submissions: initialSubmissions, activeStudents, config, onUpdateConfig, className 
 }) => {
@@ -90,10 +95,10 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             const totalQuestions = questions.filter(q => q.type !== 'section').length || 1;
 
             return {
-                id: sub.author_id || sub.author,
+                id: sub.author_id,
                 noteId: sub.id, 
-                name: sub.author,
-                role: sub.authorRole || 'student',
+                name: sub.author_name,
+                role: sub.author_role || 'student',
                 violations: data?.violations || 0,
                 score: score,
                 status: status,
@@ -101,14 +106,14 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 disqualified: isDQ,
                 hasLowWordCount: hasLowWordCount && !isDQ && data?.submitted,
                 data: data,
-                submittedAt: sub.createdAt 
+                submittedAt: sub.created_at 
             };
         });
 
         const uniqueParticipantsMap = new Map();
         rawParticipants.forEach(p => {
             const existing = uniqueParticipantsMap.get(p.id);
-            if (!existing || p.submittedAt > existing.submittedAt) {
+            if (!existing || new Date(p.submittedAt) > new Date(existing.submittedAt)) {
                 uniqueParticipantsMap.set(p.id, p);
             }
         });
@@ -130,7 +135,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 disqualified: false,
                 hasLowWordCount: false,
                 data: {},
-                submittedAt: Date.now()
+                submittedAt: new Date().toISOString()
             }));
 
         const all = [...mappedSubmissions, ...pendingStudents];
@@ -177,7 +182,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 ...sub,
                 connections: updatedData,
                 content: 'In Progress',
-                color: NoteColor.WHITE
+                color: NOTE_COLORS.WHITE
             } : sub
         ));
 
@@ -209,7 +214,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 ...sub,
                 connections: updatedData,
                 content: 'Revising',
-                color: NoteColor.WHITE
+                color: NOTE_COLORS.WHITE
             } : sub
         ));
 
@@ -230,8 +235,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         if (!confirm(`Allow revision for ${selectedStudentIds.size} selected students?`)) return;
 
         setSubmissions(prev => prev.map(sub => {
-            const pId = sub.author_id || sub.author;
-            if (selectedStudentIds.has(pId)) {
+            const pId = sub.author_id;
+            if (pId && selectedStudentIds.has(pId)) {
                  const oldData = sub.connections as any || {};
                  const updatedData = {
                     ...oldData,
@@ -244,7 +249,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                     ...sub,
                     connections: updatedData,
                     content: 'Revising',
-                    color: NoteColor.WHITE
+                    color: NOTE_COLORS.WHITE
                 };
             }
             return sub;
@@ -294,7 +299,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 ...sub,
                 connections: updatedData,
                 content: 'Restarted',
-                color: NoteColor.WHITE
+                color: NOTE_COLORS.WHITE
             } : sub
         ));
 
@@ -328,7 +333,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         questions.forEach(q => {
             if (q.type === 'section') return;
 
-            const mcqAnswer = (q.type === 'mcq' || q.type === 'multiple_choice') ? q.answer : undefined
+            const mcqAnswer = (q.type === 'mcq' || q.type === 'multiple_choice') ? q.correctAnswer : undefined
 
             if (existingGrades[q.id]) {
                 initGrades[q.id] = existingGrades[q.id];
@@ -401,7 +406,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 ...sub,
                 connections: updatedData,
                 content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)',
-                color: release ? NoteColor.GREEN : NoteColor.WHITE
+                color: release ? NOTE_COLORS.GREEN : NOTE_COLORS.WHITE
             } : sub
         ));
 
@@ -410,7 +415,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         await supabase.from('notes').update({ 
             connections: updatedData,
             content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)',
-            color: release ? 'bg-green-200' : 'bg-white'
+            color: release ? 'green' : 'gray'
         }).eq('id', participant.noteId);
 
         if (board.id && participant.id) {
@@ -418,7 +423,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 student_id: participant.id,
                 board_id: board.id,
                 score: totalScore,
-                feedback: release ? 'See assessment details' : null
+                feedback: release ? 'See assessment details' : undefined
             }, { onConflict: 'student_id, board_id' });
         }
 

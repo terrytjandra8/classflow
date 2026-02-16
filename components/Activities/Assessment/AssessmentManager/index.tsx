@@ -27,7 +27,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
 }) => {
     const questions = board.assessmentQuestions || [];
     
-    const config: AssessmentConfig = board.settings?.assessmentConfig || {
+    const config: AssessmentConfig = board.assessmentConfig || {
         status: 'setup',
         startTime: 0,
     };
@@ -119,13 +119,8 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
             startTime: Date.now(),
         };
         
-        const newBoardSettings: BoardSettings = {
-            ...board.settings,
-            assessmentConfig: newConfig,
-        };
-
         onUpdateBoard({ 
-            settings: newBoardSettings,
+            assessmentConfig: newConfig,
             assessmentState: newStatus 
         });
     };
@@ -211,17 +206,13 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                     <Editor questions={questions} onUpdateBoard={onUpdateBoard} />
                 ) : (
                     <TeacherMonitor 
-                        boardId={board.id}
+                        board={board}
                         questions={questions} 
                         submissions={submissions} 
                         activeStudents={onlineUsers || []}
                         config={config}
                         onUpdateConfig={(newConfig) => {
-                            const newBoardSettings: BoardSettings = {
-                                ...board.settings,
-                                assessmentConfig: { ...config, ...newConfig }
-                            };
-                            onUpdateBoard({ settings: newBoardSettings });
+                            onUpdateBoard({ assessmentConfig: { ...config, ...newConfig } });
                         }}
                         className={board.target_grade}
                         onForceRefresh={() => {}}

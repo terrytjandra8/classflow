@@ -34,12 +34,7 @@ interface BoardViewProps {
 export const BoardView: React.FC<BoardViewProps> = ({ 
     board: initialBoard, onBack, onUpdateBoard, theme, onToggleTheme, username, userAvatar, userId, isStudent, userRole, isPresentationMode
 }) => {
-    // --- State ---
-    // We maintain a local live version of the board to handle realtime metadata updates (locks, settings)
-    // This allows instantaneous updates without refreshing the page
     const [liveBoard, setLiveBoard] = useState<Board>(initialBoard);
-    
-    // Force re-render state for timers
     const [, setTick] = useState(0);
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -48,7 +43,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const [isRecipeSidebarOpen, setIsRecipeSidebarOpen] = useState(false);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [pendingPasteImage, setPendingPasteImage] = useState<File | null>(null);
-    const [isSimulating, setIsSimulating] = useState(false);
     const [isSimulatingStudent, setIsSimulatingStudent] = useState(false);
     const [addNoteLocation, setAddNoteLocation] = useState<any>(null); 
     const [classList, setClassList] = useState<string[]>([]);
@@ -56,14 +50,10 @@ export const BoardView: React.FC<BoardViewProps> = ({
     
     const [editingNote, setEditingNote] = useState<Note | null>(null);
 
-    // --- 1. Sync with Parent Props (Initial Load) ---
     useEffect(() => {
         setLiveBoard(initialBoard);
     }, [initialBoard]);
 
-    // --- 2. Real-time Board Settings Listener ---
-    // This is efficient: It opens ONE socket connection. It does NOT poll the database.
-    // It only receives data when the 'boards' table actually changes.
     useEffect(() => {
         const channel = supabase.channel(`board_meta:${initialBoard.id}`)
             .on('postgres_changes',
@@ -75,14 +65,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 },
                 (payload) => {
                     if (payload.new) {
-                        // When teacher updates settings, map the DB row to our Board object
-                        // and update the local state immediately.
                         const updatedBoard = mapBoard(payload.new as any);
-                        setLiveBoard(prev => ({
-                            ...updatedBoard,
-                            // Preserve local UI state that isn't in DB if necessary,
-                            // though usually mapBoard covers everything important.
-                        }));
+                        setLiveBoard(updatedBoard);
                     }
                 }
             )
@@ -91,35 +75,28 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return () => { supabase.removeChannel(channel); };
     }, [initialBoard.id]);
 
-    // --- 2.5. Timer Sync for Auto-Lock/Live ---
-    // Ensure component re-renders exactly when a timer expires
     useEffect(() => {
-        const timers = [liveBoard.autoLockTime, liveBoard.autoLiveTime].filter(t => t && t > Date.now()) as number[];
+        const timers = [liveBoard.auto_lock_time, liveBoard.auto_live_time].filter(t => t && t > Date.now()) as number[];
         
         if (timers.length > 0) {
             const nextTime = Math.min(...timers);
-            const delay = Math.max(0, nextTime - Date.now()) + 500; // 500ms buffer
+            const delay = Math.max(0, nextTime - Date.now()) + 500; 
             
             const timerId = setTimeout(() => {
-                setTick(t => t + 1); // Force re-render
+                setTick(t => t + 1); 
             }, delay);
             
             return () => clearTimeout(timerId);
         }
-    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime]);
+    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time]);
 
-    // --- 3. Derived Board State (Auto Lock & Merging) ---
-    // If autoLockTime is reached, we force the UI to treat it as ReadOnly immediately
-    // This is a client-side check that runs on top of the DB state
-    const isExpired = liveBoard.autoLockTime && Date.now() >= liveBoard.autoLockTime;
+    const isExpired = liveBoard.auto_lock_time && Date.now() >= liveBoard.auto_lock_time;
     
     const board = useMemo(() => ({
         ...liveBoard,
-        lockMode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
+        lock_mode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
     }), [liveBoard, isExpired]);
 
-    // --- Hooks ---
-    // Pass userRole here
     const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
     
     const { 
@@ -140,11 +117,11 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     useEffect(() => {
         if (!isPresentationMode) {
-            if (board.guide && !board.guideDismissed) {
+            if (board.guide && !board.guide_dismissed) {
                 setIsGuideOpen(true);
             }
         }
-    }, [board.guide, board.guideDismissed, isPresentationMode]);
+    }, [board.guide, board.guide_dismissed, isPresentationMode]);
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -162,64 +139,56 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const canManageBoard = !isStudent && !isSimulatingStudent && !isPresentationMode;
     
-    // --- AUTO LOCK / AUTO LIVE LOGIC (Teacher Only) ---
-    // Only the teacher's client needs to write to the DB to finalize the state.
-    // Students just obey the checks until the DB update hits.
     useEffect(() => {
         if (!canManageBoard) return;
         
-        // Optimize: If no timers are active, don't run the interval
-        const hasAutoLock = liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly';
-        const hasAutoLive = liveBoard.autoLiveTime && !liveBoard.isPublished;
+        const hasAutoLock = liveBoard.auto_lock_time && liveBoard.lockMode !== 'readonly';
+        const hasAutoLive = liveBoard.auto_live_time && !liveBoard.is_published;
 
         if (!hasAutoLock && !hasAutoLive) return;
 
         const checkTimers = () => {
             const now = Date.now();
             
-            // Auto Lock Logic
-            if (liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly' && now >= liveBoard.autoLockTime) {
+            if (liveBoard.auto_lock_time && liveBoard.lockMode !== 'readonly' && now >= liveBoard.auto_lock_time) {
                 onUpdateBoard({ lockMode: 'readonly' });
             }
 
-            // Auto Live Logic
-            if (liveBoard.autoLiveTime && !liveBoard.isPublished && now >= liveBoard.autoLiveTime) {
-                onUpdateBoard({ isPublished: true, autoLiveTime: null }); // Clear timer so it doesn't fire again
+            if (liveBoard.auto_live_time && !liveBoard.is_published && now >= liveBoard.auto_live_time) {
+                onUpdateBoard({ is_published: true, auto_live_time: null });
             }
         };
 
-        const interval = setInterval(checkTimers, 5000); // Check every 5s
-        checkTimers(); // Immediate check
+        const interval = setInterval(checkTimers, 5000);
+        checkTimers();
 
         return () => clearInterval(interval);
-    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime, liveBoard.lockMode, liveBoard.isPublished, canManageBoard, onUpdateBoard]);
+    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time, liveBoard.lockMode, liveBoard.is_published, canManageBoard, onUpdateBoard]);
 
     const sortedNotes = useMemo(() => {
         let filtered = notes;
         if (!canManageBoard) {
             filtered = notes.filter(n => {
-                if (!n.sectionId) return true;
-                const section = board.sections?.find(s => s.id === n.sectionId);
+                if (!n.section_id) return true;
+                const section = board.sections?.find(s => s.id === n.section_id);
                 return !section?.isHidden;
             });
         }
 
         return [...filtered].sort((a, b) => {
-            if (a.isPinned && b.isPinned) return b.createdAt - a.createdAt;
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
+            if (a.is_pinned && b.is_pinned) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            if (a.is_pinned && !b.is_pinned) return -1;
+            if (!a.is_pinned && b.is_pinned) return 1;
 
-            if (board.sortOrder === 'date_asc') return a.createdAt - b.createdAt;
-            if (board.sortOrder === 'likes') return b.likes - a.likes;
+            if (board.sort_order === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            if (board.sort_order === 'likes') return b.likes - a.likes;
             
-            return b.createdAt - a.createdAt;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-    }, [notes, board.sortOrder, board.sections, canManageBoard]);
+    }, [notes, board.sort_order, board.sections, canManageBoard]);
 
     const backgroundStyle = resolveBackgroundStyle(board.wallpaper, theme);
     const fontClass = board.font === 'serif' ? 'font-serif' : board.font === 'mono' ? 'font-mono' : board.font === 'hand' ? 'font-hand' : 'font-sans';
-
-    // --- Actions ---
 
     const openAddNoteModal = useCallback((location?: string | { x: number; y: number }) => {
         if (isPresentationMode) return;
@@ -239,30 +208,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
         if (editingNote) {
             await updateNote(editingNote.id, noteData);
         } else {
-            let calculatedCreatedAt: number | undefined = undefined;
-
-            if (typeof addNoteLocation === 'object' && addNoteLocation.relativeId) {
-                const targetNote = notes.find(n => n.id === addNoteLocation.relativeId);
-                if (targetNote) {
-                    const isNewestFirst = board.sortOrder !== 'date_asc';
-                    const epsilon = 100; 
-
-                    if (addNoteLocation.position === 'before') {
-                        calculatedCreatedAt = targetNote.createdAt + (isNewestFirst ? epsilon : -epsilon);
-                    } else {
-                        calculatedCreatedAt = targetNote.createdAt + (isNewestFirst ? -epsilon : epsilon);
-                    }
-                }
-            }
-
             const payload = {
                 ...noteData,
-                sectionId: typeof addNoteLocation === 'string' 
+                section_id: typeof addNoteLocation === 'string' 
                     ? addNoteLocation 
                     : (addNoteLocation?.sectionId || undefined), 
-                x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined,
-                y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined,
-                createdAt: calculatedCreatedAt
+                position_x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined,
+                position_y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined,
             };
             await createNote(payload);
         }
@@ -270,25 +222,23 @@ export const BoardView: React.FC<BoardViewProps> = ({
         setEditingNote(null);
     };
 
-    // --- Centralized Management Logic ---
     const launchProjectorMode = useCallback(() => {
         const url = `${window.location.origin}/?board=${board.id}&present=true`;
         window.open(url, 'ClassBoardProjector', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no');
     }, [board.id]);
 
-    // Helper: Ensure sections exist before modifying. Handles default virtual sections.
     const getEffectiveSections = useCallback(() => {
         if (board.sections && board.sections.length > 0) return board.sections;
         return [{ 
             id: 'default', 
             title: 'Group 1',
             locked: false,
-            isContentBlurred: false,
-            isHidden: false,
-            isAnonymous: false,
-            commentsEnabled: true,
-            repliesEnabled: true,
-            studentsCanDrag: false
+            is_content_blurred: false,
+            is_hidden: false,
+            is_anonymous: false,
+            comments_enabled: true,
+            replies_enabled: true,
+            students_can_drag: false
         }];
     }, [board.sections]);
 
@@ -302,8 +252,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                const current = s.isContentBlurred !== undefined ? s.isContentBlurred : s.isTitleBlurred;
-                return { ...s, isContentBlurred: !current, isTitleBlurred: !current };
+                return { ...s, is_content_blurred: !s.is_content_blurred, is_title_blurred: !s.is_content_blurred };
             }
             return s;
         });
@@ -312,13 +261,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const toggleSectionVisibility = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isHidden: !s.isHidden } : s);
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, is_hidden: !s.is_hidden } : s);
         onUpdateBoard({ sections: updatedSections });
     }, [getEffectiveSections, onUpdateBoard]);
 
     const toggleSectionAnonymous = useCallback((sectionId: string) => {
         const sections = getEffectiveSections();
-        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isAnonymous: !s.isAnonymous } : s);
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, is_anonymous: !s.is_anonymous } : s);
         onUpdateBoard({ sections: updatedSections });
     }, [getEffectiveSections, onUpdateBoard]);
 
@@ -326,8 +275,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                const currentVal = s.commentsEnabled !== false; 
-                return { ...s, commentsEnabled: !currentVal };
+                return { ...s, comments_enabled: !s.comments_enabled };
             }
             return s;
         });
@@ -338,8 +286,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                const currentVal = s.repliesEnabled !== false;
-                return { ...s, repliesEnabled: !currentVal };
+                return { ...s, replies_enabled: !s.replies_enabled };
             }
             return s;
         });
@@ -350,13 +297,12 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                const currentVal = s.studentsCanDrag !== undefined ? s.studentsCanDrag : (board.studentsCanDrag ?? false);
-                return { ...s, studentsCanDrag: !currentVal };
+                return { ...s, students_can_drag: !s.students_can_drag };
             }
             return s;
         });
         onUpdateBoard({ sections: updatedSections });
-    }, [getEffectiveSections, board.studentsCanDrag, onUpdateBoard]);
+    }, [getEffectiveSections, onUpdateBoard]);
 
     const contextValue: BoardContextType = useMemo(() => ({
         board,
@@ -369,7 +315,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         isLoadingNotes,
         updateBoard: onUpdateBoard,
         deleteNote,
-        likeNote: (id) => board.reactionsEnabled && likeNote(id),
+        likeNote: (id) => board.reactions_enabled && likeNote(id),
         addComment,
         updateNote,
         duplicateNote,
@@ -379,8 +325,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         openSettings: () => setIsSettingsOpen(true),
         openShare: () => setIsShareModalOpen(true),
         openBoardAnalysis: () => {}, 
-        isSimulating,
-        toggleSimulation: () => setIsSimulating(!isSimulating),
         isSimulatingStudent,
         toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
         isAiLoading: false,
@@ -406,17 +350,15 @@ export const BoardView: React.FC<BoardViewProps> = ({
     }), [
         board, sortedNotes, userId, username, isStudent, isSimulatingStudent, canManageBoard, isLoadingNotes,
         onUpdateBoard, deleteNote, likeNote, addComment, updateNote, duplicateNote,
-        openAddNoteModal, openEditNoteModal, onBack, isSimulating,
+        openAddNoteModal, openEditNoteModal, onBack,
         backgroundStyle, fontClass, userAvatar, onlineUsers, isPresentationMode, classList,
         launchProjectorMode, toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous,
         toggleSectionComments, toggleSectionReplies, toggleSectionRearrange, typingUsers, setTypingStatus,
         highlightedUserId
     ]);
 
-    // WRAPPER FOR STUDENT VIEW PROTECTION
     const renderProtectedContent = (content: React.ReactNode) => {
-        // Only enforce protection if the setting is ON and the user is effectively a student (or simulating one)
-        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
+        const protectionEnabled = !!board.block_screenshots && (isStudent || isSimulatingStudent);
         
         return (
             <ScreenshotGuard isEnabled={protectionEnabled} username={username}>
@@ -425,173 +367,28 @@ export const BoardView: React.FC<BoardViewProps> = ({
         );
     };
 
-    if (board.format === 'lesson') {
-        return (
-            <BoardProvider value={contextValue}>
-                {renderProtectedContent(
-                    <>
-                    <LessonLayout 
-                        board={board}
-                        isStudent={isStudent || isSimulatingStudent}
-                        onUpdateBoard={onUpdateBoard}
-                        onBack={onBack}
-                        notes={notes}
-                        userId={userId}
-                        onAddComment={addComment}
-                        onDeleteNote={deleteNote}
-                        onLikeNote={likeNote}
-                        onUpdateNote={updateNote}
-                        onDuplicateNote={duplicateNote}
-                        onOpenAddNote={openAddNoteModal}
-                        onOpenSettings={() => setIsSettingsOpen(true)}
-                        onOpenShare={() => setIsShareModalOpen(true)}
-                        isPresentationMode={isPresentationMode}
-                    />
-                    {!isPresentationMode && (
-                        <BoardOverlays 
-                            board={board} 
-                            isStudent={isStudent}
-                            username={username}
-                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
-                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
-                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
-                            isRecipeSidebarOpen={isRecipeSidebarOpen} setIsRecipeSidebarOpen={setIsRecipeSidebarOpen}
-                            isGuideOpen={isGuideOpen} setIsGuideOpen={setIsGuideOpen}
-                            isDragOver={isDragOver}
-                            onUpdateBoard={onUpdateBoard}
-                            setNotes={setNotes}
-                            onAddNote={handleModalSubmit}
-                            pendingPasteImage={pendingPasteImage}
-                            editingNote={editingNote}
-                        />
-                    )}
-                    </>
-                )}
-            </BoardProvider>
-        );
-    }
+    const ViewComponent = useMemo(() => {
+        switch (board.format) {
+            case 'lesson': return LessonLayout;
+            case 'quiz': return QuizView;
+            case 'poll': return PollView;
+            case 'assessment': return AssessmentManager;
+            default: return BoardLayout;
+        }
+    }, [board.format]);
 
-    if (board.format === 'quiz') {
-        return (
-            <BoardProvider value={contextValue}>
-                {renderProtectedContent(
-                    <>
-                    <QuizView 
-                        board={board}
-                        notes={notes}
-                        userId={userId}
-                        isStudent={isStudent || isSimulatingStudent}
-                        onlineUsers={onlineUsers}
-                        onUpdateBoard={onUpdateBoard}
-                        onActivity={() => {}} 
-                        onBack={onBack}
-                        onOpenSettings={() => setIsSettingsOpen(true)}
-                        onOpenShare={() => setIsShareModalOpen(true)}
-                        isPresentationMode={isPresentationMode}
-                    />
-                    {!isPresentationMode && (
-                        <BoardOverlays 
-                            board={board} 
-                            isStudent={isStudent}
-                            username={username}
-                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
-                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
-                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
-                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
-                            isGuideOpen={false} setIsGuideOpen={() => {}}
-                            isDragOver={false}
-                            onUpdateBoard={onUpdateBoard}
-                            setNotes={setNotes}
-                            onAddNote={handleModalSubmit}
-                            pendingPasteImage={null}
-                            editingNote={null}
-                        />
-                    )}
-                    </>
-                )}
-            </BoardProvider>
-        );
-    }
-
-    if (board.format === 'poll') {
-        return (
-            <BoardProvider value={contextValue}>
-                {renderProtectedContent(
-                    <>
-                    <PollView 
-                        board={board}
-                        notes={notes}
-                        userId={userId}
-                        isStudent={isStudent || isSimulatingStudent}
-                        onUpdateBoard={onUpdateBoard}
-                        onActivity={() => {}}
-                        onBack={onBack}
-                        onOpenSettings={() => setIsSettingsOpen(true)}
-                        onOpenShare={() => setIsShareModalOpen(true)}
-                        isPresentationMode={isPresentationMode}
-                    />
-                    {!isPresentationMode && (
-                        <BoardOverlays 
-                            board={board} 
-                            isStudent={isStudent}
-                            username={username}
-                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
-                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
-                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
-                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
-                            isGuideOpen={false} setIsGuideOpen={() => {}}
-                            isDragOver={false}
-                            onUpdateBoard={onUpdateBoard}
-                            setNotes={setNotes}
-                            onAddNote={handleModalSubmit}
-                            pendingPasteImage={null}
-                            editingNote={null}
-                        />
-                    )}
-                    </>
-                )}
-            </BoardProvider>
-        );
-    }
-
-    if (board.format === 'assessment') {
-        return (
-            <BoardProvider value={contextValue}>
-                <div className="h-screen w-full relative bg-[#111]">
-                    {/* Assessment manages its own protections */}
-                    <AssessmentManager 
-                        board={board}
-                        notes={notes}
-                        userId={userId}
-                        isStudent={isStudent || isSimulatingStudent}
-                        onUpdateBoard={onUpdateBoard}
-                        onBack={onBack}
-                        onlineUsers={onlineUsers}
-                        onOpenSettings={() => setIsSettingsOpen(true)}
-                        onOpenShare={() => setIsShareModalOpen(true)}
-                    />
-                    {!isPresentationMode && !isStudent && !isSimulatingStudent && (
-                        <BoardOverlays 
-                            board={board} 
-                            isStudent={isStudent}
-                            username={username}
-                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
-                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
-                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
-                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
-                            isGuideOpen={false} setIsGuideOpen={() => {}}
-                            isDragOver={false}
-                            onUpdateBoard={onUpdateBoard}
-                            setNotes={setNotes}
-                            onAddNote={handleModalSubmit}
-                            pendingPasteImage={null}
-                            editingNote={null}
-                        />
-                    )}
-                </div>
-            </BoardProvider>
-        );
-    }
+    const commonProps = {
+        board,
+        notes,
+        userId,
+        isStudent: isStudent || isSimulatingStudent,
+        onUpdateBoard,
+        onBack,
+        onlineUsers,
+        onOpenSettings: () => setIsSettingsOpen(true),
+        onOpenShare: () => setIsShareModalOpen(true),
+        isPresentationMode
+    };
 
     return (
         <BoardProvider value={contextValue}>
@@ -602,7 +399,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                 >
-                    <BoardLayout isPresentationMode={isPresentationMode} />
+                    <ViewComponent {...commonProps} />
                     
                     <BoardOverlays 
                         board={board} 

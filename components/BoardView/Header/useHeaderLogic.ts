@@ -10,27 +10,31 @@ export const useHeaderLogic = () => {
     const { 
         board, canManageBoard, isSimulatingStudent, toggleStudentSimulation, 
         goBack, openSettings, openShare, onlineUsers, updateBoard, classList, launchProjectorMode,
-        isPresentationMode, typingUsers // Added
+        isPresentationMode, typingUsers, userId
     } = context;
 
     const activeCount = onlineUsers?.length || 0;
     const userPreviews = onlineUsers?.slice(0, 10) || [];
-    const isLive = board.isPublished;
+    const isLive = board.is_published;
 
-    const formatDate = (ts?: number) => ts ? new Date(ts).toLocaleDateString(undefined, { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    }) : '';
+    const formatDate = (ts?: number | string) => {
+        if (!ts) return '';
+        const date = typeof ts === 'string' ? new Date(ts) : new Date(ts * 1000);
+        return date.toLocaleDateString(undefined, { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    }
 
     const handleCreateClass = async () => {
         const name = prompt("Enter the name for the new class group:");
         if (name && name.trim()) {
             const newClass = await classService.createClass(name.trim());
             if (newClass) {
-                updateBoard({ targetGrade: newClass.name });
+                updateBoard({ target_grade: newClass.name });
                 setIsClassMenuOpen(false);
             } else {
                 alert("Failed to create class. Please try again.");
@@ -48,6 +52,7 @@ export const useHeaderLogic = () => {
         formatDate,
         handleCreateClass,
         isPresentationMode,
-        typingUsers
+        typingUsers,
+        userId
     };
 };

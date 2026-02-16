@@ -30,15 +30,13 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
     const [isPresenting, setIsPresenting] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-    // Game Logic Hook
     const { 
         questions, state, currentQIndex, currentQ, timeLeft, 
         hasAnswered, myAnswerNote, scores, myStreak,
         submitAnswer, enterLobby, startGame, nextStep, resetGame
     } = useQuizGame(board, props.notes, userId, isStudent, onUpdateBoard, props.onActivity);
 
-    // Audio Logic Hook - Use setting or default to 'lofi'
-    const selectedMusicId = (board.settings?.quizMusic as string) || 'lofi';
+    const selectedMusicId = board.quizMusic || 'lofi';
     const { isMuted, setIsMuted } = useQuizAudio(state, isStudent, isPresentationMode, timeLeft, myAnswerNote, currentQ, selectedMusicId);
 
     const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper), [board.wallpaper]);
@@ -69,7 +67,6 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
         </button>
     );
 
-    // --- STUDENT VIEW ---
     if (isStudent) {
         return (
             <StudentGame 
@@ -81,7 +78,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                 myStreak={myStreak}
                 myAnswerNote={myAnswerNote}
                 scores={scores}
-                userId={userId}
+                userId={userId ?? ''}
                 submitAnswer={submitAnswer}
                 SoundControl={SoundControl}
                 backgroundStyle={backgroundStyle}
@@ -89,7 +86,6 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
         );
     }
 
-    // --- TEACHER VIEW (SETUP) ---
     if (state === 'setup' || !state) {
         return (
             <QuizSetup 
@@ -106,12 +102,10 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
         );
     }
 
-    // --- TEACHER VIEW (LIVE) ---
     return (
         <>
             <div className={`h-full flex flex-col bg-[#111] text-white font-sans ${isPresenting ? 'fixed inset-0 z-[100]' : ''}`}>
                 
-                {/* Header for Live Mode when not presenting */}
                 <div className={`bg-[#161616] border-b border-white/10 px-6 py-3 flex items-center justify-between shrink-0 ${isPresenting || isPresentationMode ? 'hidden' : 'flex'}`}>
                     <div className="flex items-center gap-4">
                         <button onClick={() => setShowResetConfirm(true)} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-red-400" title="End Game">
@@ -119,7 +113,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                         </button>
                         <div className="flex items-center gap-2">
                             <h2 className="font-bold text-lg text-purple-400">Live Quiz</h2>
-                            {board.isPublished && (
+                            {board.is_published && (
                                 <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded border border-green-500/30 animate-pulse flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
                                 </span>
