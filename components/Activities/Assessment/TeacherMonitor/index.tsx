@@ -12,11 +12,32 @@ import { ParticipantsSection } from './ParticipantsSection';
 import { GradingModal } from './GradingModal';
 import { RetryModal } from './RetryModal';
 
+interface Participant {
+    id: string;
+    noteId: string | null;
+    name: string;
+    role: string;
+    violations: number;
+    score: number;
+    status: string;
+    progress: number;
+    disqualified: boolean;
+    hasLowWordCount: boolean;
+    data: any;
+    submittedAt: string;
+}
+
+interface ActiveStudent {
+    id: string;
+    user?: string;
+    role?: string;
+}
+
 interface TeacherMonitorProps {
     board: Board;
     questions: AssessmentQuestion[];
     submissions: Note[];
-    activeStudents: any[];
+    activeStudents: ActiveStudent[];
     config?: AssessmentConfig;
     onUpdateConfig?: (config: Partial<AssessmentConfig>) => void;
     className?: string;
@@ -52,10 +73,10 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         }
     };
 
-    const [retryModal, setRetryModal] = useState<{isOpen: boolean, participant: any}>({isOpen: false, participant: null});
-    const [gradingModal, setGradingModal] = useState<{isOpen: boolean, participant: any}>({isOpen: false, participant: null});
+    const [retryModal, setRetryModal] = useState<{isOpen: boolean, participant: Participant | null}>({isOpen: false, participant: null});
+    const [gradingModal, setGradingModal] = useState<{isOpen: boolean, participant: Participant | null}>({isOpen: false, participant: null});
     
-    const [printTargets, setPrintTargets] = useState<any[]>([]); 
+    const [printTargets, setPrintTargets] = useState<Participant[]>([]); 
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [printKeyMode, setPrintKeyMode] = useState(false); 
     const [printWithFeedback, setPrintWithFeedback] = useState(true);
@@ -91,7 +112,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             else if (data?.submitted) status = 'Submitted';
 
             const answers = data?.answers || {};
-            const answeredCount = Object.values(answers).filter((val: any) => val && typeof val === 'string' && val.trim().length > 0).length;
+            const answeredCount = Object.values(answers).filter((val: unknown) => val && typeof val === 'string' && val.trim().length > 0).length;
             const totalQuestions = questions.filter(q => q.type !== 'section').length || 1;
 
             return {
@@ -110,7 +131,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             };
         });
 
-        const uniqueParticipantsMap = new Map();
+        const uniqueParticipantsMap = new Map<string, Participant>();
         rawParticipants.forEach(p => {
             const existing = uniqueParticipantsMap.get(p.id);
             if (!existing || new Date(p.submittedAt) > new Date(existing.submittedAt)) {
@@ -120,8 +141,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         
         const mappedSubmissions = Array.from(uniqueParticipantsMap.values());
 
-        const submissionIds = new Set(mappedSubmissions.map((s: any) => s.id));
-        const pendingStudents = activeStudents
+        const submissionIds = new Set(mappedSubmissions.map((s: Participant) => s.id));
+        const pendingStudents: Participant[] = activeStudents
             .filter(u => u.id && !submissionIds.has(u.id))
             .map(u => ({
                 id: u.id,
@@ -138,11 +159,11 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 submittedAt: new Date().toISOString()
             }));
 
-        const all = [...mappedSubmissions, ...pendingStudents];
+        const all: Participant[] = [...mappedSubmissions, ...pendingStudents];
 
         return {
-            teachers: all.filter((p: any) => p.role === 'teacher'),
-            students: all.filter((p: any) => p.role !== 'teacher').sort((a: any, b: any) => a.name.localeCompare(b.name))
+            teachers: all.filter((p: Participant) => p.role === 'teacher'),
+            students: all.filter((p: Participant) => p.role !== 'teacher').sort((a: Participant, b: Participant) => a.name.localeCompare(b.name))
         };
     }, [submissions, questions, activeStudents]); 
 
@@ -161,12 +182,12 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         }
     };
 
-    const initiateReset = (participant: any) => {
+    const initiateReset = (participant: Participant) => {
         if (!participant.noteId) return;
         setRetryModal({ isOpen: true, participant });
     };
 
-    const handleContinue = async (participant: any) => {
+    const handleContinue = async (participant: Participant) => {
         if (!participant.noteId) return;
 
         const updatedData = {
@@ -198,7 +219,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setTimeout(handleForceRefresh, 500);
     };
 
-    const handleAllowRevision = async (participant: any) => {
+    const handleAllowRevision = async (participant: Participant) => {
         if (!participant.noteId) return;
 
         const updatedData = {
@@ -269,7 +290,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                     connections: updatedData,
                     content: 'Revising',
                     color: 'bg-white'
-                }).eq('id', p.noteId);
+                }).eq('id', p.noteId as string);
             });
 
         await Promise.all(updates);
@@ -318,7 +339,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setRetryModal({ isOpen: false, participant: null });
     };
 
-    const openGrading = (participant: any) => {
+    const openGrading = (participant: Participant) => {
         if (!participant.noteId) {
             alert(`Student ${participant.name} has not started the assessment yet.`);
             return;
@@ -333,7 +354,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         questions.forEach(q => {
             if (q.type === 'section') return;
 
-            const mcqAnswer = (q.type === 'mcq' || q.type === 'multiple_choice') ? q.correctAnswer : undefined
+            const mcqAnswer = (q.type === 'mcq' || q.type === 'multiple_choice') ? q.answer : undefined
 
             if (existingGrades[q.id]) {
                 initGrades[q.id] = existingGrades[q.id];
@@ -359,7 +380,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         const { participant } = gradingModal;
         if (!participant || !participant.noteId) return;
 
-        const totalScore = Object.values(grades).reduce((acc: number, curr: {score: number}) => acc + (curr.score || 0), 0);
+        const totalScore = Object.values(grades).reduce((acc, curr) => acc + (curr.score || 0), 0);
         
         const updatedData = {
             ...participant.data,
@@ -390,7 +411,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         const { participant } = gradingModal;
         if (!participant || !participant.noteId) return;
 
-        const totalScore = Object.values(currentGrades).reduce((acc: number, curr: {score: number}) => acc + (curr.score || 0), 0);
+        const totalScore = Object.values(currentGrades).reduce((acc, curr) => acc + (curr.score || 0), 0);
 
         const updatedData = {
             ...participant.data,
@@ -430,7 +451,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setTimeout(handleForceRefresh, 500);
     };
 
-    const handleSinglePrint = (participant: any, withFeedback: boolean = true) => {
+    const handleSinglePrint = (participant: Participant, withFeedback: boolean = true) => {
         setPrintKeyMode(false); 
         setPrintWithFeedback(withFeedback);
         setPrintTargets([participant]);
@@ -447,7 +468,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const handlePrintMaster = (withKey: boolean) => {
         setPrintKeyMode(withKey);
         setPrintWithFeedback(false);
-        setPrintTargets([{ id: 'master-copy', name: "", data: { answers: {} } }]);
+        setPrintTargets([{ id: 'master-copy', name: "", role: 'teacher', disqualified: false, status: 'Graded', violations: 0, hasLowWordCount: false, progress: 1, score: 100, noteId: null, submittedAt: new Date().toISOString(), data: { answers: {} } }]);
     };
 
     return (
@@ -519,12 +540,12 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 onSave={saveGrades}
                 onAutoSave={handleAutoSave}
                 onPrint={(withFeedback, gradesSnapshot) => {
-                    const currentTotal = Object.values(gradesSnapshot).reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
-                    const updatedParticipant = {
-                        ...gradingModal.participant,
+                    const currentTotal = Object.values(gradesSnapshot).reduce((acc: number, curr: {score: number, feedback: string}) => acc + (curr.score || 0), 0);
+                    const updatedParticipant: Participant = {
+                        ...(gradingModal.participant as Participant),
                         score: currentTotal, 
                         data: {
-                            ...gradingModal.participant.data,
+                            ...gradingModal.participant?.data,
                             score: currentTotal,
                             grading: gradesSnapshot 
                         }

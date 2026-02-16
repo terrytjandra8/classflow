@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { AssessmentQuestion, Board, AssessmentQuestionType } from '../../../types';
-import { Plus, Trash2, CheckCircle, Type, List, Save, X, Layout, GripVertical, AlignLeft, Bold, Italic, List as ListIcon, Calculator, AlertCircle, PenTool, Image } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, List as ListIcon, Calculator, PenTool, Image } from 'lucide-react';
 import { useSortableList } from '../../../src/logic/dnd/useSortableList';
 import { RichTextEditor } from '../../RichTextEditor';
 import { DebouncedInput } from '../../ui/DebouncedInput';
@@ -12,7 +12,7 @@ interface EditorProps {
     onUpdateBoard: (updates: Partial<Board>) => void;
 }
 
-const DebouncedRichTextEditor = ({ value, onChange, className, placeholder }: any) => {
+const DebouncedRichTextEditor = ({ value, onChange, className, placeholder }: { value: string, onChange: (value: string) => void, className?: string, placeholder?: string }) => {
     const [localValue, setLocalValue] = useState(value);
     
     useEffect(() => {
@@ -72,7 +72,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
 
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
-        onReorder: (newItems: any) => {
+        onReorder: (newItems: AssessmentQuestion[]) => {
             onUpdateBoard({ assessmentQuestions: newItems });
         }
     });
@@ -274,7 +274,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     key={`points-${q.id}`}
                                                     type="number"
                                                     value={q.points as number}
-                                                    onChange={(val: any) => updateQuestion(q.id, { points: parseInt(val) || 0 })}
+                                                    onChange={(val: string) => updateQuestion(q.id, { points: parseInt(val) || 0 })}
                                                     className="w-24 bg-[#222] border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500 text-center font-bold text-lg"
                                                 />
                                                 <span className="text-sm text-gray-500 font-bold">Marks</span>
@@ -292,7 +292,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                             key={`min_words-${q.id}`}
                                                             type="number"
                                                             value={q.min_words || 0}
-                                                            onChange={(val: any) => updateQuestion(q.id, { min_words: parseInt(val) || 0 })}
+                                                            onChange={(val: string) => updateQuestion(q.id, { min_words: parseInt(val) || 0 })}
                                                             className="w-24 bg-[#222] border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500 text-center font-bold"
                                                         />
                                                         <span className="text-sm text-gray-500">Words</span>

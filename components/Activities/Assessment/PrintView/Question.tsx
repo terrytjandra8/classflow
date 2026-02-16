@@ -3,11 +3,17 @@ import React from 'react';
 import { AssessmentQuestion } from '../../../../types';
 import { parseMath } from '../../../../utils/mappers';
 
+interface GradingInfo {
+  score: number;
+  feedback: string;
+  is_correct?: boolean;
+}
+
 interface PrintQuestionProps {
     q: AssessmentQuestion;
     qNum: number;
     answer: string;
-    gradeInfo: any;
+    gradeInfo: GradingInfo | null;
     isMasterKey: boolean;
     isRealStudent: boolean;
     isBlankCopy: boolean;

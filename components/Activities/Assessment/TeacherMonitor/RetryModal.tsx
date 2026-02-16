@@ -1,10 +1,22 @@
 
 import React from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+
+interface Participant {
+    id: string;
+    name: string;
+    role: string;
+    disqualified: boolean;
+    status: 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready';
+    violations: number;
+    hasLowWordCount: boolean;
+    progress: number;
+    score: number;
+}
 
 interface RetryModalProps {
     isOpen: boolean;
-    participant: any;
+    participant: Participant | null;
     onClose: () => void;
     onConfirm: () => void;
 }

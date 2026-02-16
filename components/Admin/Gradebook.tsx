@@ -31,7 +31,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
     
     const relevantBoards = boards.filter(b => {
         if (selectedClass === 'All Classes') return true;
-        return b.targetGrade === selectedClass || b.targetGrade === 'General' || !b.targetGrade;
+        return b.target_grade === selectedClass || b.target_grade === 'General' || !b.target_grade;
     });
 
     // Helper to normalize score for averages (converts to percentage 0-100 for consistent aggregate stats)
@@ -42,7 +42,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
 
     const getBoardAverage = (boardId: string) => {
         const board = boards.find(b => b.id === boardId);
-        const maxScore = board?.gradingConfig?.maxScore || 100;
+        const maxScore = board?.grading_config?.max_score || 100;
         
         const boardGrades = grades.filter(g => g.board_id === boardId && students.some(s => s.id === g.student_id && s.role !== 'teacher'));
         if (boardGrades.length === 0) return null;
@@ -56,7 +56,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
             .map(b => {
                 const g = grades.find(g => g.student_id === studentId && g.board_id === b.id);
                 if (!g || g.score === null) return null;
-                const max = b.gradingConfig?.maxScore || 100;
+                const max = b.grading_config?.max_score || 100;
                 return normalizeScore(g.score, max);
             })
             .filter(score => score !== null) as number[];
@@ -151,7 +151,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
                                         <div className="flex items-center justify-between">
                                             {getBadge(b.format)}
                                             <span className="text-[9px] text-gray-400 font-normal">
-                                                Max: {b.gradingConfig?.maxScore || 100}
+                                                Max: {b.grading_config?.max_score || 100}
                                             </span>
                                         </div>
                                     </div>
@@ -180,7 +180,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
                                         </td>
                                         {relevantBoards.map(b => {
                                             const grade = grades.find(g => g.student_id === student.id && g.board_id === b.id);
-                                            const config = b.gradingConfig || { mode: 'numeric', maxScore: 100 };
+                                            const config = b.grading_config || { mode: 'numeric', max_score: 100 };
                                             
                                             return (
                                                 <td key={b.id} className={`px-4 py-3 p-0 relative group/cell border-r border-gray-100 dark:border-white/5 last:border-r-0 align-middle ${b.format === 'quiz' ? (theme === 'light' ? 'bg-purple-50/30' : 'bg-purple-900/5') : ''}`}>
@@ -188,8 +188,8 @@ export const Gradebook: React.FC<GradebookProps> = ({
                                                         {config.mode === 'binary' ? (
                                                             <div className="flex gap-2">
                                                                 <button
-                                                                    onClick={() => onUpdateGrade(student.id, b.id, config.maxScore.toString())}
-                                                                    className={`w-8 h-8 rounded flex items-center justify-center transition-all ${grade?.score === config.maxScore ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 dark:bg-white/5 text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}`}
+                                                                    onClick={() => onUpdateGrade(student.id, b.id, config.max_score.toString())}
+                                                                    className={`w-8 h-8 rounded flex items-center justify-center transition-all ${grade?.score === config.max_score ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 dark:bg-white/5 text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}`}
                                                                     title="Pass"
                                                                 >
                                                                     <Check size={14} strokeWidth={3} />
@@ -207,7 +207,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
                                                                 <input 
                                                                     type="number" 
                                                                     min="0" 
-                                                                    max={config.maxScore}
+                                                                    max={config.max_score}
                                                                     value={grade?.score ?? ''}
                                                                     onChange={(e) => onUpdateGrade(student.id, b.id, e.target.value)} 
                                                                     placeholder="-" 
@@ -215,7 +215,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
                                                                 />
                                                                 {grade?.score !== undefined ? (
                                                                     <div className="absolute right-2 opacity-0 group-hover/cell:opacity-100 pointer-events-none">
-                                                                        {grade.score >= (config.maxScore * 0.75) ? <Award size={12} className="text-green-500" /> : <Save size={10} className="text-gray-400"/>}
+                                                                        {grade.score >= (config.max_score * 0.75) ? <Award size={12} className="text-green-500" /> : <Save size={10} className="text-gray-400"/>}
                                                                     </div>
                                                                 ) : null}
                                                             </>
@@ -277,7 +277,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
                             {getBadge(hoveredBoard.format)}
                             <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider text-gray-400">{hoveredBoard.format}</span>
                             <span className="bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider">
-                                Max: {hoveredBoard.gradingConfig?.maxScore || 100}
+                                Max: {hoveredBoard.grading_config?.max_score || 100}
                             </span>
                         </div>
                     </div>

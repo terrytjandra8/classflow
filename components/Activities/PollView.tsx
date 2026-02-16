@@ -52,7 +52,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
         setShowResetConfirm(false);
     };
 
-    const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper ?? null), [board.wallpaper]);
+    const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper ?? ''), [board.wallpaper]);
 
     if (isStudent) {
         if (!currentPoll) return <div className="h-full flex items-center justify-center text-white">Connecting...</div>;

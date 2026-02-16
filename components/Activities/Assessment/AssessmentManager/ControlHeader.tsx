@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Play, Pause, Lock, BookOpen, SkipForward, Eye, Share2, Settings, Radio, EyeOff, Printer, Users, ChevronDown, Rocket } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Lock, BookOpen, SkipForward, Eye, Share2, Settings, EyeOff, Printer, Users, ChevronDown, Rocket } from 'lucide-react';
 import { AssessmentConfig } from '../../../../types';
 
 interface ControlHeaderProps {
@@ -10,7 +10,7 @@ interface ControlHeaderProps {
     config: AssessmentConfig;
     isPublished: boolean;
     onBack: () => void;
-    onTransition: (status: any) => void;
+    onTransition: (status: 'setup' | 'reading' | 'practice' | 'active' | 'closed') => void;
     onTogglePublish: () => void;
     view: 'editor' | 'monitor';
     setView: (v: 'editor' | 'monitor') => void;

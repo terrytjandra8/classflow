@@ -3,6 +3,16 @@ import React from 'react';
 import { Lock, Clock, RefreshCw, Eye, Ban, ShieldAlert, Home, CheckCircle, Rocket, UserCheck } from 'lucide-react';
 import { AssessmentConfig, AssessmentQuestion, Board } from '../../../../types';
 
+interface SubmissionData {
+    answers: Record<string, string>;
+    violations?: number;
+    score?: number;
+    submitted?: boolean;
+    disqualified?: boolean;
+    retryQuestions?: string[];
+    released?: boolean;
+}
+
 interface StatusViewProps {
     type: 'setup' | 'intro' | 'closed' | 'disqualified' | 'submitted';
     board?: Board;
@@ -13,7 +23,7 @@ interface StatusViewProps {
     onReturnHome?: () => void;
     onStartTest?: () => void;
     onManualRefresh?: () => void;
-    submissionData?: any;
+    submissionData?: SubmissionData | null;
 }
 
 const PreviewBanner = ({ onExit }: { onExit?: () => void }) => (

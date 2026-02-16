@@ -4,7 +4,6 @@ import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
 import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock } from 'lucide-react';
 import { DrawingCanvas } from '../../../ui/DrawingCanvas';
 import { supabase } from '../../../../services/supabaseClient';
-import { createPortal } from 'react-dom';
 import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
 
@@ -32,10 +31,9 @@ const formatTime = (seconds: number) => {
 };
 
 const QuestionItem = memo(({ 
-    q, idx, answer, onAnswerChange, isReadingMode, allowInteractions, setActiveDrawingQId, questionNumber, isReadOnly
+    q, answer, onAnswerChange, isReadingMode, allowInteractions, setActiveDrawingQId, questionNumber, isReadOnly
 }: {
     q: AssessmentQuestion;
-    idx: number;
     answer: string;
     onAnswerChange: (id: string, val: string) => void;
     isReadingMode: boolean;
@@ -198,7 +196,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         
         try {
             const fileName = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
-            const { data, error } = await supabase.storage.from('uploads').upload(fileName, blob);
+            const { error } = await supabase.storage.from('uploads').upload(fileName, blob);
             
             if (error) throw error;
             
@@ -294,7 +292,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                             <QuestionItem 
                                 key={q.id}
                                 q={q}
-                                idx={idx}
                                 answer={answers[q.id]}
                                 onAnswerChange={(id, val) => onAnswerChange(id, val, false)}
                                 isReadingMode={isReadingMode}

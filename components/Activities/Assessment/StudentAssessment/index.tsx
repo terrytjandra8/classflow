@@ -6,7 +6,22 @@ import { supabase } from '../../../../services/supabaseClient';
 import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
-import { Cloud, Check, Loader2, AlertCircle, Save } from 'lucide-react';
+import { Cloud, Loader2, AlertCircle } from 'lucide-react';
+
+interface SubmissionData {
+    answers: Record<string, string>;
+    violations?: number;
+    score?: number;
+    submitted?: boolean;
+    disqualified?: boolean;
+    retryQuestions?: string[];
+    released?: boolean;
+}
+
+interface BackupData extends SubmissionData {
+    timestamp: number;
+    status: 'inprogress' | 'submitted' | 'disqualified';
+}
 
 interface StudentAssessmentProps {
     board: Board;
@@ -31,10 +46,10 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     const submissionIdRef = useRef<string | null>(null);
     const answersRef = useRef<Record<string, string>>({});
     const violationCountRef = useRef(0);
-    const saveTimeoutRef = useRef<any>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isCreatingRef = useRef(false);
 
-    const [submissionData, setSubmissionData] = useState<any>(null);
+    const [submissionData, setSubmissionData] = useState<SubmissionData | null>(null);
     
     const [now, setNow] = useState(Date.now());
     
@@ -52,14 +67,80 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const backupKey = useMemo(() => `assessment_backup_${board.id}_${userId}`, [board.id, userId]);
 
-    const saveToBackup = (data: any) => {
+    const saveToBackup = (data: Omit<BackupData, 'timestamp'>) => {
         try {
-            localStorage.setItem(backupKey, JSON.stringify({
+            const backupData: BackupData = {
                 ...data,
                 timestamp: Date.now()
-            }));
+            };
+            localStorage.setItem(backupKey, JSON.stringify(backupData));
         } catch (e) { console.error("Backup failed", e); }
     };
+
+    const persistToDB = useCallback(async (currentAnswers: Record<string, string>, currentViolations: number, disqualified: boolean, isFinalSubmit: boolean) => {
+        if (isPreviewMode) return;
+        
+        if (!submissionIdRef.current && isCreatingRef.current) return;
+
+        setSaveStatus('saving');
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        let autoScore = 0;
+        if (!disqualified) {
+            questions.forEach(q => {
+                if ((q.type === 'mcq' || q.type === 'multiple_choice') && q.answer === currentAnswers[q.id]) {
+                    autoScore += (q.points || 0);
+                }
+            });
+        }
+        
+        const existingRetries = submissionData?.retryQuestions || [];
+
+        const newSubmissionData: SubmissionData = {
+            ...submissionData,
+            answers: currentAnswers,
+            violations: currentViolations,
+            score: autoScore,
+            submitted: isFinalSubmit || disqualified, 
+            disqualified: disqualified,
+            retryQuestions: existingRetries
+        };
+
+        const payload = {
+            board_id: board.id,
+            author_id: userId,
+            title: 'Assessment Submission',
+            type: 'assessment_submission',
+            content: disqualified ? 'Disqualified (Violation)' : (isFinalSubmit ? 'Submitted' : 'In Progress'),
+            author: user?.user_metadata?.full_name || 'Student',
+            color: disqualified ? 'bg-red-500' : 'bg-white',
+            connections: newSubmissionData as any 
+        };
+
+        try {
+            if (submissionIdRef.current) {
+                await supabase.from('notes').update(payload).eq('id', submissionIdRef.current);
+            } else {
+                isCreatingRef.current = true;
+                const { data, error } = await supabase.from('notes').insert({ ...payload, x: 0, y: 0 }).select().single();
+                isCreatingRef.current = false;
+                
+                if (data && !error) {
+                    submissionIdRef.current = data.id;
+                }
+            }
+            setSubmissionData(newSubmissionData);
+            setSaveStatus('saved');
+            
+            if (isFinalSubmit) {
+                localStorage.removeItem(backupKey);
+            }
+        } catch (e) {
+            console.error("Save failed", e);
+            setSaveStatus('error');
+            isCreatingRef.current = false;
+        }
+    }, [board.id, userId, questions, isPreviewMode, submissionData, backupKey]);
 
     const fetchSubmission = useCallback(async () => {
         const { data } = await supabase
@@ -72,21 +153,21 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             .limit(1)
             .single();
         
-        let localBackup: any = null;
+        let localBackup: BackupData | null = null;
         try {
             const raw = localStorage.getItem(backupKey);
             if (raw) localBackup = JSON.parse(raw);
         } catch (e) {}
 
-        let finalAnswers = {};
+        let finalAnswers: Record<string, string> = {};
         let finalViolations = 0;
-        let finalData: any = {};
+        let finalData: SubmissionData = {};
 
         if (data) {
             submissionIdRef.current = data.id;
             
             if (data.connections) {
-                const submission = data.connections as any;
+                const submission = data.connections as SubmissionData;
                 finalData = Array.isArray(submission) ? {} : submission;
                 
                 if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
@@ -155,7 +236,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         if (Object.keys(finalAnswers).length > 0 || submissionIdRef.current) {
             setHasStarted(true);
         }
-    }, [board.id, userId, isClosed, backupKey]);
+    }, [board.id, userId, isClosed, backupKey, persistToDB]);
 
     useEffect(() => {
         if (!isPreviewMode) fetchSubmission();
@@ -167,71 +248,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             setSubmitted(true);
         }
     }, [isClosed, submitted, hasStarted, isPreviewMode, isPracticeMode, retryQuestions]);
-
-    const persistToDB = useCallback(async (currentAnswers: Record<string, string>, currentViolations: number, disqualified: boolean, isFinalSubmit: boolean) => {
-        if (isPreviewMode) return;
-        
-        if (!submissionIdRef.current && isCreatingRef.current) return;
-
-        setSaveStatus('saving');
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        let autoScore = 0;
-        if (!disqualified) {
-            questions.forEach(q => {
-                if ((q.type === 'mcq' || q.type === 'multiple_choice') && q.answer === currentAnswers[q.id]) {
-                    autoScore += (q.points || 0);
-                }
-            });
-        }
-        
-        const existingRetries = submissionData?.retryQuestions || [];
-
-        const newSubmissionData = {
-            ...submissionData,
-            answers: currentAnswers,
-            violations: currentViolations,
-            score: autoScore,
-            submitted: isFinalSubmit || disqualified, 
-            disqualified: disqualified,
-            retryQuestions: existingRetries
-        };
-
-        const payload = {
-            board_id: board.id,
-            author_id: userId,
-            title: 'Assessment Submission',
-            type: 'assessment_submission',
-            content: disqualified ? 'Disqualified (Violation)' : (isFinalSubmit ? 'Submitted' : 'In Progress'),
-            author: user?.user_metadata?.full_name || 'Student',
-            color: disqualified ? 'bg-red-500' : 'bg-white',
-            connections: newSubmissionData as any 
-        };
-
-        try {
-            if (submissionIdRef.current) {
-                await supabase.from('notes').update(payload).eq('id', submissionIdRef.current);
-            } else {
-                isCreatingRef.current = true;
-                const { data, error } = await supabase.from('notes').insert({ ...payload, x: 0, y: 0 }).select().single();
-                isCreatingRef.current = false;
-                
-                if (data && !error) {
-                    submissionIdRef.current = data.id;
-                }
-            }
-            setSubmissionData(newSubmissionData);
-            setSaveStatus('saved');
-            
-            if (isFinalSubmit) {
-                localStorage.removeItem(backupKey);
-            }
-        } catch (e) {
-            console.error("Save failed", e);
-            setSaveStatus('error');
-            isCreatingRef.current = false;
-        }
-    }, [board.id, userId, questions, isPreviewMode, submissionData, backupKey]);
 
     const handleManualSync = async () => {
         await persistToDB(answersRef.current, violationCountRef.current, false, false);
@@ -288,7 +304,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 persistToDB(answersRef.current, violationCountRef.current, false, false);
             }, delay);
         }
-    }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB]);
+    }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB, saveToBackup]);
 
     const handleConfirmSubmit = async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);

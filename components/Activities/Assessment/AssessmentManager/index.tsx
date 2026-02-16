@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Board, Note, AssessmentConfig, AssessmentState, BoardSettings } from '../../../../types';
+import { Board, Note, AssessmentConfig, AssessmentState } from '../../../../types';
 import { Editor } from '../Editor';
 import { StudentAssessment } from '../StudentAssessment/index';
 import { TeacherMonitor } from '../TeacherMonitor';
@@ -16,7 +16,7 @@ interface AssessmentManagerProps {
     isStudent: boolean;
     onUpdateBoard: (updates: Partial<Board>) => void;
     onBack: () => void;
-    onlineUsers?: any[];
+    onlineUsers?: { id: string, name: string, avatar: string }[];
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
 }
@@ -68,6 +68,19 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
     const ibLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/IB.png').data.publicUrl;
 
+    const handleTransition = React.useCallback((newStatus: AssessmentState) => {
+        const newConfig: AssessmentConfig = { 
+            ...config, 
+            status: newStatus, 
+            startTime: Date.now(),
+        };
+        
+        onUpdateBoard({ 
+            assessmentConfig: newConfig,
+            assessmentState: newStatus 
+        });
+    }, [config, onUpdateBoard]);
+
     useEffect(() => {
         const tick = () => {
             const currentTime = Date.now();
@@ -110,20 +123,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
         tick();
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [config, board.autoLiveTime, board.autoLockTime, isStudent, isPreviewMode]);
-
-    const handleTransition = (newStatus: AssessmentState) => {
-        const newConfig: AssessmentConfig = { 
-            ...config, 
-            status: newStatus, 
-            startTime: Date.now(),
-        };
-        
-        onUpdateBoard({ 
-            assessmentConfig: newConfig,
-            assessmentState: newStatus 
-        });
-    };
+    }, [config, board.autoLiveTime, board.autoLockTime, isStudent, isPreviewMode, handleTransition]);
 
     const effectiveStatus = (board.autoLockTime && now >= board.autoLockTime && config.status !== 'finished') 
         ? 'finished' 

@@ -172,7 +172,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                             <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center w-80 transform transition-transform hover:scale-[1.02] shadow-2xl">
                                 <div className="text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mb-2">Class Code</div>
                                 <div className="text-6xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                                    {board.classCode}
+                                    {board.class_code}
                                 </div>
                                 <div className="mt-6 text-sm text-gray-400 border-t border-white/10 pt-4">
                                     Join at <span className="text-white font-bold">classboards.ai</span>
@@ -216,7 +216,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     {state === 'question' && (
                         <div className="w-full h-2 bg-white/5 relative overflow-hidden">
                             <div 
-                                className={`h-full transition-all duration-200 ease-linear ${timeLeft <= 5 ? 'bg-red-500 shadow-[0_0_20px_#ef4444]' : 'bg-blue-500 shadow-[0_0_20px_#3b82f6]'}`}
+                                className={`h-full transition-all duration-200 ease-linear ${Number(timeLeft) <= 5 ? 'bg-red-500 shadow-[0_0_20px_#ef4444]' : 'bg-blue-500 shadow-[0_0_20px_#3b82f6]'}`}
                                 style={{ width: `${(timeLeft / (currentQ.time_limit || 30)) * 100}%` }}
                             ></div>
                         </div>
@@ -231,7 +231,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                         </div>
                         {state === 'question' ? (
                             <div className="flex items-center gap-2 text-white font-mono font-bold bg-white/5 px-4 py-1 rounded-full border border-white/10">
-                                <Hourglass size={16} className={timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-blue-400'} />
+                                <Hourglass size={16} className={Number(timeLeft) <= 5 ? 'text-red-500 animate-pulse' : 'text-blue-400'} />
                                 {timeLeft}s
                             </div>
                         ) : (

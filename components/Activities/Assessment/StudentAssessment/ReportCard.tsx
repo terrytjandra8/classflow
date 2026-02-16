@@ -7,10 +7,16 @@ import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView } from '../AssessmentPrintView';
 import { parseMath } from '../../../../utils/mappers';
 
+interface SubmissionData {
+    answers: Record<string, string>;
+    score?: number;
+    grading?: Record<string, { score: number; feedback: string; }>;
+}
+
 interface ReportCardProps {
     board: Board;
     questions: AssessmentQuestion[];
-    submissionData: any;
+    submissionData: SubmissionData | null;
     isPreviewMode?: boolean;
     onExitPreview?: () => void;
     onReturnHome: () => void;

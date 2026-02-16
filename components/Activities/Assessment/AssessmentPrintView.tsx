@@ -7,8 +7,26 @@ import { PrintHeader } from './PrintView/Header';
 import { PrintQuestion } from './PrintView/Question';
 import { SectionHeader } from './PrintView/SectionHeader';
 
+type Answer = string | string[] | number | null;
+
+interface GradingInfo {
+  score: number;
+  feedback: string;
+  is_correct?: boolean;
+}
+
+interface PrintViewParticipant {
+    id?: string;
+    name: string;
+    score?: number;
+    data: {
+        answers: Record<string, Answer>;
+        grading?: Record<string, GradingInfo>;
+    };
+}
+
 interface AssessmentPrintViewProps {
-    participants: any[]; 
+    participants: PrintViewParticipant[];
     questions: AssessmentQuestion[];
     ipekaLogoUrl: string;
     ibLogoUrl: string;
