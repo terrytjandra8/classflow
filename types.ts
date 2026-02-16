@@ -3,12 +3,28 @@ import { PostgrestError } from "@supabase/supabase-js";
 
 // A comprehensive overhaul of all type definitions to fix the build errors.
 
+// Enums
 export type BoardFormat = 'wall' | 'columns' | 'grid' | 'timeline' | 'quiz' | 'poll' | 'map' | 'canvas' | 'freeform' | 'lesson' | 'assessment' | 'stream';
 export type LockMode = 'unlocked' | 'posts-only' | 'locked' | 'readonly' | 'comments_only';
 export type NoteColor = 'gray' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'pink' | 'purple' | string;
 export type NoteType = 'text' | 'image' | 'video' | 'link' | 'doodle' | 'drawing' | 'exit_ticket' | 'quiz_answer' | 'assessment_submission' | 'section';
 export type UserRole = 'teacher' | 'student' | 'admin';
+export type LessonStepType = 'slide' | 'poll' | 'quiz' | 'discussion' | 'canva' | 'google_slide' | 'board' | 'canvas' | 'video' | 'image' | 'website';
+export type AssessmentQuestionType = 'multiple_choice' | 'short_answer' | 'essay' | 'section' | 'mcq';
+export type AssessmentState = 'setup' | 'reading' | 'inprogress' | 'submitted' | 'finished' | 'grading' | 'active' | 'closed' | 'practice';
+export type QuizState = 'setup' | 'lobby' | 'question' | 'reveal' | 'leaderboard' | 'finished';
+export type ViewMode = 'presentation' | 'collaboration';
+export type GradingType = 'manual' | 'automatic' | 'none';
+export type SortOrder = 'manual' | 'date_desc' | 'date_asc' | 'likes';
+export type NewPostPosition = 'first' | 'last';
+export type ColorScheme = string;
+export type Font = string;
+export type RecipeStatus = string;
+export type ParticipantStatus = 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready' | 'Disqualified';
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
+
+// Interfaces
 export interface AiRecipe {
     id: string;
     title: string;
@@ -22,7 +38,6 @@ export interface BoardGuide {
     steps: any[];
 }
 
-export type LessonStepType = 'slide' | 'poll' | 'quiz' | 'discussion' | 'canva' | 'google_slide' | 'board' | 'canvas' | 'video' | 'image' | 'website';
 export interface LessonStep {
     id: string;
     type: LessonStepType;
@@ -37,12 +52,10 @@ export interface QuizQuestion {
     id: string;
     question: string;
     options: string[];
-    correct_answer: number;
+    correctAnswer: number;
     timeLimit?: number;
     [key: string]: any;
 }
-
-export type QuizState = 'setup' | 'lobby' | 'question' | 'reveal' | 'leaderboard' | 'finished';
 
 export interface PollQuestion {
     id: string;
@@ -51,7 +64,6 @@ export interface PollQuestion {
     [key: string]: any;
 }
 
-export type AssessmentQuestionType = 'multiple_choice' | 'short_answer' | 'essay' | 'section' | 'mcq';
 export interface AssessmentQuestion {
     id: string;
     type: AssessmentQuestionType;
@@ -73,15 +85,13 @@ export interface AssessmentConfig {
      [key: string]: any;
 }
 
-export type AssessmentState = 'setup' | 'reading' | 'inprogress' | 'submitted' | 'finished' | 'grading' | 'active' | 'closed' | 'practice';
-
 export interface Board {
     id: string;
     createdAt: string;
     updatedAt?: string;
     title: string;
     description?: string;
-    owner_id: string;
+    ownerId: string;
     format: BoardFormat;
     sections?: Section[];
     sectionGroups?: SectionGroup[];
@@ -93,10 +103,10 @@ export interface Board {
     targetGrade?: string;
     subject?: string;
     topic?: string;
-    gradingType?: 'manual' | 'automatic' | 'none';
+    gradingType?: GradingType;
     isFavorite?: boolean;
     lockMode?: LockMode;
-    viewMode?: 'presentation' | 'collaboration';
+    viewMode?: ViewMode;
     steps?: LessonStep[];
     currentStepIndex?: number;
     notes?: Note[];
@@ -104,13 +114,13 @@ export interface Board {
     deletedAt?: Date | null;
     isTrashed?: boolean;
     icon?: string;
-    sortOrder?: 'manual' | 'date_desc' | 'date_asc' | 'likes';
-    newPostPosition?: 'first' | 'last';
+    sortOrder?: SortOrder;
+    newPostPosition?: NewPostPosition;
     customSlug?: string;
     autoLiveTime?: number | null;
     autoLockTime?: number | null;
-    colorScheme?: string;
-    font?: string;
+    colorScheme?: ColorScheme;
+    font?: Font;
     textColor?: string;
     contentTextColor?: string;
     groupTextColor?: string;
@@ -139,36 +149,36 @@ export interface Board {
     guide?: BoardGuide;
     guideDismissed?: boolean;
     collaborators?: any[];
-    polls?: PollQuestion[];
+    polls?: Poll[];
     currentPollIndex?: number;
     recipeId?: string;
-    recipeStatus?: string;
+    recipeStatus?: RecipeStatus;
 }
 
 export interface BoardSettings {
-    allow_posts?: boolean;
-    allow_reactions?: boolean;
-    allow_comments?: boolean;
-    allow_anonymous_posts?: boolean;
-    allow_anonymous_comments?: boolean;
-    allow_student_pins?: boolean;
-    allow_embedding?: boolean;
-    default_note_color?: string;
-    default_note_font?: string;
-    max_posts_per_student?: number;
-    max_comments_per_student?: number;
-    post_approval_required?: boolean;
-    comment_approval_required?: boolean;
-    show_authors?: boolean;
-    show_posts_in_realtime?: boolean;
-    show_header?: boolean;
-    show_posts_count?: boolean;
-    show_reactions_count?: boolean;
-    show_comments_count?: boolean;
-    post_order?: 'newest_first' | 'oldest_first' | 'random';
-    layout_columns?: number;
-    layout_direction?: 'row' | 'column';
-    layout_align?: 'start' | 'center' | 'end';
+    allowPosts?: boolean;
+    allowReactions?: boolean;
+    allowComments?: boolean;
+    allowAnonymousPosts?: boolean;
+    allowAnonymousComments?: boolean;
+    allowStudentPins?: boolean;
+    allowEmbedding?: boolean;
+    defaultNoteColor?: string;
+    defaultNoteFont?: string;
+    maxPostsPerStudent?: number;
+    maxCommentsPerStudent?: number;
+    postApprovalRequired?: boolean;
+    commentApprovalRequired?: boolean;
+    showAuthors?: boolean;
+    showPostsInRealtime?: boolean;
+    showHeader?: boolean;
+    showPostsCount?: boolean;
+    showReactionsCount?: boolean;
+    showCommentsCount?: boolean;
+    postOrder?: 'newest_first' | 'oldest_first' | 'random';
+    layoutColumns?: number;
+    layoutDirection?: 'row' | 'column';
+    layoutAlign?: 'start' | 'center' | 'end';
     quizMusic?: string;
     assessmentConfig?: AssessmentConfig;
     lessonLayout?: string;
@@ -177,11 +187,11 @@ export interface BoardSettings {
 export interface Section {
     id: string;
     title: string;
-    is_published?: boolean;
+    isPublished?: boolean;
     locked?: boolean;
     isContentBlurred?: boolean;
     isHidden?: boolean;
-    isAnonymous?: boolean;
+isAnonymous?: boolean;
     commentsEnabled?: boolean;
     repliesEnabled?: boolean;
     studentsCanDrag?: boolean;
@@ -197,32 +207,32 @@ export interface SectionGroup {
 
 export interface Note {
     id: string;
-    board_id: string;
-    section_id?: string;
+    boardId: string;
+    sectionId?: string;
     createdAt: string;
     updatedAt?: string;
     content: string;
-    author_id: string;
-    author_name?: string;
-    author_avatar?: string;
+    authorId: string;
+    authorName?: string;
+    authorAvatar?: string;
     color: NoteColor;
-    position_x: number;
-    position_y: number;
+    positionX: number;
+    positionY: number;
     width: number;
     height: number;
     likes: number;
-    is_placeholder?: boolean;
-    is_deleted?: boolean;
-    is_pinned?: boolean;
-    is_watermarked?: boolean;
-    image_url?: string;
-    video_url?: string;
+    isPlaceholder?: boolean;
+    isDeleted?: boolean;
+    isPinned?: boolean;
+    isWatermarked?: boolean;
+    imageUrl?: string;
+    videoUrl?: string;
     attachmentUrl?: string;
     reactions?: any[];
     comments?: Comment[];
     tags?: string[];
-    author_role?: UserRole;
-    liked_by?: string[];
+    authorRole?: UserRole;
+    likedBy?: string[];
     title?: string;
     author?: any;
     type?: NoteType;
@@ -233,12 +243,12 @@ export interface Note {
 
 export interface Grade {
     id: string;
-    student_id: string;
-    board_id: string;
+    studentId: string;
+    boardId: string;
     score: number;
     feedback?: string;
-    created_at: string;
-    updated_at: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface CommentAttachment {
@@ -250,44 +260,44 @@ export interface CommentAttachment {
 
 export interface Comment {
     id: string;
-    note_id: string;
-    author_id: string;
-    author_name?: string;
-    author_avatar?: string;
+    noteId: string;
+    authorId: string;
+    authorName?: string;
+    authorAvatar?: string;
     content: string;
     text: string;
     createdAt: string;
-    is_anonymous?: boolean;
-    liked_by?: string[];
+    isAnonymous?: boolean;
+    likedBy?: string[];
     replies?: Comment[];
-    author_role?: UserRole | string;
+    authorRole?: UserRole | string;
     author?: any;
     likes?: number;
     attachment?: CommentAttachment;
 }
 
-export interface UserProfile {
+export interface Profile {
     id: string;
-    updated_at: string;
-    full_name: string;
-    avatar_url: string;
+    updatedAt: string;
+    fullName: string;
+    avatarUrl: string;
     role: UserRole;
-    enrolled_classes?: string[];
+    enrolledClasses?: string[];
     email: string;
     preferences?: UserPreferences;
-    grade_level?: string;
+    gradeLevel?: string;
 }
 
 export interface UserPreferences {
-    saved_colors?: string[];
-    saved_gradients?: string[];
+    savedColors?: string[];
+    savedGradients?: string[];
 }
 
 export type AppState = {
     currentBoard: Board | null;
     currentBoardError: PostgrestError | null;
     notes: Note[];
-    profile: UserProfile | null;
+    profile: Profile | null;
 }
 
 export interface ClassGroup {
@@ -299,9 +309,9 @@ export interface Class {
     id: string;
     name: string;
     description?: string;
-    owner_id: string;
-    created_at: string;
-    auto_enroll?: boolean;
+    ownerId: string;
+    createdAt: string;
+    autoEnroll?: boolean;
     position?: number;
     group?: ClassGroup;
 }
@@ -309,8 +319,6 @@ export interface Class {
 export interface ColumnAnalyticsData {
   // Define properties based on usage
 }
-
-export type ParticipantStatus = 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready' | 'Disqualified';
 
 export interface Participant {
     id: string;
@@ -344,4 +352,14 @@ export interface BackupData {
     answers: { [key: string]: string };
     violations: any[];
     timestamp: number;
+}
+
+export interface Poll extends PollQuestion {
+    // any additional properties for a Poll
+}
+export interface GradingConfig {
+    // any additional properties for a GradingConfig
+}
+export interface Guide {
+    // any additional properties for a Guide
 }

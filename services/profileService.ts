@@ -6,21 +6,21 @@ import { Profile } from '../types';
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 export interface UserPreferences {
-    saved_colors?: string[];
-    saved_gradients?: string[];
+    savedColors?: string[];
+    savedGradients?: string[];
 }
 
 const mapProfile = (row: ProfileRow): Profile => ({
     id: row.id,
     email: row.email || '',
-    fullName: row.full_name || 'Unknown',
-    avatarUrl: row.avatar_url || '',
+    fullName: row.fullName || 'Unknown',
+    avatarUrl: row.avatarUrl || '',
     role: (row.role as 'student' | 'teacher') || 'student',
-    enrolledClasses: row.enrolled_classes || [],
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    enrolledClasses: row.enrolledClasses || [],
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     preferences: row.preferences as any,
-    gradeLevel: row.grade_level
+    gradeLevel: row.gradeLevel
 });
 
 export const profileService = {
@@ -52,14 +52,14 @@ export const profileService = {
             const newProfile: ProfileRow = {
                 id: user.id,
                 email: user.email!,
-                full_name: metaName,
-                avatar_url: metaAvatar,
+                fullName: metaName,
+                avatarUrl: metaAvatar,
                 role: role,
-                created_at: new Date().toISOString(),
-                enrolled_classes: [],
+                createdAt: new Date().toISOString(),
+                enrolledClasses: [],
                 preferences: {},
-                updated_at: new Date().toISOString(),
-                grade_level: null
+                updatedAt: new Date().toISOString(),
+                gradeLevel: null
             };
             
             const { error: insertError } = await supabase.from('profiles').upsert(newProfile);
@@ -76,10 +76,10 @@ export const profileService = {
 
     async updateProfile(userId: string, updates: Partial<Profile>) {
         const snakeCaseUpdates: any = {};
-        if (updates.fullName) snakeCaseUpdates.full_name = updates.fullName;
-        if (updates.avatarUrl) snakeCaseUpdates.avatar_url = updates.avatarUrl;
+        if (updates.fullName) snakeCaseUpdates.fullName = updates.fullName;
+        if (updates.avatarUrl) snakeCaseUpdates.avatarUrl = updates.avatarUrl;
         if (updates.role) snakeCaseUpdates.role = updates.role;
-        if (updates.enrolledClasses) snakeCaseUpdates.enrolled_classes = updates.enrolledClasses;
+        if (updates.enrolledClasses) snakeCaseUpdates.enrolledClasses = updates.enrolledClasses;
         if (updates.preferences) snakeCaseUpdates.preferences = updates.preferences;
 
         const { error } = await supabase.from('profiles').update(snakeCaseUpdates).eq('id', userId);
@@ -89,7 +89,7 @@ export const profileService = {
     async updateClasses(userId: string, classes: string[]) {
         const { error } = await supabase
             .from('profiles')
-            .update({ enrolled_classes: classes })
+            .update({ enrolledClasses: classes })
             .eq('id', userId);
         if (error) throw error;
     },
@@ -112,10 +112,10 @@ export const profileService = {
         if (!user) return;
 
         const prefs = await this.getPreferences();
-        const currentColors = prefs.saved_colors || [];
+        const currentColors = prefs.savedColors || [];
         
         if (!currentColors.includes(color)) {
-            const newPrefs = { ...prefs, saved_colors: [...currentColors, color] };
+            const newPrefs = { ...prefs, savedColors: [...currentColors, color] };
             await supabase.from('profiles').update({ preferences: newPrefs }).eq('id', user.id);
         }
     },
@@ -125,8 +125,8 @@ export const profileService = {
         if (!user) return;
 
         const prefs = await this.getPreferences();
-        const newColors = (prefs.saved_colors || []).filter(c => c !== color);
-        const newPrefs = { ...prefs, saved_colors: newColors };
+        const newColors = (prefs.savedColors || []).filter(c => c !== color);
+        const newPrefs = { ...prefs, savedColors: newColors };
         
         await supabase.from('profiles').update({ preferences: newPrefs }).eq('id', user.id);
     },
@@ -136,10 +136,10 @@ export const profileService = {
         if (!user) return;
 
         const prefs = await this.getPreferences();
-        const currentGradients = prefs.saved_gradients || [];
+        const currentGradients = prefs.savedGradients || [];
         
         if (!currentGradients.includes(gradient)) {
-            const newPrefs = { ...prefs, saved_gradients: [...currentGradients, gradient] };
+            const newPrefs = { ...prefs, savedGradients: [...currentGradients, gradient] };
             await supabase.from('profiles').update({ preferences: newPrefs }).eq('id', user.id);
         }
     },
@@ -149,8 +149,8 @@ export const profileService = {
         if (!user) return;
 
         const prefs = await this.getPreferences();
-        const newGradients = (prefs.saved_gradients || []).filter(g => g !== gradient);
-        const newPrefs = { ...prefs, saved_gradients: newGradients };
+        const newGradients = (prefs.savedGradients || []).filter(g => g !== gradient);
+        const newPrefs = { ...prefs, savedGradients: newGradients };
         
         await supabase.from('profiles').update({ preferences: newPrefs }).eq('id', user.id);
     }
