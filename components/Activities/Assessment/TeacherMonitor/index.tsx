@@ -212,7 +212,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
         await supabase.from('notes').update({ 
             connections: updatedData, content: 'Revising', color: 'bg-white'
-        }).eq('id', participant.noteI I will now commit the changes I have made and push them to the remote repository.d);
+        }).eq('id', participant.noteId);
 
         setTimeout(handleForceRefresh, 500);
     };    
