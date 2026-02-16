@@ -73,7 +73,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
         onReorder: (newItems: any) => {
-            onUpdateBoard({ assessment_questions: newItems });
+            onUpdateBoard({ assessmentQuestions: newItems });
         }
     });
 
@@ -110,18 +110,18 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             response_type: 'text'
         };
         const newQuestions = [...questions, newQ];
-        onUpdateBoard({ assessment_questions: newQuestions });
+        onUpdateBoard({ assessmentQuestions: newQuestions });
         setEditingId(newQ.id);
     };
 
     const updateQuestion = (id: string, updates: Partial<AssessmentQuestion>) => {
         const newQuestions = questions.map(q => q.id === id ? { ...q, ...updates } : q);
-        onUpdateBoard({ assessment_questions: newQuestions });
+        onUpdateBoard({ assessmentQuestions: newQuestions });
     };
 
     const deleteQuestion = (id: string) => {
         const newQuestions = questions.filter(q => q.id !== id);
-        onUpdateBoard({ assessment_questions: newQuestions });
+        onUpdateBoard({ assessmentQuestions: newQuestions });
         if (editingId === id) setEditingId(null);
     };
 

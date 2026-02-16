@@ -119,7 +119,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     </div>
                 </div>
 
-                {board.show_question_on_student_device && (
+                {board.showQuestionOnStudentDevice && (
                     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white/5 rounded-3xl border border-white/10 overflow-y-auto shadow-inner backdrop-blur-sm">
                         <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed">
                             {currentQ?.question}
@@ -127,7 +127,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     </div>
                 )}
 
-                <div className={`grid grid-cols-2 gap-4 ${board.show_question_on_student_device ? 'h-auto pb-4' : 'flex-1'}`}>
+                <div className={`grid grid-cols-2 gap-4 ${board.showQuestionOnStudentDevice ? 'h-auto pb-4' : 'flex-1'}`}>
                     {currentQ?.options.map((opt, idx) => (
                         <button 
                             key={idx}
@@ -135,12 +135,12 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                             className={`
                                 ${BTN_STYLES[idx % 4]} 
                                 border-2 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-100 active:scale-95
-                                ${!board.show_question_on_student_device ? 'h-full' : 'h-32'}
+                                ${!board.showQuestionOnStudentDevice ? 'h-full' : 'h-32'}
                             `}
                         >
                             <span className="text-4xl mb-2 drop-shadow-md transform group-active:scale-90 transition-transform text-white/90">{SHAPES[idx % 4]}</span>
                             
-                            {board.show_question_on_student_device && (
+                            {board.showQuestionOnStudentDevice && (
                                 <span className="text-xs font-bold text-white/80 px-4 text-center line-clamp-2 w-full">{opt}</span>
                             )}
                         </button>

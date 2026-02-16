@@ -9,7 +9,7 @@ import { BoardRules } from '../../utils/boardRules'; // USE ENGINE FOR PERMISSIO
 
 interface BoardCardProps {
     board: Board;
-    viewMode: 'recents' | 'made_by_me' | 'trashed' | 'favourites';
+    viewMode: 'recents' | 'madeByMe' | 'trashed' | 'favourites';
     onSelect: (id: string) => void;
     onDelete: (id: string) => void;
     onRestore: (id: string) => void;
@@ -66,7 +66,8 @@ export const BoardCard: React.FC<BoardCardProps> = ({
                 isClassMenuOpen &&
                 triggerRef.current && !triggerRef.current.contains(event.target as Node) &&
                 dropdownRef.current && !dropdownRef.current.contains(event.target as Node)
-            ) {
+            )
+            {
                 setIsClassMenuOpen(false);
             }
         };
@@ -97,7 +98,7 @@ export const BoardCard: React.FC<BoardCardProps> = ({
     const hasUpdated = board.updatedAt && board.updatedAt > board.createdAt;
     const displayTs = hasUpdated ? board.updatedAt! : board.createdAt;
     
-    const currentClass = board.targetGrade || 'General';
+    const currentClass = board.target_grade || 'General';
     const showClassBadge = true;
 
     // --- Interaction Handlers ---
@@ -139,7 +140,7 @@ export const BoardCard: React.FC<BoardCardProps> = ({
 
     const handleClassChange = (className: string) => {
         if (onUpdate) {
-            onUpdate({ targetGrade: className });
+            onUpdate({ target_grade: className });
         }
         setIsClassMenuOpen(false);
     };
@@ -212,9 +213,9 @@ export const BoardCard: React.FC<BoardCardProps> = ({
                 {viewMode !== 'trashed' && (
                     <button 
                         onClick={(e) => { e.stopPropagation(); onToggleFavorite(board.id); }}
-                        className={`absolute top-2 right-2 p-1.5 rounded-full transition-all z-10 hover:bg-black/40 backdrop-blur-sm ${board.isFavorite ? 'text-red-500 opacity-100' : 'text-white/50 opacity-0 group-hover:opacity-100'}`}
+                        className={`absolute top-2 right-2 p-1.5 rounded-full transition-all z-10 hover:bg-black/40 backdrop-blur-sm ${board.is_favorite ? 'text-red-500 opacity-100' : 'text-white/50 opacity-0 group-hover:opacity-100'}`}
                     >
-                        <Heart size={18} fill={board.isFavorite ? "currentColor" : "none"} />
+                        <Heart size={18} fill={board.is_favorite ? "currentColor" : "none"} />
                     </button>
                 )}
 

@@ -20,18 +20,18 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
             correct_answer: "Option 1",
             time_limit: 20
         };
-        onUpdateBoard({ quiz_questions: [...questions, newQ] });
+        onUpdateBoard({ quizQuestions: [...questions, newQ] });
         setEditingQuestion(newQ);
     };
 
     const updateQuestion = (q: QuizQuestion) => {
         const newQuestions = questions.map(exist => exist.id === q.id ? q : exist);
-        onUpdateBoard({ quiz_questions: newQuestions });
+        onUpdateBoard({ quizQuestions: newQuestions });
         setEditingQuestion(null);
     };
 
     const deleteQuestion = (id: string) => {
-        onUpdateBoard({ quiz_questions: questions.filter(q => q.id !== id) });
+        onUpdateBoard({ quizQuestions: questions.filter(q => q.id !== id) });
         if (editingQuestion?.id === id) setEditingQuestion(null);
     };
 

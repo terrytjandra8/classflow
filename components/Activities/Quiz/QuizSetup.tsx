@@ -26,7 +26,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const currentMusicId = (board.settings?.quiz_music as string) || 'lofi';
+    const currentMusicId = (board.settings?.quizMusic as string) || 'lofi';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -70,7 +70,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
         onUpdateBoard({
             settings: {
                 ...board.settings,
-                quiz_music: trackId
+                quizMusic: trackId
             }
         });
     };
@@ -184,7 +184,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => setIsEditing(true)} className="p-2 hover:bg-white/10 rounded text-blue-400"><Edit2 size={16}/></button>
                                             <button 
-                                                onClick={() => onUpdateBoard({ quiz_questions: questions.filter(item => item.id !== q.id) })} 
+                                                onClick={() => onUpdateBoard({ quizQuestions: questions.filter(item => item.id !== q.id) })} 
                                                 className="p-2 hover:bg-white/10 rounded text-red-400"
                                             >
                                                 <Trash2 size={16}/>

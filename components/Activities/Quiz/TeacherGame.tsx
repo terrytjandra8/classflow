@@ -35,7 +35,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const currentMusicId = (board.settings?.quiz_music as string) || 'lofi';
+    const currentMusicId = (board.settings?.quizMusic as string) || 'lofi';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -79,7 +79,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
         onUpdateBoard({
             settings: {
                 ...board.settings,
-                quiz_music: trackId
+                quizMusic: trackId
             }
         });
     };
@@ -172,7 +172,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                             <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center w-80 transform transition-transform hover:scale-[1.02] shadow-2xl">
                                 <div className="text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mb-2">Class Code</div>
                                 <div className="text-6xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                                    {board.class_code}
+                                    {board.classCode}
                                 </div>
                                 <div className="mt-6 text-sm text-gray-400 border-t border-white/10 pt-4">
                                     Join at <span className="text-white font-bold">classboards.ai</span>

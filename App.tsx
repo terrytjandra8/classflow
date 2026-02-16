@@ -243,7 +243,7 @@ function AppContent() {
                       
                       const isPublic = updatedBoard.is_public;
                       const isLive = updatedBoard.is_published;
-                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quiz_state && updatedBoard.quiz_state !== 'setup';
+                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
                       
                       if (isPublic || isLive || isQuizActive) {
                           setAccessCheckStatus('allowed');
@@ -339,7 +339,7 @@ function AppContent() {
   const handleDeleteBoard = async (id: string) => {
       try {
           setBoards(boards.filter(b => b.id !== id));
-          await boardService.updateBoard(id, { is_trashed: true, deleted_at: new Date() });
+          await boardService.updateBoard(id, { isTrashed: true, deletedAt: new Date() });
       } catch (e) {
           console.error("Failed to delete board", e);
       }
@@ -371,17 +371,17 @@ function AppContent() {
 
       const overrideSettings: Partial<Board> = {
           title: `${boardToDup.title} (Copy)`,
-          is_favorite: false,
-          is_published: false,
-          is_public: false,
-          quiz_state: 'setup',
-          current_step_index: 0,
-          assessment_config: boardToDup.assessment_config ? {
-              ...boardToDup.assessment_config,
+          isFavorite: false,
+          isPublished: false,
+          isPublic: false,
+          quizState: 'setup',
+          currentStepIndex: 0,
+          assessmentConfig: boardToDup.assessmentConfig ? {
+              ...boardToDup.assessmentConfig,
               status: 'setup',
               startTime: 0
           } : undefined,
-          current_poll_index: 0
+          currentPollIndex: 0
       };
 
       try {
@@ -422,14 +422,14 @@ function AppContent() {
   const handleToggleFavorite = async (id: string) => {
       const board = boards.find(b => b.id === id);
       if (board) {
-          const newVal = !board.is_favorite;
-          handleUpdateBoard(id, { is_favorite: newVal });
+          const newVal = !board.isFavorite;
+          handleUpdateBoard(id, { isFavorite: newVal });
       }
   };
 
   const handleEmptyTrash = async () => {
-      const trashedIds = boards.filter(b => b.is_trashed).map(b => b.id);
-      setBoards(prev => prev.filter(b => !b.is_trashed));
+      const trashedIds = boards.filter(b => b.isTrashed).map(b => b.id);
+      setBoards(prev => prev.filter(b => !b.isTrashed));
       if (trashedIds.length > 0) {
           await supabase.from('boards').delete().in('id', trashedIds);
       }
@@ -531,8 +531,8 @@ function AppContent() {
       const effectiveRole = isGuest ? 'student' : userProfile?.role ?? 'student'; 
       const isStudent = effectiveRole === 'student';
       
-      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quiz_state && activeBoard.quiz_state !== 'setup';
-      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessment_config?.status === 'inprogress' || activeBoard.assessment_config?.status === 'reading');
+      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
+      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
       
       const isAllowed = !isStudent || activeBoard.is_published || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
 

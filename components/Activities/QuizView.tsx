@@ -36,7 +36,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
         submitAnswer, enterLobby, startGame, nextStep, resetGame
     } = useQuizGame(board, props.notes, userId, isStudent, onUpdateBoard, props.onActivity);
 
-    const selectedMusicId = board.settings?.quiz_music || 'lofi';
+    const selectedMusicId = board.settings?.quizMusic || 'lofi';
     const { isMuted, setIsMuted } = useQuizAudio(state, isStudent, isPresentationMode, timeLeft, myAnswerNote, currentQ, selectedMusicId);
 
     const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper ?? null), [board.wallpaper]);
@@ -113,7 +113,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                         </button>
                         <div className="flex items-center gap-2">
                             <h2 className="font-bold text-lg text-purple-400">Live Quiz</h2>
-                            {board.is_published && (
+                            {board.isPublished && (
                                 <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded border border-green-500/30 animate-pulse flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
                                 </span>
