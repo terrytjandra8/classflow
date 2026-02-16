@@ -102,7 +102,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
     
     const handleAddRelative = useCallback((noteId: string, position: 'before' | 'after') => {
         const note = localNotes.find((n: any) => n.id === noteId);
-        if(note) openAddNote({ section_id: note.section_id, relativeId: note.id, position } as any);
+        if(note) openAddNote({ sectionId: note.sectionId, relativeId: note.id, position } as any);
     }, [localNotes, openAddNote]);
 
     const handleMoveNote = useCallback((noteId: string, direction: 'up' | 'down') => {
@@ -122,8 +122,8 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                 if (section.isHidden && isStudent) return null;
 
                 const sectionNotes = sectionIdFilter 
-                    ? localNotes.filter((n: any) => n.section_id === section.id) 
-                    : localNotes.filter((n: any) => n.section_id === section.id || (!n.section_id && section.id === sections[0].id));
+                    ? localNotes.filter((n: any) => n.sectionId === section.id) 
+                    : localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && section.id === sections[0].id));
                 
                 const isSectionLocked = section.locked;
                 const canAddToSection = canManageBoard || (!isLocked && !isSectionLocked);

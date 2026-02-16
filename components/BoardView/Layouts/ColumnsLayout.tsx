@@ -124,7 +124,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const handleAddRelative = useCallback((noteId: string, position: 'before' | 'after') => {
         const note = localNotes.find(n => n.id === noteId);
         if (note) {
-            openAddNote({ section_id: note.section_id, relativeId: note.id, position } as any);
+            openAddNote({ sectionId: note.sectionId, relativeId: note.id, position } as any);
         }
     }, [localNotes, openAddNote]);
 
@@ -154,7 +154,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         const type = dragTypeRef.current;
         if (!draggedId || type !== 'NOTE') return;
         
-        const sectionNotes = localNotes.filter(n => n.section_id === sectionId);
+        const sectionNotes = localNotes.filter(n => n.sectionId === sectionId);
         const newIndex = sectionNotes.findIndex(n => n.id === draggedId);
         const prevNote = newIndex > 0 ? sectionNotes[newIndex - 1] : null;
         const nextNote = newIndex < sectionNotes.length - 1 ? sectionNotes[newIndex + 1] : null;
@@ -164,7 +164,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         else if (prevNote) newCreatedAt = new Date(prevNote.createdAt).getTime() - 60000; 
         else if (nextNote) newCreatedAt = new Date(nextNote.createdAt).getTime() + 60000; 
         
-        await updateNote(draggedId, { section_id: sectionId, createdAt: new Date(newCreatedAt).toISOString() });
+        await updateNote(draggedId, { sectionId: sectionId, createdAt: new Date(newCreatedAt).toISOString() });
 
         setDraggingId(null);
         setDraggingType(null);
@@ -177,7 +177,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const renderColumn = (section: Section, idx: number) => {
         if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
 
-        const sectionNotes = localNotes.filter((n: any) => n.section_id === section.id || (!n.section_id && idx === 0));
+        const sectionNotes = localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && idx === 0));
         const canAdd = canManageBoard || (!isLocked && !section.locked);
         const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
         const repliesOn = section.repliesEnabled !== undefined ? section.repliesEnabled : (board.repliesEnabled !== false);
@@ -218,7 +218,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10 space-y-3 min-h-[100px] relative transition-colors rounded-xl">
                         {canAdd && <button onClick={() => canAdd && openAddNote(section.id)} className={`w-full py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-sm hover:shadow-md backdrop-blur-sm mb-3 ${!canAdd ? 'border-2 border-dashed border-red-500/20 text-red-400 cursor-not-allowed bg-red-500/5' : 'bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold'}`}>{canAdd ? (<><div className="bg-pink-500 text-white rounded-full p-1"><IconPlus size={14} className="group-hover:scale-110 transition-transform"/></div> Add Post</>) : (<><IconLock size={14} /> Locked</>)}</button>}
-                        {sectionNotes.map((note: any) => <NoteCard key={note.id} note={note} onAddBefore={() => handleAddRelative(note.id, 'before')} onAddAfter={() => handleAddRelative(note.id, 'after')} onMoveNote={handleMoveNote} canDrag={canDragNotes} isStudent={isStudent} isSectionAnonymous={section.isAnonymous} isContentBlurred={isContentBlurred} commentsEnabled={commentsOn} reactionsEnabled={board.reactionsEnabled} onDelete={deleteNote} onLike={likeNote} onAddComment={addComment} onUpdate={updateNote} />)}
+                        {sectionNotes.map((note: any) => <NoteCard key={note.id} note={note} onAddBefore={() => handleAddRelative(note.id, 'before')} onAddAfter={() => handleAddRelative(note.id, 'after')} onMoveNote={handleMoveNote} canDrag={canDragNotes} isSectionAnonymous={section.isAnonymous} isContentBlurred={isContentBlurred} commentsEnabled={commentsOn} reactionsEnabled={board.reactionsEnabled} onDelete={deleteNote} onLike={likeNote} onAddComment={addComment} onUpdate={updateNote} />)}
                     </div>
                 </div>
             </React.Fragment>

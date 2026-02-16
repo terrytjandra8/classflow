@@ -116,13 +116,13 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
                                 onUpdate={(val) => onUpdate({ wallpaper: val })}
                                 onSave={handleSaveGradient}
                                 onDelete={handleDeleteGradient}
-                                savedGradients={prefs.saved_gradients || []}
+                                savedGradients={prefs.savedGradients || []}
                                 presets={GRADIENTS}
                             />
                         ) : (
                             <div className="flex flex-wrap gap-2">
                                 {/* Saved Gradients */}
-                                {prefs.saved_gradients?.map(grad => (
+                                {prefs.savedGradients?.map(grad => (
                                     <button 
                                         key={grad}
                                         onClick={() => onUpdate({ wallpaper: grad })}
@@ -157,7 +157,7 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
                         <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center justify-between">
                             <span className="flex items-center gap-1"><PaintBucket size={12}/> Solids</span>
                             {/* Save Button for Current Custom Color */}
-                            {customColor && !SOLIDS.includes(customColor) && !prefs.saved_colors?.includes(customColor) && (
+                            {customColor && !SOLIDS.includes(customColor) && !prefs.savedColors?.includes(customColor) && (
                                 <button onClick={handleSaveColor} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
                                     <Save size={10} /> Save
                                 </button>
@@ -181,7 +181,7 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
                             </div>
                             
                             {/* Saved Colors */}
-                            {prefs.saved_colors?.map(color => (
+                            {prefs.savedColors?.map(color => (
                                 <div key={color} className="relative group">
                                     <button 
                                         onClick={() => {

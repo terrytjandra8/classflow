@@ -34,7 +34,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
 
   const filteredBoards = useMemo(() => {
       if (loading || !userId) return []; 
-      return boards.filter(b => b.owner_id === userId);
+      return boards.filter(b => b.ownerId === userId);
   }, [boards, userId, loading]);
 
   const [newClassName, setNewClassName] = useState('');
@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
   };
 
   const getAvgScore = (studentId: string) => {
-      const studentGrades = grades.filter((g: any) => g.student_id === studentId);
+      const studentGrades = grades.filter((g: any) => g.studentId === studentId);
       if (studentGrades.length === 0) return 0;
       const sum = studentGrades.reduce((acc, curr) => acc + (curr.score || 0), 0);
       return Math.round(sum / studentGrades.length);
@@ -92,14 +92,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ boards, theme, s
         if (s.role === 'teacher') return false;
 
         if (selectedClass !== 'All Classes') {
-            const hasClass = (s.enrolled_classes || []).some(
+            const hasClass = (s.enrolledClasses || []).some(
                 (c: string) => c.trim().toLowerCase() === selectedClass.trim().toLowerCase()
             );
             if (!hasClass) return false;
         }
 
         return (
-            (s.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+            (s.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
             (s.email || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     });

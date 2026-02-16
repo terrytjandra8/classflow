@@ -49,7 +49,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             const { data } = await supabase
                 .from('notes')
                 .select('*')
-                .eq('board_id', board.id)
+                .eq('boardId', board.id)
                 .eq('type', 'assessment_submission');
             
             if (data) {
@@ -203,7 +203,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             submitted: false,
             graded: false,
             released: false,
-            retry_questions: [] 
+            retryQuestions: [] 
         };
 
         setSubmissions(prev => prev.map(sub => 
@@ -227,7 +227,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                  const oldData = sub.connections as any || {};
                  const updatedData = {
                     ...oldData,
-                    submitted: false, graded: false, released: false, retry_questions: [] 
+                    submitted: false, graded: false, released: false, retryQuestions: [] 
                 };
                 return { ...sub, connections: updatedData, content: 'Revising', color: 'gray' };
             }
@@ -238,7 +238,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             .filter(s => selectedStudentIds.has(s.id) && s.noteId)
             .map(p => {
                  const updatedData = {
-                    ...p.data, submitted: false, graded: false, released: false, retry_questions: [] 
+                    ...p.data, submitted: false, graded: false, released: false, retryQuestions: [] 
                 };
                 return supabase.from('notes').update({
                     connections: updatedData, content: 'Revising', color: 'bg-white'
@@ -258,7 +258,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         const updatedData = {
             ...participant.data,
             answers: {}, violations: [], score: 0,
-            submitted: false, disqualified: false, graded: false, released: false, retry_questions: []
+            submitted: false, disqualified: false, graded: false, released: false, retryQuestions: []
         };
 
         setSubmissions(prev => prev.map(sub => 
@@ -325,8 +325,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             graded: true, 
             submitted: true,
             ...(updatedAnswers && { answers: updatedAnswers }),
-            ...(retryQuestions && { retry_questions: retryQuestions }),
-            ...(teacherOverrides && { teacher_overrides: teacherOverrides })
+            ...(retryQuestions && { retryQuestions: retryQuestions }),
+            ...(teacherOverrides && { teacherOverrides: teacherOverrides })
         };
 
         const { error } = await supabase.from('notes').update({ 
@@ -372,8 +372,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
         if (board.id && participant.id) {
              await supabase.from('grades').upsert({
-                student_id: participant.id,
-                board_id: board.id,
+                studentId: participant.id,
+                boardId: board.id,
                 score: totalScore,
                 feedback: release ? 'See assessment details' : undefined
             }, { onConflict: 'student_id, board_id' });

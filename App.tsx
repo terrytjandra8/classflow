@@ -423,7 +423,7 @@ function AppContent() {
       const board = boards.find(b => b.id === id);
       if (board) {
           const newVal = !board.isFavorite;
-          handleUpdateBoard(id, { isFavorite: newVal });
+          handleUpdate_board(id, { isFavorite: newVal });
       }
   };
 
@@ -589,17 +589,16 @@ function AppContent() {
 
   return (
       <Suspense fallback={<LoadingScreen />}>
-          {userProfile?.role === 'student' || isGuest ? (
+          {(userProfile?.role === 'student' || isGuest) && userProfile ? (
               <StudentDashboard 
                   boards={boards}
                   onSelectBoard={selectBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={isGuest ? guestName : userProfile?.fullName ?? ''}
-                  userAvatar={isGuest ? guestAvatar : userProfile?.avatarUrl ?? null}
+                  profile={userProfile}
                   userClasses={userProfile?.enrolledClasses ?? []}
               />
-          ) : (
+          ) : userProfile ? (
               <Dashboard 
                   boards={boards}
                   onCreateBoard={createBoard}
@@ -615,7 +614,7 @@ function AppContent() {
                   userId={session?.user?.id}
                   onJoinByCode={handleJoinByCode}
               />
-          )}
+          ) : null}
 
           <DuplicateModal 
               isOpen={duplicateModal.isOpen}
