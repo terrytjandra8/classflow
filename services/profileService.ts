@@ -7,10 +7,10 @@ type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 export interface UserProfile {
     id: string;
     email: string;
-    fullName: string;
-    avatarUrl: string;
+    full_name: string;
+    avatar_url: string;
     role: 'student' | 'teacher';
-    enrolledClasses: string[];
+    enrolled_classes: string[];
 }
 
 export interface UserPreferences {
@@ -21,10 +21,10 @@ export interface UserPreferences {
 const mapProfile = (row: ProfileRow): UserProfile => ({
     id: row.id,
     email: row.email || '',
-    fullName: row.full_name || 'Unknown',
-    avatarUrl: row.avatar_url || '',
+    full_name: row.full_name || 'Unknown',
+    avatar_url: row.avatar_url || '',
     role: (row.role as 'student' | 'teacher') || 'student',
-    enrolledClasses: row.enrolled_classes || [], // Alias for easier frontend use
+    enrolled_classes: row.enrolled_classes || [],
 });
 
 export const profileService = {
@@ -34,14 +34,13 @@ export const profileService = {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, full_name, avatar_url, role, enrolled_classes, email') // Explicitly select columns
+            .select('id, full_name, avatar_url, role, enrolled_classes, email')
             .eq('id', user.id)
             .single();
 
         const isSuperAdmin = user.email?.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase();
 
         if (data) {
-            // Auto-correct: If Super Admin is marked as student in DB, fix it immediately
             if (isSuperAdmin && data.role !== 'teacher') {
                 await supabase.from('profiles').update({ role: 'teacher' }).eq('id', user.id);
                 data.role = 'teacher';
@@ -49,37 +48,30 @@ export const profileService = {
             return mapProfile(data as ProfileRow);
         }
         
-        // Fallback: Create if missing (Self-healing)
         if (user) {
             const metaName = user.user_metadata.full_name || user.email?.split('@')[0];
             const metaAvatar = user.user_metadata.avatar_url;
-            
-            // Ensure Super Admin starts as teacher
             const role = isSuperAdmin ? 'teacher' : 'student';
             
-            const newProfile = {
+            const newProfile: ProfileRow = {
                 id: user.id,
-                email: user.email,
+                email: user.email!,
                 full_name: metaName,
                 avatar_url: metaAvatar,
-                role: role
+                role: role,
+                created_at: new Date().toISOString(),
+                enrolled_classes: [],
+                preferences: {},
+                updated_at: new Date().toISOString(),
             };
             
-            // Fire and forget insert (Note: if policy fails, this will fail silently on client side)
             const { error: insertError } = await supabase.from('profiles').upsert(newProfile);
             
             if (insertError) {
                 console.error("Failed to create user profile. Please check RLS policies.", insertError);
             }
             
-            return {
-                id: user.id,
-                email: user.email || '',
-                fullName: metaName,
-                avatarUrl: metaAvatar,
-                role: role,
-                enrolledClasses: []
-            };
+            return mapProfile(newProfile);
         }
         
         return null;
@@ -92,8 +84,6 @@ export const profileService = {
             .eq('id', userId);
         if (error) throw error;
     },
-
-    // --- PREFERENCES (Colors/Gradients) ---
 
     async getPreferences(): Promise<UserPreferences> {
         const { data: { user } } = await supabase.auth.getUser();

@@ -94,7 +94,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     
     const board = useMemo(() => ({
         ...liveBoard,
-        lock_mode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
+        lock_mode: (isExpired ? 'readonly' : liveBoard.lock_mode) as LockMode
     }), [liveBoard, isExpired]);
 
     const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
@@ -142,7 +142,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     useEffect(() => {
         if (!canManageBoard) return;
         
-        const hasAutoLock = liveBoard.auto_lock_time && liveBoard.lockMode !== 'readonly';
+        const hasAutoLock = liveBoard.auto_lock_time && liveBoard.lock_mode !== 'readonly';
         const hasAutoLive = liveBoard.auto_live_time && !liveBoard.is_published;
 
         if (!hasAutoLock && !hasAutoLive) return;
@@ -150,8 +150,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const checkTimers = () => {
             const now = Date.now();
             
-            if (liveBoard.auto_lock_time && liveBoard.lockMode !== 'readonly' && now >= liveBoard.auto_lock_time) {
-                onUpdateBoard({ lockMode: 'readonly' });
+            if (liveBoard.auto_lock_time && liveBoard.lock_mode !== 'readonly' && now >= liveBoard.auto_lock_time) {
+                onUpdateBoard({ lock_mode: 'readonly' });
             }
 
             if (liveBoard.auto_live_time && !liveBoard.is_published && now >= liveBoard.auto_live_time) {
@@ -163,7 +163,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         checkTimers();
 
         return () => clearInterval(interval);
-    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time, liveBoard.lockMode, liveBoard.is_published, canManageBoard, onUpdateBoard]);
+    }, [liveBoard.auto_lock_time, liveBoard.auto_live_time, liveBoard.lock_mode, liveBoard.is_published, canManageBoard, onUpdateBoard]);
 
     const sortedNotes = useMemo(() => {
         let filtered = notes;
@@ -171,7 +171,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
             filtered = notes.filter(n => {
                 if (!n.section_id) return true;
                 const section = board.sections?.find(s => s.id === n.section_id);
-                return !section?.isHidden;
+                return !section?.is_hidden;
             });
         }
 
@@ -190,7 +190,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const backgroundStyle = resolveBackgroundStyle(board.wallpaper, theme);
     const fontClass = board.font === 'serif' ? 'font-serif' : board.font === 'mono' ? 'font-mono' : board.font === 'hand' ? 'font-hand' : 'font-sans';
 
-    const openAddNoteModal = useCallback((location?: string | { x: number; y: number }) => {
+    const openAddNoteModal = useCallback((location?: string | { x: number; y: number; section_id?: string }) => {
         if (isPresentationMode) return;
         setAddNoteLocation(location);
         setPendingPasteImage(null);
@@ -212,7 +212,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 ...noteData,
                 section_id: typeof addNoteLocation === 'string' 
                     ? addNoteLocation 
-                    : (addNoteLocation?.sectionId || undefined), 
+                    : (addNoteLocation?.section_id || undefined), 
                 position_x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined,
                 position_y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined,
             };
@@ -252,7 +252,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const sections = getEffectiveSections();
         const updatedSections = sections.map(s => {
             if (s.id === sectionId) {
-                return { ...s, is_content_blurred: !s.is_content_blurred, is_title_blurred: !s.is_content_blurred };
+                return { ...s, is_content_blurred: !s.is_content_blurred };
             }
             return s;
         });

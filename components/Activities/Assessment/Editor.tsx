@@ -73,7 +73,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
         onReorder: (newItems: any) => {
-            onUpdateBoard({ assessmentQuestions: newItems });
+            onUpdateBoard({ assessment_questions: newItems });
         }
     });
 
@@ -106,22 +106,22 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             options: type === 'mcq' ? ['Option 1', 'Option 2', 'Option 3', 'Option 4'] : [],
             answer: type === 'mcq' ? '0' : '',
             points: type === 'section' ? 0 : (type === 'mcq' ? 1 : 5),
-            minWords: type === 'essay' ? 0 : undefined,
-            responseType: 'text'
+            min_words: type === 'essay' ? 0 : undefined,
+            response_type: 'text'
         };
         const newQuestions = [...questions, newQ];
-        onUpdateBoard({ assessmentQuestions: newQuestions });
+        onUpdateBoard({ assessment_questions: newQuestions });
         setEditingId(newQ.id);
     };
 
     const updateQuestion = (id: string, updates: Partial<AssessmentQuestion>) => {
         const newQuestions = questions.map(q => q.id === id ? { ...q, ...updates } : q);
-        onUpdateBoard({ assessmentQuestions: newQuestions });
+        onUpdateBoard({ assessment_questions: newQuestions });
     };
 
     const deleteQuestion = (id: string) => {
         const newQuestions = questions.filter(q => q.id !== id);
-        onUpdateBoard({ assessmentQuestions: newQuestions });
+        onUpdateBoard({ assessment_questions: newQuestions });
         if (editingId === id) setEditingId(null);
     };
 
@@ -273,7 +273,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                 <DebouncedInput 
                                                     key={`points-${q.id}`}
                                                     type="number"
-                                                    value={q.points}
+                                                    value={q.points as number}
                                                     onChange={(val: any) => updateQuestion(q.id, { points: parseInt(val) || 0 })}
                                                     className="w-24 bg-[#222] border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500 text-center font-bold text-lg"
                                                 />
@@ -289,10 +289,10 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     </label>
                                                     <div className="flex items-center gap-2">
                                                         <DebouncedInput 
-                                                            key={`minWords-${q.id}`}
+                                                            key={`min_words-${q.id}`}
                                                             type="number"
-                                                            value={q.minWords || 0}
-                                                            onChange={(val: any) => updateQuestion(q.id, { minWords: parseInt(val) || 0 })}
+                                                            value={q.min_words || 0}
+                                                            onChange={(val: any) => updateQuestion(q.id, { min_words: parseInt(val) || 0 })}
                                                             className="w-24 bg-[#222] border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500 text-center font-bold"
                                                         />
                                                         <span className="text-sm text-gray-500">Words</span>
@@ -303,20 +303,20 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     <label className="text-xs font-bold text-gray-500 uppercase">Response Type</label>
                                                     <div className="flex gap-1 bg-[#222] p-1 rounded-lg">
                                                         <button 
-                                                            onClick={() => updateQuestion(q.id, { responseType: 'text' })}
-                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.responseType === 'text' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                                            onClick={() => updateQuestion(q.id, { response_type: 'text' })}
+                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.response_type === 'text' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
                                                         >
                                                             <Type size={12} /> Text
                                                         </button>
                                                         <button 
-                                                            onClick={() => updateQuestion(q.id, { responseType: 'drawing' })}
-                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.responseType === 'drawing' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                                            onClick={() => updateQuestion(q.id, { response_type: 'drawing' })}
+                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.response_type === 'drawing' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
                                                         >
                                                             <PenTool size={12} /> Draw
                                                         </button>
                                                         <button 
-                                                            onClick={() => updateQuestion(q.id, { responseType: 'both' })}
-                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.responseType === 'both' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                                            onClick={() => updateQuestion(q.id, { response_type: 'both' })}
+                                                            className={`flex-1 py-1 text-xs font-bold rounded flex items-center justify-center gap-1 ${q.response_type === 'both' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
                                                         >
                                                             <Image size={12} /> Both
                                                         </button>

@@ -25,24 +25,17 @@ interface TeacherGameProps {
 }
 
 const SHAPES = ['▲', '◆', '●', '■'];
-// New Neon Palette: Red, Blue, Yellow, Green but with glowing effects
-const NEON_COLORS = [
-    'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] text-red-400',
-    'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)] text-blue-400',
-    'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)] text-yellow-400',
-    'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)] text-green-400'
-];
 
 export const TeacherGame: React.FC<TeacherGameProps> = ({
     state, board, currentQ, currentQIndex, questions, timeLeft, scores, onlineUsers, 
-    startGame, nextStep, openProjectorMode, SoundControl, backgroundStyle, isPresenting, togglePresentation, onUpdateBoard
+    startGame, nextStep, SoundControl, isPresenting, togglePresentation, onUpdateBoard
 }) => {
     const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
     const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const currentMusicId = (board.settings?.quizMusic as string) || 'lofi';
+    const currentMusicId = (board.settings?.quiz_music as string) || 'lofi';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -86,12 +79,11 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
         onUpdateBoard({
             settings: {
                 ...board.settings,
-                quizMusic: trackId
+                quiz_music: trackId
             }
         });
     };
 
-    // Dynamic Mesh Gradient for "2026" feel
     const quizBackground = {
         background: 'radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%)',
         backgroundColor: '#050505'
@@ -100,14 +92,12 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
     return (
         <div className="flex-1 relative overflow-hidden flex flex-col font-sans" style={quizBackground}>
             
-            {/* Animated Mesh Blobs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[20%] left-[20%] w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] animate-blob"></div>
                 <div className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
                 <div className="absolute top-[50%] left-[50%] w-64 h-64 bg-pink-600/20 rounded-full blur-[100px] animate-blob animation-delay-4000"></div>
             </div>
 
-            {/* Music Controls (Floating) */}
             {!isPresenting && (
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[90]">
                     <div className="relative" ref={menuRef}>
@@ -164,7 +154,6 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {/* SCENE: LOBBY */}
             {state === 'lobby' && (
                 <div className="flex-1 flex flex-col items-center justify-center p-10 relative z-10">
                     <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-12">
@@ -178,13 +167,12 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                             </div>
                         </div>
 
-                        {/* Holographic Ticket */}
                         <div className="relative group perspective-1000">
                             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-pink-600 rounded-3xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
                             <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center w-80 transform transition-transform hover:scale-[1.02] shadow-2xl">
                                 <div className="text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mb-2">Class Code</div>
                                 <div className="text-6xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                                    {board.classCode}
+                                    {board.class_code}
                                 </div>
                                 <div className="mt-6 text-sm text-gray-400 border-t border-white/10 pt-4">
                                     Join at <span className="text-white font-bold">classboards.ai</span>
@@ -223,15 +211,13 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {/* SCENE: QUESTION & REVEAL */}
             {(state === 'question' || state === 'reveal') && currentQ && (
                 <div className="flex-1 flex flex-col relative z-10">
-                    {/* Timer Bar */}
                     {state === 'question' && (
                         <div className="w-full h-2 bg-white/5 relative overflow-hidden">
                             <div 
                                 className={`h-full transition-all duration-200 ease-linear ${timeLeft <= 5 ? 'bg-red-500 shadow-[0_0_20px_#ef4444]' : 'bg-blue-500 shadow-[0_0_20px_#3b82f6]'}`}
-                                style={{ width: `${(timeLeft / currentQ.timeLimit) * 100}%` }}
+                                style={{ width: `${(timeLeft / (currentQ.time_limit || 30)) * 100}%` }}
                             ></div>
                         </div>
                     )}
@@ -256,20 +242,17 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     </div>
 
                     <div className="flex-1 flex flex-col items-center justify-center p-8 gap-10">
-                        {/* Question Card */}
                         <div className="w-full max-w-5xl text-center">
                             <h2 className="text-4xl md:text-6xl font-black text-white leading-tight drop-shadow-2xl tracking-tight">
                                 {currentQ.question}
                             </h2>
                         </div>
 
-                        {/* Answer Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-6xl flex-1 max-h-[50vh]">
                             {currentQ.options.map((opt, idx) => {
-                                const isCorrect = idx === currentQ.correctIndex;
+                                const isCorrect = opt === currentQ.correct_answer;
                                 const isReveal = state === 'reveal';
                                 
-                                // Reveal Styling
                                 const dim = isReveal && !isCorrect;
                                 const highlight = isReveal && isCorrect;
 
@@ -282,7 +265,6 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                                             ${highlight ? 'bg-green-500/20 border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' : (!isReveal ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/5 border-transparent')}
                                         `}
                                     >
-                                        {/* Color Indicator Bar */}
                                         <div className={`absolute left-0 top-0 bottom-0 w-3 rounded-l-3xl ${idx === 0 ? 'bg-red-500' : idx === 1 ? 'bg-blue-500' : idx === 2 ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
                                         
                                         <div className="ml-6 flex items-center gap-6 w-full">
@@ -305,7 +287,6 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {/* SCENE: LEADERBOARD */}
             {(state === 'leaderboard' || state === 'finished') && (
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-10">
                     <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 mb-12 tracking-tight drop-shadow-[0_0_30px_rgba(234,179,8,0.3)] uppercase">

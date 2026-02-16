@@ -130,7 +130,7 @@ function AppContent() {
         setAccessCheckStatus('checking');
         const { data: board, error } = await supabase
             .from('boards')
-            .select('id, is_public, is_published, assessmentConfig, format, owner_id, title, description, wallpaper')
+            .select('id, is_public, is_published, assessment_config, format, owner_id, title, description, wallpaper, quiz_state')
             .eq('id', boardId)
             .maybeSingle();
 
@@ -139,8 +139,8 @@ function AppContent() {
         } else {
             const isPublic = board.is_public;
             const isLive = board.is_published;
-            const assessmentConfig = board.assessmentConfig as any;
-            const isQuizActive = board.format === 'quiz' && board.quizState && board.quizState !== 'setup';
+            const assessmentConfig = board.assessment_config as any;
+            const isQuizActive = board.format === 'quiz' && board.quiz_state && board.quiz_state !== 'setup';
             const isAssessmentActive = board.format === 'assessment' && assessmentConfig?.status === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
@@ -185,7 +185,7 @@ function AppContent() {
   const fetchProfile = async () => {
       try {
         const profile = await profileService.getCurrentProfile();
-        setUserProfile(profile);
+        if (profile) setUserProfile(profile as UserProfile);
       } catch (e) {
           console.error("Failed to fetch profile", e);
       }
@@ -243,7 +243,7 @@ function AppContent() {
                       
                       const isPublic = updatedBoard.is_public;
                       const isLive = updatedBoard.is_published;
-                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
+                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quiz_state && updatedBoard.quiz_state !== 'setup';
                       
                       if (isPublic || isLive || isQuizActive) {
                           setAccessCheckStatus('allowed');
@@ -339,7 +339,7 @@ function AppContent() {
   const handleDeleteBoard = async (id: string) => {
       try {
           setBoards(boards.filter(b => b.id !== id));
-          await boardService.updateBoard(id, { isTrashed: true, deletedAt: new Date() });
+          await boardService.updateBoard(id, { is_trashed: true, deleted_at: new Date() });
       } catch (e) {
           console.error("Failed to delete board", e);
       }
@@ -374,15 +374,14 @@ function AppContent() {
           is_favorite: false,
           is_published: false,
           is_public: false,
-          quizState: 'setup',
+          quiz_state: 'setup',
           current_step_index: 0,
-          assessmentState: 'setup',
-          assessmentConfig: boardToDup.assessmentConfig ? {
-              ...boardToDup.assessmentConfig,
+          assessment_config: boardToDup.assessment_config ? {
+              ...boardToDup.assessment_config,
               status: 'setup',
               startTime: 0
           } : undefined,
-          currentPollIndex: 0
+          current_poll_index: 0
       };
 
       try {
@@ -429,8 +428,8 @@ function AppContent() {
   };
 
   const handleEmptyTrash = async () => {
-      const trashedIds = boards.filter(b => b.isTrashed).map(b => b.id);
-      setBoards(prev => prev.filter(b => !b.isTrashed));
+      const trashedIds = boards.filter(b => b.is_trashed).map(b => b.id);
+      setBoards(prev => prev.filter(b => !b.is_trashed));
       if (trashedIds.length > 0) {
           await supabase.from('boards').delete().in('id', trashedIds);
       }
@@ -526,14 +525,14 @@ function AppContent() {
           return <LoadingScreen />;
       }
 
-      const effectiveUsername = isGuest ? guestName : userProfile?.full_name;
-      const effectiveAvatar = isGuest ? guestAvatar : userProfile?.avatar_url;
-      const effectiveUserId = isGuest ? guestId : (session?.user?.id);
-      const effectiveRole = isGuest ? 'student' : userProfile?.role; 
+      const effectiveUsername = isGuest ? guestName : userProfile?.full_name ?? '';
+      const effectiveAvatar = isGuest ? guestAvatar : userProfile?.avatar_url ?? null;
+      const effectiveUserId = isGuest ? guestId : (session?.user?.id) ?? '';
+      const effectiveRole = isGuest ? 'student' : userProfile?.role ?? 'student'; 
       const isStudent = effectiveRole === 'student';
       
-      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
-      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
+      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quiz_state && activeBoard.quiz_state !== 'setup';
+      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessment_config?.status === 'inprogress' || activeBoard.assessment_config?.status === 'reading');
       
       const isAllowed = !isStudent || activeBoard.is_published || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
 
@@ -593,9 +592,9 @@ function AppContent() {
                   onSelectBoard={selectBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={isGuest ? guestName : userProfile?.full_name}
-                  userAvatar={isGuest ? guestAvatar : userProfile?.avatar_url}
-                  userClasses={userProfile?.enrolled_classes}
+                  username={isGuest ? guestName : userProfile?.full_name ?? ''}
+                  userAvatar={isGuest ? guestAvatar : userProfile?.avatar_url ?? null}
+                  userClasses={userProfile?.enrolled_classes ?? []}
               />
           ) : (
               <Dashboard 
@@ -609,8 +608,8 @@ function AppContent() {
                   onUpdateBoard={handleUpdateBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  username={userProfile?.full_name}
-                  userAvatar={userProfile?.avatar_url}
+                  username={userProfile?.full_name ?? ''}
+                  userAvatar={userProfile?.avatar_url ?? null}
                   userId={session?.user?.id}
                   onJoinByCode={handleJoinByCode}
               />

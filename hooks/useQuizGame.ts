@@ -4,15 +4,15 @@ import { supabase } from '../services/supabaseClient';
 import { Board, Note, QuizQuestion, QuizState } from '../types';
 
 export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStudent?: boolean, onUpdateBoard?: (updates: Partial<Board>) => void, onActivity?: () => void) => {
-    const questions: QuizQuestion[] = board.quizQuestions || [];
-    const state: QuizState = board.quizState || 'setup'; 
+    const questions: QuizQuestion[] = board.quiz_questions || [];
+    const state: QuizState = board.quiz_state || 'setup'; 
     const currentQIndex = board.current_question_index || 0;
     const currentQ = questions[currentQIndex];
     
     const calculateTimeLeft = () => {
-        if (state === 'question' && board.quizStartTime && currentQ) {
-            const elapsed = (Date.now() - board.quizStartTime) / 1000;
-            const remaining = (currentQ.timeLimit || 30) - elapsed;
+        if (state === 'question' && board.quiz_start_time && currentQ) {
+            const elapsed = (Date.now() - board.quiz_start_time) / 1000;
+            const remaining = (currentQ.time_limit || 30) - elapsed;
             return Math.ceil(Math.max(0, remaining));
         }
         return 0;
@@ -21,7 +21,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
     useEffect(() => {
-        if (state === 'question' && board.quizStartTime && currentQ) {
+        if (state === 'question' && board.quiz_start_time && currentQ) {
             setTimeLeft(calculateTimeLeft());
 
             const interval = setInterval(() => {
@@ -29,7 +29,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
                 setTimeLeft(remaining);
                 
                 if (remaining <= 0 && !isStudent && state === 'question' && onUpdateBoard) {
-                    onUpdateBoard({ quizState: 'reveal' });
+                    onUpdateBoard({ quiz_state: 'reveal' });
                 }
             }, 200);
             
@@ -37,7 +37,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         } else {
             setTimeLeft(0);
         }
-    }, [state, board.quizStartTime, currentQ, isStudent, onUpdateBoard]);
+    }, [state, board.quiz_start_time, currentQ, isStudent, onUpdateBoard]);
 
     const myAnswerNote = useMemo(() => {
         if (!userId) return undefined;
@@ -54,7 +54,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
             const q = questions[i];
             const ansNote = notes.find(n => n.author_id === userId && n.title === `Q_${i}`);
             
-            if (ansNote && parseInt(ansNote.content) === q.correct_answer) {
+            if (ansNote && ansNote.content === q.correct_answer) {
                 streak++;
             } else {
                 break; 
@@ -73,9 +73,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
                 }
 
                 const qIdx = parseInt(n.title?.split('_')[1] || '-1');
-                const answerIdx = parseInt(n.content);
+                const answer = n.content;
                 
-                if (questions[qIdx] && questions[qIdx].correct_answer === answerIdx) {
+                if (questions[qIdx] && questions[qIdx].correct_answer === answer) {
                     playerMap[n.author_id].score += 1000; 
                 }
             }
@@ -86,7 +86,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
             .sort((a, b) => b.score - a.score);
     }, [notes, questions]);
 
-    const submitAnswer = async (index: number) => {
+    const submitAnswer = async (answer: string) => {
         if (!userId || hasAnswered || state !== 'question') return;
         
         const { data: { user } } = await supabase.auth.getUser();
@@ -95,7 +95,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
             board_id: board.id,
             type: 'quiz_answer',
             title: `Q_${currentQIndex}`,
-            content: index.toString(),
+            content: answer,
             author_name: user?.user_metadata?.full_name || 'Player',
             author_id: userId,
             color: 'gray',
@@ -112,7 +112,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
     const enterLobby = () => {
         if (onUpdateBoard) {
             onUpdateBoard({ 
-                quizState: 'lobby', 
+                quiz_state: 'lobby', 
                 current_question_index: 0,
                 is_published: true 
             });
@@ -122,9 +122,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
     const startGame = () => {
         if (onUpdateBoard) {
             onUpdateBoard({ 
-                quizState: 'question', 
+                quiz_state: 'question', 
                 current_question_index: 0, 
-                quizStartTime: Date.now() 
+                quiz_start_time: Date.now()
             });
         }
     };
@@ -133,16 +133,16 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         if (!onUpdateBoard) return;
 
         if (state === 'reveal') {
-            onUpdateBoard({ quizState: 'leaderboard' });
+            onUpdateBoard({ quiz_state: 'leaderboard' });
         } else if (state === 'leaderboard') {
             if (currentQIndex < questions.length - 1) {
                 onUpdateBoard({ 
-                    quizState: 'question', 
+                    quiz_state: 'question', 
                     current_question_index: currentQIndex + 1, 
-                    quizStartTime: Date.now() 
+                    quiz_start_time: Date.now()
                 });
             } else {
-                onUpdateBoard({ quizState: 'finished' });
+                onUpdateBoard({ quiz_state: 'finished' });
             }
         }
     };
@@ -151,7 +151,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, isStud
         if (!onUpdateBoard) return;
         
         onUpdateBoard({ 
-            quizState: 'setup',
+            quiz_state: 'setup',
             current_question_index: 0,
             is_published: false
         });

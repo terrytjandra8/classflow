@@ -3,18 +3,15 @@ import { supabase } from './supabaseClient';
 import { Board } from '../types';
 import { Database } from '../types/db';
 import { mapBoard } from '../utils/mappers';
-import { SUPER_ADMIN_EMAIL } from '../components/Dashboard/constants';
 
 type BoardRow = Database['public']['Tables']['boards']['Row'];
 type BoardInsert = Database['public']['Tables']['boards']['Insert'];
-type BoardUpdate = Database['public']['Tables']['boards']['Update'];
 
 export const boardService = {
     async getBoards() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
 
-        // RLS policies handle visibility (Owner + Public + Published)
         const { data, error } = await supabase
             .from('boards')
             .select('*')
@@ -38,27 +35,24 @@ export const boardService = {
     async createBoard(board: Partial<Board>, userId: string) {
         const settings: any = {
             sections: board.sections || [],
-            lockMode: board.lockMode || 'unlocked',
-            autoLockTime: board.autoLockTime || null,
-            autoLiveTime: board.autoLiveTime || null,
-            commentsEnabled: board.commentsEnabled ?? true,
-            reactionsEnabled: board.reactionsEnabled ?? true,
+            lock_mode: board.lock_mode || 'unlocked',
+            auto_lock_time: board.auto_lock_time || null,
+            auto_live_time: board.auto_live_time || null,
+            comments_enabled: board.comments_enabled ?? true,
+            reactions_enabled: board.reactions_enabled ?? true,
             wallpaper: board.wallpaper,
-            colorScheme: board.colorScheme,
+            color_scheme: board.color_scheme,
             font: board.font,
-            recipeId: board.recipeId,
-            recipeStatus: board.recipeStatus,
+            recipe_id: board.recipe_id,
+            recipe_status: board.recipe_status,
             icon: board.icon,
             guide: board.guide,
-            // Interactive Modules
             polls: board.polls,
-            quizQuestions: board.quizQuestions,
-            // Capture Assessment Data
-            assessmentQuestions: board.assessmentQuestions,
-            assessmentState: board.assessmentState,
-            assessmentConfig: board.assessmentConfig,
-            // Capture Grading Config
-            gradingConfig: board.gradingConfig
+            quiz_questions: board.quiz_questions,
+            assessment_questions: board.assessment_questions,
+            assessment_state: board.assessment_state,
+            assessment_config: board.assessment_config,
+            grading_config: board.grading_config
         };
 
         const payload: BoardInsert = {
@@ -69,7 +63,7 @@ export const boardService = {
             wallpaper: board.wallpaper,
             class_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
             settings: settings,
-            target_grade: board.targetGrade || 'General',
+            target_grade: board.target_grade || 'General',
             steps: board.steps as any,
             current_step_index: 0
         };
@@ -88,7 +82,6 @@ export const boardService = {
         const { data: current } = await supabase.from('boards').select('settings').eq('id', id).single();
         const currentSettings = (current?.settings as any) || {};
 
-        // Keys that map directly to DB columns
         const dbColumns = [
             'title', 'description', 'topic', 'format', 'class_code', 'wallpaper', 
             'is_published', 'is_public', 'is_favorite', 'target_grade', 'subject', 'grading_type',
@@ -99,26 +92,13 @@ export const boardService = {
         const settingsUpdates: any = { ...currentSettings };
 
         Object.entries(updates).forEach(([key, value]) => {
-            if (key === 'classCode') dbUpdates.class_code = value;
-            else if (key === 'isPublished') dbUpdates.is_published = value;
-            else if (key === 'isPublic') dbUpdates.is_public = value;
-            else if (key === 'isFavorite') dbUpdates.is_favorite = value;
-            else if (key === 'targetGrade') dbUpdates.target_grade = value;
-            else if (key === 'gradingType') dbUpdates.grading_type = value;
-            else if (key === 'currentStepIndex') dbUpdates.current_step_index = value;
-            else if (key === 'settings') {
-                // CRITICAL FIX: Merge nested settings properly instead of nesting them under 'settings' key
-                Object.assign(settingsUpdates, value);
-            }
-            else if (dbColumns.includes(key)) {
+            if (dbColumns.includes(key)) {
                 dbUpdates[key] = value;
             } else {
-                // Everything else goes to settings
                 settingsUpdates[key] = value;
             }
         });
 
-        // Always update updated_at
         dbUpdates.updated_at = new Date().toISOString();
         dbUpdates.settings = settingsUpdates;
 
@@ -133,10 +113,8 @@ export const boardService = {
         return mapBoard(data as BoardRow);
     },
 
-    // --- REPAIR TOOLS ---
     async repairAssessmentData(boardId: string) {
         console.log("Starting repair for board:", boardId);
-        // Fetch all notes
         const { data: notes } = await supabase.from('notes').select('*').eq('board_id', boardId);
         if (!notes) return 0;
 
@@ -146,7 +124,6 @@ export const boardService = {
             let needsUpdate = false;
             let newType = note.type;
 
-            // Safe Parse Connections
             let conn: any = {};
             if (typeof note.connections === 'string') {
                 try { conn = JSON.parse(note.connections); } catch {}
@@ -154,7 +131,6 @@ export const boardService = {
                 conn = note.connections;
             }
 
-            // Heuristic: If it has answers/score but wrong type
             const hasAssessmentData = conn && (conn.answers || conn.grading || conn.submitted === true || conn.score !== undefined);
             
             if (hasAssessmentData && note.type !== 'assessment_submission') {

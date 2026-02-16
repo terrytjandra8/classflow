@@ -18,7 +18,6 @@ interface ControlHeaderProps {
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
     onPrint?: () => void;
-    // New Class Props
     classList?: string[];
     currentClass?: string;
     onUpdateClass?: (cls: string) => void;
@@ -51,7 +50,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                     {status}
                 </span>
 
-                {/* Class Selector Dropdown */}
                 <div className="relative">
                     <button 
                         onClick={() => setIsClassMenuOpen(!isClassMenuOpen)}
@@ -89,7 +87,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
 
                 <div className="h-6 w-px bg-white/10"></div>
 
-                {/* Live Toggle */}
                 <button 
                     onClick={onTogglePublish}
                     className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border ${
@@ -114,7 +111,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                 </button>
             </div>
 
-            {/* CENTRAL TIMER DISPLAY FOR TEACHER */}
             <div className="flex flex-col items-center">
                 <div className={`text-2xl font-mono font-bold ${timeLeft !== null && timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                     {timeLeft !== null ? formatTime(timeLeft) : (status === 'practice' ? '∞' : '--:--')}
@@ -125,7 +121,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-                {/* View Switcher */}
                 <div className="flex bg-black/50 rounded-lg p-1 border border-white/10">
                     <button 
                         onClick={() => setView('editor')}
@@ -143,7 +138,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
 
                 <div className="h-6 w-px bg-white/10"></div>
                 
-                {/* Settings & Share & Preview */}
                 <div className="flex items-center gap-1">
                     {onOpenShare && (
                         <button 
@@ -183,10 +177,9 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
 
                 <div className="h-6 w-px bg-white/10"></div>
                 
-                {/* CONTROL ACTIONS */}
                 {config.status === 'setup' && (
                     <div className="flex gap-2">
-                        {config.readingMinutes > 0 && (
+                        {(config.reading_minutes ?? 0) > 0 && (
                             <button 
                                 onClick={() => onTransition('reading')}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2"

@@ -36,10 +36,10 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
         submitAnswer, enterLobby, startGame, nextStep, resetGame
     } = useQuizGame(board, props.notes, userId, isStudent, onUpdateBoard, props.onActivity);
 
-    const selectedMusicId = board.quizMusic || 'lofi';
+    const selectedMusicId = board.settings?.quiz_music || 'lofi';
     const { isMuted, setIsMuted } = useQuizAudio(state, isStudent, isPresentationMode, timeLeft, myAnswerNote, currentQ, selectedMusicId);
 
-    const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper), [board.wallpaper]);
+    const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper ?? null), [board.wallpaper]);
 
     const togglePresentation = (forceState?: boolean) => {
         const shouldBePresenting = forceState !== undefined ? forceState : !isPresenting;

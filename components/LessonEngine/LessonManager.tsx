@@ -22,7 +22,7 @@ interface LessonManagerProps {
     onOpenAddNote: (sectionId?: string) => void;
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
-    isPresentationMode?: boolean; // New prop
+    isPresentationMode?: boolean;
 }
 
 export const LessonManager: React.FC<LessonManagerProps> = ({
@@ -31,31 +31,28 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
     isPresentationMode
 }) => {
     const [steps, setSteps] = useState<LessonStep[]>(board.steps || []);
-    const [currentIndex, setCurrentIndex] = useState(board.currentStepIndex || 0);
-    // Hide sidebar by default if in presentation mode
+    const [currentIndex, setCurrentIndex] = useState(board.current_step_index || 0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isStudent && !isPresentationMode);
     const [isPresenting, setIsPresenting] = useState(false);
     const [sidebarWidth, setSidebarWidth] = useState(300);
     
     const lastInteractionRef = useRef(0);
 
-    // Sync local state when board prop updates (e.g. from Projector Window sync)
     useEffect(() => {
         const timeSinceInteraction = Date.now() - lastInteractionRef.current;
-        if (timeSinceInteraction > 2000 || isPresentationMode) { // Always sync in presentation mode
+        if (timeSinceInteraction > 2000 || isPresentationMode) {
             if (board.steps) setSteps(board.steps);
-            if (board.currentStepIndex !== undefined) setCurrentIndex(board.currentStepIndex);
+            if (board.current_step_index !== undefined) setCurrentIndex(board.current_step_index);
         }
-    }, [board.steps, board.currentStepIndex, isPresentationMode]);
+    }, [board.steps, board.current_step_index, isPresentationMode]);
 
     const handleStepChange = async (index: number) => {
         if (index < 0 || (steps.length > 0 && index >= steps.length)) return;
         
         lastInteractionRef.current = Date.now();
         setCurrentIndex(index);
-        onUpdateBoard({ currentStepIndex: index });
+        onUpdateBoard({ current_step_index: index });
         
-        // Sync to DB
         await supabase.from('boards').update({ current_step_index: index }).eq('id', board.id);
     };
 
@@ -72,14 +69,13 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         const newIndex = newSteps.length - 1;
         setSteps(newSteps);
         setCurrentIndex(newIndex);
-        onUpdateBoard({ steps: newSteps, currentStepIndex: newIndex });
+        onUpdateBoard({ steps: newSteps, current_step_index: newIndex });
         await supabase.from('boards').update({ 
             steps: newSteps,
             current_step_index: newIndex
         }).eq('id', board.id);
     };
 
-    // PROJECTOR WINDOW LAUNCHER
     const openProjectorMode = () => {
         const url = `${window.location.origin}/?board=${board.id}&present=true`;
         window.open(url, 'ClassBoardProjector', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no');
@@ -119,7 +115,6 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         onOpenAddNote: onOpenAddNote
     };
 
-    // --- Student View ---
     if (isStudent) {
         return (
             <StudentView step={currentStep} totalSteps={steps.length} currentIndex={currentIndex}>
@@ -128,10 +123,8 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         );
     }
 
-    // --- Teacher View ---
     return (
         <div className={`h-full flex flex-col bg-[#111] text-white overflow-hidden ${isPresenting ? 'fixed inset-0 z-[100]' : ''}`}>
-            {/* Top Bar - Hidden in Presentation Mode */}
             {!isPresenting && !isPresentationMode && (
                 <div className="h-14 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between px-4 shrink-0">
                     <div className="flex items-center gap-4">
@@ -198,7 +191,6 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
                     <div className="flex-1 relative overflow-hidden flex flex-col">
                         <SlideViewer {...viewerProps} />
                         
-                        {/* Overlay Controls for Presentation Mode Window (Minimal) */}
                         {isPresentationMode && (
                             <div className="absolute top-4 left-4 z-50 pointer-events-none">
                                 <span className="bg-green-600/90 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur border border-white/20 uppercase tracking-widest animate-pulse">
@@ -216,7 +208,6 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
                         )}
                     </div>
 
-                    {/* Bottom Nav - Hidden in Presentation Mode */}
                     {!isPresentationMode && (
                         <div className="h-16 bg-[#1a1a1a] border-t border-white/10 flex items-center justify-between px-6 shrink-0 z-20">
                             <button onClick={() => handleStepChange(currentIndex - 1)} disabled={currentIndex === 0} className="flex items-center gap-2 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-bold text-sm">
@@ -226,7 +217,7 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
                                 <span className="text-white font-bold text-base">Slide {currentIndex + 1} <span className="text-gray-500 font-normal">/ {steps.length}</span></span>
                                 {currentStep && <span className="text-[10px] text-gray-500 uppercase tracking-wider bg-white/5 px-2 rounded-full mt-1">{currentStep.type}</span>}
                             </div>
-                            <button onClick={() => handleStepChange(currentIndex + 1)} disabled={currentIndex === steps.length - 1} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-bold flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-transform active:scale-95 text-sm">
+                            <button onClick={() => handleStepChange(currentIndex + 1)} disabled={currentIndex >= steps.length - 1} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-bold flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-transform active:scale-95 text-sm">
                                 Next <ChevronRight size={18} />
                             </button>
                         </div>
