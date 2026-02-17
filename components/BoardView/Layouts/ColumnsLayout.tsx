@@ -134,7 +134,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
             {sections.map((section: any, idx: number) => {
                 const isHidden = section.isHidden || section.is_hidden;
                 const isLocked = section.isLocked || section.is_locked;
-                const isBlurred = section.isBlurred || section.is_blurred;
+                const isContentBlurred = section.isContentBlurred ?? false;
                 const isAnon = section.anonymousMode || section.anonymous_mode;
                 const sectionNotes = getNotesForSection(section.id);
 
@@ -182,7 +182,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                         <div className="flex gap-1">
                                             {isLocked && <Lock size={12} className="text-red-500" />}
                                             {isAnon && <Ghost size={12} className="text-purple-500" />}
-                                            {isBlurred && <EyeOff size={12} className="text-slate-400" />}
+                                            {isContentBlurred && <EyeOff size={12} className="text-slate-400" />}
                                         </div>
                                     </div>
                                 </div>
@@ -208,9 +208,9 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                                 className: isAnon ? 'text-purple-600' : ''
                                             },
                                             {
-                                                label: isBlurred ? 'Unblur Content' : 'Blur Content',
-                                                icon: isBlurred ? <Eye size={14}/> : <EyeOff size={14}/>,
-                                                onClick: () => updateSection(section.id, { isBlurred: !isBlurred })
+                                                label: isContentBlurred ? 'Unblur Content' : 'Blur Content',
+                                                icon: isContentBlurred ? <Eye size={14}/> : <EyeOff size={14}/>,
+                                                onClick: () => updateSection(section.id, { isContentBlurred: !isContentBlurred })
                                             },
                                             {
                                                 label: isHidden ? 'Show Group' : 'Hide Group',
@@ -232,7 +232,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                             </div>
 
                             {/* --- CONTENT --- */}
-                            <div className={`flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar ${isBlurred && isStudent ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
                                 {!isLocked && (!isStudent || !isHidden) && (
                                     <button
                                         onClick={() => openAddNote(section.id)}
@@ -252,6 +252,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                         <NoteCard 
                                             note={note} 
                                             isStudent={isStudent} 
+                                            isContentBlurred={isContentBlurred}
                                         />
                                     </div>
                                 ))}
