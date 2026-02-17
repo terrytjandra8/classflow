@@ -143,7 +143,6 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                         placeholderImg.src = publicUrl;
                         placeholderImg.removeAttribute('id');
                         placeholderImg.style.opacity = '1';
-                        placeholderImg.style.cursor = 'pointer';
                         isInternalChange.current = true;
                         onChange(editorRef.current.innerHTML);
                     }
@@ -162,25 +161,62 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         }
     };
 
-    // Image resizing logic
+    // Image resizing logic with handles
     useEffect(() => {
         if (!editorRef.current) return;
         const editor = editorRef.current;
 
-        const onMouseDown = (e: MouseEvent) => {
-            if ((e.target as HTMLElement).tagName !== 'IMG') return;
+        const onImageClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.tagName !== 'IMG') {
+                // Remove active class from all images if clicking outside
+                editor.querySelectorAll('img.resizable-active').forEach(img => {
+                    img.classList.remove('resizable-active');
+                });
+                return;
+            }
             
-            const img = e.target as HTMLImageElement;
-            if (!editor.contains(img)) return;
+            // Toggle active state on the clicked image
+            const isActive = target.classList.contains('resizable-active');
+            editor.querySelectorAll('img.resizable-active').forEach(img => {
+                img.classList.remove('resizable-active');
+            });
+            if (!isActive) {
+                target.classList.add('resizable-active');
+            }
+        };
 
-            img.style.objectFit = 'contain';
+        const onMouseDown = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.classList.contains('resizer')) return;
+
+            e.preventDefault(); // Prevent text selection
+            
+            const img = (target.parentNode as HTMLElement).querySelector('img');
+            if (!img) return;
+
             const startX = e.pageX;
-            const startWidth = img.width;
+            const startY = e.pageY;
+            const startWidth = img.offsetWidth;
+            const startHeight = img.offsetHeight;
+
+            const handle = target.dataset.handle;
 
             const onMouseMove = (moveE: MouseEvent) => {
-                const newWidth = startWidth + (moveE.pageX - startX);
+                let newWidth = startWidth;
+                let newHeight = startHeight;
+                const dX = moveE.pageX - startX;
+                const dY = moveE.pageY - startY;
+
+                if (handle?.includes('right')) newWidth = startWidth + dX;
+                if (handle?.includes('left')) newWidth = startWidth - dX;
+                if (handle?.includes('bottom')) newHeight = startHeight + dY;
+                if (handle?.includes('top')) newHeight = startHeight - dY;
+
                 img.style.width = `${newWidth > 20 ? newWidth : 20}px`;
-                img.style.height = 'auto'; // Maintain aspect ratio
+                // If aspect ratio is to be maintained, adjust height based on width change
+                // For free-form resize, remove the line below
+                img.style.height = 'auto'; 
             };
 
             const onMouseUp = () => {
@@ -194,10 +230,42 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             document.addEventListener('mouseup', onMouseUp);
         };
 
+        editor.addEventListener('click', onImageClick);
+        // Wrap images with resizers dynamically
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node instanceof HTMLImageElement && !node.parentNode.classList.contains('resizable-container')) {
+                        const container = document.createElement('div');
+                        container.className = 'resizable-container';
+                        container.style.position = 'relative';
+                        container.style.display = 'inline-block'; // Fit the image size
+
+                        node.parentNode?.insertBefore(container, node);
+                        container.appendChild(node);
+
+                        const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+                        handles.forEach(handle => {
+                            const resizer = document.createElement('div');
+                            resizer.className = `resizer ${handle}`;
+                            resizer.dataset.handle = handle;
+                            container.appendChild(resizer);
+                        });
+
+                        // Ensure image has relative positioning for z-index to work
+                        node.style.position = 'relative';
+                    }
+                });
+            });
+        });
+
+        observer.observe(editor, { childList: true, subtree: true });
         editor.addEventListener('mousedown', onMouseDown);
 
         return () => {
+            editor.removeEventListener('click', onImageClick);
             editor.removeEventListener('mousedown', onMouseDown);
+            observer.disconnect();
         };
 
     }, [onChange]);
@@ -207,8 +275,33 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             <style>{`
                 .rich-text-content sub { vertical-align: sub; font-size: smaller; }
                 .rich-text-content sup { vertical-align: super; font-size: smaller; }
-                .rich-text-content img { max-width: 100%; cursor: move; border-radius: 4px; border: 1px solid transparent; transition: border-color 0.2s; }
-                .rich-text-content img:hover { border-color: rgba(0, 122, 255, 0.5); }
+                .rich-text-content .resizable-container { display: inline-block; position: relative; line-height: 0; }
+                .rich-text-content img { max-width: 100%; border-radius: 4px; }
+                
+                .rich-text-content img.resizable-active + .resizer {
+                    display: block;
+                }
+                .resizer {
+                    position: absolute;
+                    width: 12px;
+                    height: 12px;
+                    background: #007aff;
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    display: none; /* Hide by default */
+                    z-index: 10;
+                }
+                .resizable-container:hover .resizer, .resizable-active + .resizer {
+                    display: block;
+                }
+                img.resizable-active {
+                   outline: 2px solid #007aff;
+                }
+
+                .resizer.top-left { top: -6px; left: -6px; cursor: nwse-resize; }
+                .resizer.top-right { top: -6px; right: -6px; cursor: nesw-resize; }
+                .resizer.bottom-left { bottom: -6px; left: -6px; cursor: nesw-resize; }
+                .resizer.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
             `}</style>
             <div
                 ref={editorRef}
@@ -219,10 +312,10 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 onPaste={handlePasteLogic}
                 onMouseUp={checkFormats}
                 onKeyUp={checkFormats}
-                onClick={checkFormats} 
                 data-placeholder={placeholder}
                 style={{ overflowWrap: 'break-word', wordBreak: 'break-word', ...style }}
                 spellCheck={true}
+                suppressContentEditableWarning={true}
             />
         </>
     );

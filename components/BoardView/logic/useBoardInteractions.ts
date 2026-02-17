@@ -16,7 +16,17 @@ export const useBoardInteractions = (
     // Handle CTRL+V (Paste) for images
     useEffect(() => {
         const handlePaste = (e: ClipboardEvent) => {
-            if (isModalOpen || isLocked) return;
+            // CRITICAL FIX: Check if the paste event is happening inside an editable field.
+            const target = e.target as HTMLElement;
+            const isEditable = target.isContentEditable || 
+                               target.tagName === 'INPUT' || 
+                               target.tagName === 'TEXTAREA' ||
+                               target.closest('.ProseMirror, [contenteditable="true"]');
+
+            // If it is editable, or a modal is open, or the board is locked for the user, ignore the global paste.
+            if (isEditable || isModalOpen || isLocked) {
+                return;
+            }
             
             const items = e.clipboardData?.items;
             if (items) {
@@ -24,6 +34,7 @@ export const useBoardInteractions = (
                     if (items[i].type.indexOf('image') !== -1) {
                         const file = items[i].getAsFile();
                         if (file) {
+                            // This is a global paste, open the note creation modal
                             setPendingPasteImage(file);
                             setIsModalOpen(true);
                             e.preventDefault();
@@ -33,16 +44,17 @@ export const useBoardInteractions = (
                 }
             }
         };
-        window.addEventListener('paste', handlePaste);
-        return () => window.removeEventListener('paste', handlePaste);
+        
+        // Use capturing phase to potentially intercept before other listeners
+        window.addEventListener('paste', handlePaste, true);
+        return () => window.removeEventListener('paste', handlePaste, true);
+
     }, [isModalOpen, isLocked, setIsModalOpen, setPendingPasteImage]);
 
     // Drag and Drop Handlers
     const handleDragOver = useCallback((e: React.DragEvent) => {
         if (isModalOpen || isLocked) return;
         
-        // CRITICAL FIX: Only trigger upload overlay if dragging FILES
-        // e.dataTransfer.types is an array-like object (DOMStringList)
         if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
             e.preventDefault(); // Allow drop
             setIsDragOver(true);
@@ -50,7 +62,6 @@ export const useBoardInteractions = (
     }, [isModalOpen, isLocked]);
 
     const handleDragLeave = useCallback((e: React.DragEvent) => {
-        // Only prevent default if we were actually handling a file drag
         if (isDragOver) {
             e.preventDefault();
             setIsDragOver(false);
@@ -60,14 +71,12 @@ export const useBoardInteractions = (
     const handleDrop = useCallback(async (e: React.DragEvent) => {
         if (isModalOpen || isLocked) return;
 
-        // Only handle if files are present
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             e.preventDefault();
             e.stopPropagation();
             setIsDragOver(false);
             
             const file = e.dataTransfer.files[0];
-            // Only accept images for now via drag/drop shortcut
             if (file.type.startsWith('image/')) {
                 setPendingPasteImage(file);
                 setIsModalOpen(true);
