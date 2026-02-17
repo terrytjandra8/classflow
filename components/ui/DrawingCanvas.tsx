@@ -1,15 +1,14 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { PenTool, Trash2, Undo, Redo, Eraser, Check } from 'lucide-react';
+import { PenTool, Trash2, Undo, Redo, Eraser } from 'lucide-react';
 
 interface DrawingCanvasProps {
-    onSave?: (blob: Blob) => void;
+    onDrawEnd?: (blob: Blob) => void;
     onClear?: () => void;
     width?: number;
     height?: number;
     className?: string;
     style?: React.CSSProperties;
     strokeColor?: string;
-    manualSave?: boolean;
     initialData?: string;
 }
 
@@ -17,14 +16,13 @@ const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'
 const STROKE_SIZES = [3, 6, 12]; // Small, Medium, Large
 
 export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
-    onSave, 
+    onDrawEnd, 
     onClear, 
     width = 500, 
     height = 300, 
     className = "",
     style,
     strokeColor = '#000000',
-    manualSave = false,
     initialData
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,6 +49,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ctx.fillRect(0, 0, width, height);
                     if (initialData) {
                         const img = new Image();
+                        img.crossOrigin = "anonymous";
                         img.onload = () => {
                             ctx.drawImage(img, 0, 0, width, height);
                             const initial = ctx.getImageData(0, 0, width, height);
@@ -82,7 +81,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         }
     }, [strokeWidth, activeColor, isEraser]);
 
-
     const saveHistoryStep = () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
@@ -101,18 +99,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         }
     };
 
-    const notifySave = () => {
-        if (manualSave) return;
+    const notifyDrawEnd = () => {
         const canvas = canvasRef.current;
-        if (canvas && onSave) {
-            canvas.toBlob((blob) => { if (blob) onSave(blob); });
-        }
-    };
-
-    const triggerManualSave = () => {
-        const canvas = canvasRef.current;
-        if (canvas && onSave) {
-            canvas.toBlob((blob) => { if (blob) onSave(blob); });
+        if (canvas && onDrawEnd) {
+            canvas.toBlob((blob) => { if (blob) onDrawEnd(blob); });
         }
     };
 
@@ -126,12 +116,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.putImageData(previousState, 0, 0);
                 setHistoryStep(newStep);
                 setHasContent(newStep > 0 || !!initialData);
-                if (!manualSave) {
-                     canvas.toBlob((blob) => { if (blob && onSave) onSave(blob); });
-                }
+                notifyDrawEnd();
             }
         }
-    }, [history, historyStep, onSave, manualSave, initialData]);
+    }, [history, historyStep, onDrawEnd, initialData]);
 
     const handleRedo = useCallback(() => {
         if (historyStep < history.length - 1) {
@@ -143,12 +131,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.putImageData(nextState, 0, 0);
                 setHistoryStep(newStep);
                 setHasContent(true);
-                if (!manualSave) {
-                    canvas.toBlob((blob) => { if (blob && onSave) onSave(blob); });
-                }
+                notifyDrawEnd();
             }
         }
-    }, [history, historyStep, onSave, manualSave]);
+    }, [history, historyStep, onDrawEnd]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -204,7 +190,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         if (isDrawing) {
             setIsDrawing(false);
             saveHistoryStep();
-            notifySave();
+            notifyDrawEnd();
         }
     };
 
@@ -217,7 +203,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 setHasContent(false);
                 saveHistoryStep();
-                notifySave();
+                notifyDrawEnd();
                 if (onClear) onClear();
             }
         }
@@ -269,9 +255,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                             <>
                                 <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-1"></div>
                                 <button type="button" onClick={clearCanvas} className="text-xs text-red-500 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"><Trash2 size={14} /> Clear</button>
-                                {manualSave && (
-                                     <button type="button" onClick={triggerManualSave} className="text-xs text-white bg-green-600 hover:bg-green-700 font-bold px-4 py-1.5 rounded-lg flex items-center gap-1 ml-2"><Check size={14} /> Done</button>
-                                )}
                             </>
                         )}
                     </div>

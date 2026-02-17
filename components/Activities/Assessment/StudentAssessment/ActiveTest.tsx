@@ -1,12 +1,13 @@
 
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
-import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript } from 'lucide-react';
+import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Save } from 'lucide-react';
 import { DrawingCanvas } from '../../../ui/DrawingCanvas';
 import { supabase } from '../../../../services/supabaseClient';
 import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
 import { RichTextEditor, FormatState } from '../../../RichTextEditor';
+import { debounce } from 'lodash';
 
 interface ActiveTestProps {
     boardTitle: string;
@@ -201,6 +202,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
+    const [drawingSaveStatus, setDrawingSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
 
@@ -215,24 +217,44 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         setTimeout(() => setIsSyncing(false), 800);
     };
 
-    const handleSaveDrawing = async (blob: Blob) => {
-        if (!activeDrawingQId) return;
-        
-        try {
-            const fileName = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
-            const { data, error } = await supabase.storage.from('uploads').upload(fileName, blob);
-            
-            if (error) throw error;
-            
-            const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-            
-            onAnswerChange(activeDrawingQId, publicUrl, true);
-            setActiveDrawingQId(null);
-        } catch (e) {
-            console.error("Drawing upload failed", e);
-            alert("Failed to save drawing. Please try again.");
+    const debouncedSave = useMemo(() => 
+        debounce(async (blob: Blob, qId: string) => {
+            setDrawingSaveStatus('saving');
+            try {
+                const currentAnswer = answers[qId];
+                let fileName;
+
+                if (currentAnswer && currentAnswer.startsWith('http')) {
+                    const urlParts = currentAnswer.split('/');
+                    fileName = urlParts[urlParts.length - 1].split('?')[0];
+                } else {
+                    fileName = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
+                }
+
+                const { error } = await supabase.storage.from('uploads').upload(fileName, blob, { upsert: true });
+
+                if (error) throw error;
+
+                const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
+                
+                // Add cache-busting parameter
+                const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
+
+                onAnswerChange(qId, finalUrl, true);
+                setDrawingSaveStatus('saved');
+            } catch (e) {
+                console.error("Drawing upload failed", e);
+                setDrawingSaveStatus('error');
+            }
+        }, 2500)
+    , [answers, onAnswerChange]);
+
+    const handleDrawEnd = useCallback((blob: Blob) => {
+        if (activeDrawingQId) {
+            debouncedSave(blob, activeDrawingQId);
         }
-    };
+    }, [activeDrawingQId, debouncedSave]);
+
 
     const activeDrawingInitialData = activeDrawingQId ? answers[activeDrawingQId] : undefined;
 
@@ -383,17 +405,29 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
 
             {activeDrawingQId && (
                 <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-                     <div className="w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-y-auto relative">
-                         <button 
-                            onClick={() => setActiveDrawingQId(null)}
-                            className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-50"
-                         >
-                             <X size={24}/>
-                         </button>
-                         <div className="flex-1 bg-white relative">
+                     <div className="w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative">
+                         <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+                            <div className="flex items-center gap-2">
+                                <PenTool size={18} />
+                                <h2 className="font-bold text-lg">Drawing Canvas</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                 <div className={`text-xs flex items-center gap-2 transition-opacity ${drawingSaveStatus === 'idle' ? 'opacity-0' : 'opacity-100'}`}>
+                                    {drawingSaveStatus === 'saving' && <><RefreshCcw size={14} className="animate-spin"/> Saving...</>}
+                                    {drawingSaveStatus === 'saved' && <><Check size={14} className="text-green-500"/> Saved</>}
+                                    {drawingSaveStatus === 'error' && <><AlertTriangle size={14} className="text-red-500"/> Error</>}
+                                </div>
+                                <button 
+                                    onClick={() => setActiveDrawingQId(null)}
+                                    className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                                >
+                                    <X size={20}/>
+                                </button>
+                            </div>
+                         </div>
+                         <div className="flex-1 bg-white relative p-1">
                             <DrawingCanvas 
-                                onSave={handleSaveDrawing} 
-                                manualSave={true} 
+                                onDrawEnd={handleDrawEnd} 
                                 initialData={activeDrawingInitialData}
                             />
                          </div>
