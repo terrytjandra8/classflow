@@ -97,6 +97,7 @@ export const mapBoard = (row: BoardRow | any): Board => {
 
 export const mapNote = (row: NoteRow | any): Note => {
     const authorInfo = safeParse(row.author, {});
+    const connections = safeParse(row.connections, []);
 
     return {
         id: row.id,
@@ -129,7 +130,7 @@ export const mapNote = (row: NoteRow | any): Note => {
         title: row.title || undefined,
         author: authorInfo,
         type: (row.type as any) || 'text',
-        connections: safeParse(row.connections, {}),
+        connections: Array.isArray(connections) ? connections : [],
         x: (row as any).positionX || row.position_x || 0,
         y: (row as any).positionY || row.position_y || 0,
     } as Note;
