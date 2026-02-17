@@ -231,6 +231,14 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                     const isSection = q.type === 'section';
                     const editorFocusHandler = (key: string) => { setActiveEditor(key); };
 
+                    const ResponseTypeButton = ({ value, current, onClick, children }: any) => (
+                        <button
+                            onClick={onClick}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${current === value ? 'bg-purple-600 text-white shadow-md' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}>
+                            {children}
+                        </button>
+                    );
+
                     return (
                         <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="flex justify-between items-center mb-2">
@@ -243,7 +251,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isSection ? 'Section Title' : 'Question Prompt'}</label>
                                     <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-text` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-text`)}>
                                         {renderToolbar(`${q.id}-text`)}
-                                        {/* CHANGED: Use DebouncedRichTextEditor */}
                                         <DebouncedRichTextEditor id={`${q.id}-text`} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
                                     </div>
                                 </div>
@@ -253,7 +260,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Sub-text / Notes (Optional)</label>
                                         <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-notes` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-notes`)}>
                                             {renderToolbar(`${q.id}-notes`)}
-                                            {/* CHANGED: Use DebouncedRichTextEditor */}
                                             <DebouncedRichTextEditor id={`${q.id}-notes`} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Add instructions, hints, or context..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
                                         </div>
                                     </div>
@@ -267,6 +273,17 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     {q.type === 'essay' && <div className="space-y-2"><label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2"><AlignLeft size={14}/> Word Count Min.</label><div className="flex items-center gap-2"><DebouncedInput type="number" value={q.minWords || 0} onChange={(val: any) => updateQuestion(q.id, { minWords: parseInt(val) || 0 })} className="w-24 bg-[#222] border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500 text-center font-bold" /><span className="text-sm text-gray-500">Words</span></div></div>}
                                 </div>}
 
+                                {q.type === 'essay' && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Response Type</label>
+                                        <div className="flex items-center gap-2">
+                                            <ResponseTypeButton value="text" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'text' })}><Type size={14}/> Text Only</ResponseTypeButton>
+                                            <ResponseTypeButton value="drawing" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'drawing' })}><PenTool size={14}/> Drawing Only</ResponseTypeButton>
+                                            <ResponseTypeButton value="both" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'both' })}><Plus size={14}/>Both</ResponseTypeButton>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {q.type === 'mcq' && (
                                     <div className="space-y-4 pt-2">
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><span>Answer Options</span><span className="text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded border border-green-500/20 normal-case">Select the correct answer</span></label>
@@ -276,7 +293,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     <button onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-8 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}><CheckCircle size={16}/></button>
                                                     <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'} ${activeEditor === `${q.id}-options-${idx}` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-options-${idx}`)}>
                                                         {renderToolbar(`${q.id}-options-${idx}`)}
-                                                        {/* CHANGED: Use DebouncedRichTextEditor */}
                                                         <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
                                                     </div>
                                                     <button onClick={() => updateQuestion(q.id, { options: q.options?.filter((_, i) => i !== idx) })} className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><X size={16}/></button>
