@@ -144,11 +144,8 @@ export const GradingModal: React.FC<GradingModalProps> = ({
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
 
             const imageHtml = `<img src="${publicUrl}" alt="Feedback Image" style="max-width: 100%; border-radius: 8px;"/>`;
-            
-            const existingFeedback = currentGrades[qId]?.feedback || '';
-            const newFeedback = `${existingFeedback}${imageHtml}`;
-
-            handleUpdate(qId, { feedback: newFeedback });
+            document.execCommand('insertHTML', false, imageHtml);
+            handleCommand('insertHTML');
 
         } catch (e) {
             console.error("Feedback upload failed", e);
@@ -175,7 +172,8 @@ export const GradingModal: React.FC<GradingModalProps> = ({
         if (activeFeedbackId) {
             const editor = document.getElementById(`feedback-editor-${activeFeedbackId}`)?.querySelector('.rich-text-content');
             if (editor) {
-                handleUpdate(activeFeedbackId, { feedback: editor.innerHTML });
+                const event = new Event('input', { bubbles: true });
+                editor.dispatchEvent(event);
             }
         }
     };
@@ -302,6 +300,14 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                 <div className={`bg-black/20 rounded-lg border transition-colors ${isFocused ? 'border-blue-500/50' : 'border-white/5'}`} onFocus={() => setActiveFeedbackId(q.id)}>
                                     {isFocused && (
                                         <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/5 bg-[#161616] rounded-t-lg animate-in fade-in slide-in-from-top-1">
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('undo'); }} className={getBtnClass(false)} title="Undo"><Undo size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('redo'); }} className={getBtnClass(false)} title="Redo"><Redo size={14}/></button>
+                                            <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
+                                            <div className="w-px h-4 bg-white/10 mx-1"></div>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline"><Underline size={14}/></button>

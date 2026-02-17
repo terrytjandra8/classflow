@@ -78,41 +78,9 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         if (activeEditor) {
             const editor = document.getElementById(activeEditor);
             if (editor) {
-                const html = editor.innerHTML;
-                const [qId, field, optIdx] = activeEditor.split('-');
-                if (field === 'options' && optIdx) {
-                    const q = questions.find(q => q.id === qId);
-                    const newOptions = [...(q?.options || [])];
-                    newOptions[parseInt(optIdx)] = html;
-                    updateQuestion(qId, { options: newOptions });
-                } else {
-                    updateQuestion(qId, { [field]: html });
-                }
+                const event = new Event('input', { bubbles: true });
+                editor.dispatchEvent(event);
             }
-        }
-        // Manually trigger format check after command
-        const selection = window.getSelection();
-        if (selection) {
-          const parentTag = (selection.anchorNode?.parentNode as HTMLElement)?.tagName;
-          setActiveFormats({
-            bold: document.queryCommandState('bold'),
-            italic: document.queryCommandState('italic'),
-            underline: document.queryCommandState('underline'),
-            strikeThrough: document.queryCommandState('strikeThrough'),
-            list: document.queryCommandState('insertUnorderedList'),
-            orderedList: document.queryCommandState('insertOrderedList'),
-            subscript: document.queryCommandState('subscript'),
-            superscript: document.queryCommandState('superscript'),
-            blockquote: getActiveFormat('', ['BLOCKQUOTE']),
-            h1: parentTag === 'H1',
-            h2: parentTag === 'H2',
-            h3: parentTag === 'H3',
-            h4: parentTag === 'H4',
-            alignLeft: document.queryCommandState('justifyLeft'),
-            alignCenter: document.queryCommandState('justifyCenter'),
-            alignRight: document.queryCommandState('justifyRight'),
-            alignJustify: document.queryCommandState('justifyFull'),
-          });
         }
     };
 
@@ -129,21 +97,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             const imageHtml = `<img src="${publicUrl}" style="max-width: 100%; border-radius: 8px;"/>`;
             document.execCommand('insertHTML', false, imageHtml);
             
-            const editor = document.getElementById(activeEditor);
-            if (editor) {
-                const [qId, field, optIdx] = activeEditor.split('-');
-                let html = editor.innerHTML;
-                if (field === 'options' && optIdx !== undefined) {
-                    const question = questions.find(q => q.id === qId);
-                    if (question && question.options) {
-                        const newOptions = [...question.options];
-                        newOptions[parseInt(optIdx)] = html;
-                        updateQuestion(qId, { options: newOptions });
-                    }
-                } else if (field === 'text' || field === 'notes') {
-                    updateQuestion(qId, { [field]: html });
-                }
-            }
+            handleCommand('insertHTML');
         } catch (e) { console.error("Upload failed", e); } 
         finally { setIsUploading(null); }
     };
@@ -154,8 +108,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const renderToolbar = (editorKey: string) => {
         if (activeEditor !== editorKey) return null;
         
-        const formatBlock = (tag: string) => handleCommand('formatBlock', `<${tag}>`);
-        
         return (
             <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
                 {/* Undo/Redo */}
@@ -164,10 +116,10 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
 
                 {/* Headings */}
-                <button onMouseDown={e => { e.preventDefault(); formatBlock('h1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); formatBlock('h2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); formatBlock('h3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); formatBlock('h4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
                 
                 {/* Basic Formatting */}
@@ -185,7 +137,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                 {/* Lists & Quote */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List (Ctrl+Shift+8)"><ListIcon size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><List size={14} /></button>
-                <button onMouseDown={e => { e.preventDefault(); formatBlock('blockquote'); }} className={getBtnClass(activeFormats.blockquote)} title="Blockquote"><Quote size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'blockquote'); }} className={getBtnClass(activeFormats.blockquote)} title="Blockquote"><Quote size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
 
                 {/* Alignment */}
