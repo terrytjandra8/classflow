@@ -323,46 +323,55 @@ function AppContent() {
       checkAccess();
   }, [session, isGuest]); // removed activeBoardId dep to prevent loops, relying on URL param
 
-  // Load Boards List
+  // Fetch boards whenever the user navigates to the dashboard
+  useEffect(() => {
+      if (view === 'dashboard' && (session || isGuest)) {
+          const fetchBoards = async () => {
+              try {
+                  const data = await boardService.getBoards();
+                  setBoards(data);
+              } catch (e) {
+                  console.error("Failed to fetch boards", e);
+              }
+          };
+          fetchBoards();
+      }
+  }, [view, session, isGuest]);
+
+  // Subscribe to board changes in real-time
   useEffect(() => {
       if (!session && !isGuest) return;
-      
-      const fetchBoards = async () => {
-          try {
-              const data = await boardService.getBoards();
-              setBoards(data);
-          } catch (e) {
-              console.error("Failed to fetch boards", e);
-          }
-      };
 
-      fetchBoards();
-      
-      // Global Boards listener (adds/removes from dashboard list)
-      const channel = supabase.channel('public:boards')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
-          // Optimization: If it's the active board, our specific listener handles it.
-          // This listener is mainly for the dashboard list (new boards, titles, etc)
-          // But to be safe and consistent, we can just update state if we have the data.
-          
+      const handleBoardUpdate = (payload: any) => {
+          if (payload.eventType === 'DELETE') {
+              setBoards(prev => prev.filter(b => b.id !== payload.old.id));
+              return;
+          }
+
           if (payload.new) {
-             const freshBoard = mapBoard(payload.new as any);
-             setBoards(prev => {
+              const freshBoard = mapBoard(payload.new as any);
+              setBoards(prev => {
                   const idx = prev.findIndex(b => b.id === freshBoard.id);
                   if (idx > -1) {
+                      // Update existing board
                       const newBoards = [...prev];
                       newBoards[idx] = freshBoard;
                       return newBoards;
+                  } else {
+                      // Add new board
+                      return [freshBoard, ...prev];
                   }
-                  // Only add to list if we are not currently viewing a specific board (dashboard mode)
-                  // or if we want realtime additions to dashboard
-                  return [freshBoard, ...prev]; 
-             });
+              });
           }
-      })
-      .subscribe();
+      };
 
-      return () => { supabase.removeChannel(channel); };
+      const channel = supabase.channel('public:boards')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, handleBoardUpdate)
+          .subscribe();
+
+      return () => {
+          supabase.removeChannel(channel);
+      };
   }, [session, isGuest]);
 
   const createBoard = (format: BoardFormat, templateData?: Partial<Board>, initialNotes?: Note[]) => {
