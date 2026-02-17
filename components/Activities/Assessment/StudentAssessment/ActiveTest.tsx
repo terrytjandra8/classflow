@@ -384,12 +384,12 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                          >
                              <X size={24}/>
                          </button>
-                         <div className="flex-1 bg-white relative">
+                         <div className="flex-1 bg-white relative overflow-y-auto">
                              <DrawingCanvas 
                                 width={1200}
                                 height={800}
                                 onSave={handleSaveDrawing}
-                                className="w-full h-full"
+                                className="w-full"
                                 manualSave={true} // IMPORTANT: Only save when user clicks Done
                              />
                          </div>
