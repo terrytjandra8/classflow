@@ -33,7 +33,7 @@ const formatTime = (seconds: number) => {
 };
 
 const QuestionItem = memo(({ 
-    q, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly, config, isSaving
+    q, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly, config
 }: {
     q: AssessmentQuestion;
     answer: string;
@@ -42,8 +42,7 @@ const QuestionItem = memo(({
     setActiveDrawingQId: (id: string) => void;
     questionNumber: number;
     isReadOnly: boolean;
-    config: AssessmentConfig;
-    isSaving: boolean;
+    config: AssessmentConfig
 }) => {
     const [activeFormats, setActiveFormats] = useState<FormatState>({
         bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
@@ -131,13 +130,8 @@ const QuestionItem = memo(({
                         <div className="mb-4">
                             {isDrawing ? (
                                 <div className="relative group border border-white/10 rounded-xl overflow-hidden">
-                                    <img src={answer} alt="Drawing Answer" className={`w-full h-auto max-h-[400px] object-contain bg-white transition-opacity ${isSaving ? 'opacity-50' : 'opacity-100'}`} />
-                                    {isSaving && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                            <RefreshCcw size={24} className="text-white animate-spin" />
-                                        </div>
-                                    )}
-                                    {!isReadingMode && !isReadOnly && !isSaving && (
+                                    <img src={answer} alt="Drawing Answer" className="w-full h-auto max-h-[400px] object-contain bg-white" />
+                                    {!isReadingMode && !isReadOnly && (
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                             <button 
                                                 onClick={() => setActiveDrawingQId(q.id)}
@@ -208,8 +202,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
-    const [drawingSaveStatus, setDrawingSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-    const [optimisticUrl, setOptimisticUrl] = useState<string | null>(null);
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
 
@@ -226,7 +218,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
 
     const debouncedSave = useMemo(() => 
         debounce(async (blob: Blob, qId: string) => {
-            setDrawingSaveStatus('saving');
             try {
                 const currentAnswer = answers[qId];
                 let fileName;
@@ -247,24 +238,17 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
 
                 onAnswerChange(qId, finalUrl, true);
-                setDrawingSaveStatus('saved');
-                setOptimisticUrl(null); 
             } catch (e) {
                 console.error("Drawing upload failed", e);
-                setDrawingSaveStatus('error');
-                setOptimisticUrl(null); 
             }
         }, 2500)
     , [answers, onAnswerChange]);
 
     const handleDrawEnd = useCallback((blob: Blob) => {
         if (activeDrawingQId) {
-            const tempUrl = URL.createObjectURL(blob);
-            setOptimisticUrl(tempUrl);
-            onAnswerChange(activeDrawingQId, tempUrl, false); 
             debouncedSave(blob, activeDrawingQId);
         }
-    }, [activeDrawingQId, debouncedSave, onAnswerChange]);
+    }, [activeDrawingQId, debouncedSave]);
 
 
     const activeDrawingInitialData = activeDrawingQId ? answers[activeDrawingQId] : undefined;
@@ -344,7 +328,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                     {questions.map((q, idx) => {
                         const questionNumber = questions.filter((item, i) => i <= idx && item.type !== 'section').length;
                         const isQuestionReadOnly = isRevision && !retryQuestions?.includes(q.id);
-                        const isSaving = drawingSaveStatus === 'saving' && !!optimisticUrl;
 
                         return (
                             <QuestionItem 
@@ -357,7 +340,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 questionNumber={questionNumber}
                                 isReadOnly={isQuestionReadOnly ?? false}
                                 config={config}
-                                isSaving={isSaving}
                             />
                         );
                     })}
@@ -424,25 +406,12 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 <PenTool size={18} />
                                 <h2 className="font-bold text-lg">Drawing Canvas</h2>
                             </div>
-                            <div className="flex items-center gap-3">
-                                 <div className={`text-xs flex items-center gap-2 transition-opacity ${drawingSaveStatus === 'idle' ? 'opacity-0' : 'opacity-100'}`}>
-                                    {drawingSaveStatus === 'saving' && <><RefreshCcw size={14} className="animate-spin"/> Saving...</>}
-                                    {drawingSaveStatus === 'saved' && <><Check size={14} className="text-green-500"/> Saved</>}
-                                    {drawingSaveStatus === 'error' && <><AlertTriangle size={14} className="text-red-500"/> Error</>}
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        setActiveDrawingQId(null);
-                                        if (optimisticUrl) {
-                                            URL.revokeObjectURL(optimisticUrl);
-                                            setOptimisticUrl(null);
-                                        }
-                                    }}
-                                    className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-                                >
-                                    <X size={20}/>
-                                </button>
-                            </div>
+                            <button 
+                                onClick={() => setActiveDrawingQId(null)}
+                                className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                            >
+                                <X size={20}/>
+                            </button>
                          </div>
                          <div className="flex-1 bg-white relative p-1">
                             <DrawingCanvas 
