@@ -45,7 +45,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.fillRect(0, 0, width, height);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.lineWidth = strokeWidth;
                 const blank = ctx.getImageData(0, 0, width, height);
                 setHistory([blank]);
                 setHistoryStep(0);
@@ -54,7 +53,17 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         setHasContent(false);
         setIsEraser(false);
         setActiveColor(strokeColor);
-    }, [width, height, strokeColor, strokeWidth]);
+    }, [width, height, strokeColor]);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (ctx) {
+            ctx.lineWidth = isEraser ? 20 : strokeWidth;
+            ctx.strokeStyle = isEraser ? '#ffffff' : activeColor;
+        }
+    }, [strokeWidth, activeColor, isEraser]);
+
 
     const saveHistoryStep = () => {
         const canvas = canvasRef.current;
@@ -150,7 +159,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
     };
 
-    const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HמלTMLCanvasElement>) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -159,8 +168,6 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const { x, y } = getCanvasCoordinates(e);
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.strokeStyle = isEraser ? '#ffffff' : activeColor;
-        ctx.lineWidth = isEraser ? 20 : strokeWidth;
     };
 
     const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
