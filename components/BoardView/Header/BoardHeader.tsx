@@ -1,249 +1,120 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, MonitorPlay, Minimize2, Loader2, Eye } from 'lucide-react';
-import { BoardProps } from './boardTypes';
-import { BoardHeader } from './Header/BoardHeader';
-import { Tooltip } from '../Tooltip';
-import { GridLayout } from './Layouts/GridLayout';
-import { ColumnsLayout } from './Layouts/ColumnsLayout';
-import { StreamLayout } from './Layouts/StreamLayout';
-import { TimelineLayout } from './Layouts/TimelineLayout';
-import { MapLayout } from './Layouts/MapLayout';
-import { SandboxLayout } from './Sandbox';
-import { useBoard, BoardProvider } from './BoardContext';
+import React from 'react';
+import { useBoard } from '../BoardContext';
+// Note: Adjusted paths to ../.. because we are inside BoardView/Header/
+import { EditableInput } from '../../ui/EditableInput'; 
+import { Tooltip } from '../../Tooltip';
+import { 
+    Settings, Share2, ArrowLeft, MonitorPlay, Minimize2, 
+    Users, Clock, Eye, EyeOff 
+} from 'lucide-react';
+import { format } from 'date-fns';
 
-export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: boolean }> = (props) => {
-    const parentContext = useBoard();
-    const [isPresenting, setIsPresenting] = useState(false);
-    
-    // 1. Merge Context with Props to create a local source of truth
-    const board = props.board || parentContext.board;
-    const isStudent = props.isStudent !== undefined ? props.isStudent : parentContext.isStudent;
-    const sectionIdFilter = props.sectionIdFilter || parentContext.sectionIdFilter;
-    const embeddedMode = props.embeddedMode !== undefined ? props.embeddedMode : parentContext.embeddedMode;
-    const backgroundStyle = props.backgroundStyle || parentContext.backgroundStyle;
-    const fontClass = props.fontClass || parentContext.fontClass;
-    const userAvatar = props.userAvatar || parentContext.userAvatar;
-    
-    // Combine props/context presentation mode with local fullscreen toggle
-    const effectivePresentationMode = props.isPresentationMode || parentContext.isPresentationMode || isPresenting;
-    
-    // Actions fallback to context if not in props
-    const contextValue = useMemo(() => ({
-        ...parentContext,
-        board,
-        isStudent,
-        sectionIdFilter,
-        embeddedMode,
-        backgroundStyle,
-        fontClass,
-        userAvatar,
-        openAddNote: props.onOpenAddNote || parentContext.openAddNote,
-        openSettings: props.onOpenSettings || parentContext.openSettings,
-        openShare: props.onOpenShare || parentContext.openShare,
-        goBack: props.onBack || parentContext.goBack,
-        updateBoard: props.onUpdateBoard || parentContext.updateBoard,
-        toggleSimulation: props.onToggleSimulation || parentContext.toggleSimulation,
-        summarize: props.onSummarize || parentContext.summarize,
-        isSimulating: props.isSimulating !== undefined ? props.isSimulating : parentContext.isSimulating,
-        isAiLoading: false, // Force disabled
-        onlineUsers: props.onlineUsers || parentContext.onlineUsers,
-        classList: props.classList || parentContext.classList,
-        isPresentationMode: effectivePresentationMode
-    }), [parentContext, board, isStudent, sectionIdFilter, embeddedMode, backgroundStyle, fontClass, userAvatar, props, effectivePresentationMode]);
+interface BoardHeaderProps {
+    isPresenting?: boolean;
+    onTogglePresentation?: () => void;
+}
 
-    const canManageBoard = contextValue.canManageBoard;
-    const isLoadingNotes = contextValue.isLoadingNotes;
+export const BoardHeader: React.FC<BoardHeaderProps> = ({ 
+    isPresenting, 
+    onTogglePresentation 
+}) => {
+    const { 
+        board, updateBoard, goBack, openSettings, openShare, 
+        canManageBoard, onlineUsers 
+    } = useBoard();
 
-    const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
-    
-    const showFab = (canManageBoard || (!isLocked && board.format !== 'columns' && board.format !== 'timeline')) && !isPresenting && !embeddedMode && !effectivePresentationMode;
-
-    useEffect(() => {
-        const handleFsChange = () => {
-            if (!document.fullscreenElement) {
-                setIsPresenting(false);
-            }
-        };
-        document.addEventListener('fullscreenchange', handleFsChange);
-        return () => document.removeEventListener('fullscreenchange', handleFsChange);
-    }, []);
-
-    // AUTO-SCROLL TO HIGHLIGHTED STUDENT
-    useEffect(() => {
-        const highlightedId = parentContext.highlightedUserId;
-        if (!highlightedId) return;
-
-        setTimeout(() => {
-            const selector = `[data-author-id="${highlightedId}"]`;
-            const elements = document.querySelectorAll(selector);
-            
-            if (elements.length === 0) return;
-
-            elements.forEach((el) => {
-                const card = el as HTMLElement;
-                let parent = card.parentElement;
-                
-                while (parent) {
-                    const style = window.getComputedStyle(parent);
-                    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                        const parentRect = parent.getBoundingClientRect();
-                        const cardRect = card.getBoundingClientRect();
-                        const targetScroll = parent.scrollTop + (cardRect.top - parentRect.top) - (parent.clientHeight / 2) + (card.clientHeight / 2);
-                        
-                        parent.scrollTo({
-                            top: targetScroll,
-                            behavior: 'smooth'
-                        });
-                        break;
-                    }
-                    parent = parent.parentElement;
-                }
-            });
-
-            setTimeout(() => {
-                const firstElement = elements[0] as HTMLElement;
-                if (firstElement) {
-                    firstElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                }
-            }, 300);
-
-        }, 100);
-        
-    }, [parentContext.highlightedUserId]);
-
-    const togglePresentation = () => {
-        if (!isPresenting) {
-            document.documentElement.requestFullscreen().catch(e => console.error("Fullscreen failed:", e));
-            setIsPresenting(true);
-        } else {
-            if (document.fullscreenElement) document.exitFullscreen();
-            setIsPresenting(false);
-        }
+    const handleTitleSave = (newTitle: string) => {
+        updateBoard({ title: newTitle });
     };
-
-    const renderContent = () => {
-        switch (board.format) {
-            case 'stream': 
-                return <StreamLayout />;
-            case 'timeline':
-                return <TimelineLayout />;
-            case 'map':
-                return <MapLayout />;
-            case 'canvas':
-            case 'freeform':
-                return <SandboxLayout />;
-            case 'columns':
-                if (sectionIdFilter) {
-                     return <GridLayout gridClass="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6" isStudent={isStudent} />;
-                }
-                return <ColumnsLayout isStudent={isStudent} />;
-            case 'grid': 
-            case 'wall': 
-            default:
-                return <GridLayout gridClass="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6" isStudent={isStudent} />;
-        }
-    };
-
-    // --- CRITICAL FIX START ---
-    // This allows us to pass props to the Header even though the Header file 
-    // doesn't explicitly say it accepts them. This fixes the build error.
-    const SafeBoardHeader = BoardHeader as any;
-    // --- CRITICAL FIX END ---
-
-    const content = (
-        <div className={`h-full flex flex-col ${fontClass} relative`}>
-            <div className={`absolute inset-0 z-0 ${embeddedMode ? '' : 'fixed'}`} style={backgroundStyle}></div>
-            
-            <div className="relative z-10 flex flex-col h-full">
-                {/* Header: Visible unless embedded or fullscreen presenting */}
-                {!embeddedMode && (
-                    <SafeBoardHeader 
-                        isPresenting={isPresenting}
-                        onTogglePresentation={togglePresentation}
-                    />
-                )}
-                
-                {/* Presentation Mode Banner */}
-                {effectivePresentationMode && (
-                    <div className="absolute top-4 left-4 z-50 pointer-events-none">
-                        <span className="bg-green-600/90 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur border border-white/20 uppercase tracking-widest animate-pulse">
-                            PROJECTOR VIEW
-                        </span>
-                    </div>
-                )}
-
-                {/* Simulation Banner */}
-                {parentContext.isSimulatingStudent && (
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[60] animate-in slide-in-from-top-4 fade-in pointer-events-none">
-                        <div className="bg-indigo-600/90 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-2xl backdrop-blur-md border border-indigo-400 flex items-center gap-2">
-                            <Eye size={14} className="animate-pulse" /> Viewing as Student
-                        </div>
-                    </div>
-                )}
-                
-                {isPresenting && !embeddedMode && (
-                    <div className="fixed top-6 right-6 z-[100] flex gap-2">
-                        <div className="bg-black/50 backdrop-blur-md text-white px-4 py-2 rounded-full font-bold text-sm shadow-xl border border-white/10 flex items-center gap-2">
-                            <MonitorPlay size={16} className="text-green-400" /> Presentation Mode
-                        </div>
-                        <button onClick={togglePresentation} className="bg-white text-black p-2 rounded-full hover:bg-gray-200 transition-colors shadow-xl">
-                            <Minimize2 size={20} />
-                        </button>
-                    </div>
-                )}
-
-                <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isPresenting || effectivePresentationMode ? 'presentation-mode' : ''}`}>
-                    <style>{`
-                        .presentation-mode {
-                            font-size: 1.25rem;
-                        }
-                        .presentation-mode .note-card-title {
-                            font-size: 1.5rem !important;
-                        }
-                        .presentation-mode .note-card-content {
-                            font-size: 1.1rem !important;
-                        }
-                    `}</style>
-                    
-                    {isLoadingNotes ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/5 backdrop-blur-[1px] z-20">
-                            <div className="bg-white/80 dark:bg-black/50 p-4 rounded-full shadow-lg border border-white/10 backdrop-blur-md">
-                                <Loader2 className="animate-spin text-pink-500" size={32} />
-                            </div>
-                        </div>
-                    ) : (
-                        renderContent()
-                    )}
-                </div>
-                
-                 {showFab && (
-                    <Tooltip content="Quick Add Note" position="left">
-                        <button
-                            onClick={() => contextValue.openAddNote(sectionIdFilter)}
-                            className={`fixed bottom-8 right-8 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 z-[51] ${board.colorScheme === 'light' ? 'bg-slate-900 text-white' : 'bg-pink-600 text-white'}`}
-                        >
-                            <Plus size={32} />
-                        </button>
-                    </Tooltip>
-                 )}
-                 
-                 {embeddedMode && (canManageBoard || !isLocked) && sectionIdFilter && (
-                     <div className="absolute bottom-6 right-6 z-50">
-                        <button
-                            onClick={() => contextValue.openAddNote(sectionIdFilter)}
-                            className={`w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 bg-pink-600 text-white`}
-                        >
-                            <Plus size={24} />
-                        </button>
-                     </div>
-                 )}
-            </div>
-        </div>
-    );
 
     return (
-        <BoardProvider value={contextValue}>
-            {content}
-        </BoardProvider>
+        <header className="relative z-20 flex flex-col w-full bg-white/10 backdrop-blur-xl border-b border-white/10 text-white p-4">
+            <div className="flex items-center justify-between">
+                
+                {/* LEFT: Back Button & Title */}
+                <div className="flex items-center gap-4">
+                    <button onClick={goBack} className="p-2 hover:bg-white/10 rounded-full transition-all">
+                        <ArrowLeft size={20} />
+                    </button>
+                    
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <EditableInput 
+                                value={board.title || 'Untitled Board'} 
+                                onSave={handleTitleSave}
+                                disabled={!canManageBoard}
+                                className="font-bold text-xl bg-transparent border-none focus:ring-0 p-0 cursor-pointer hover:opacity-80"
+                            />
+                            {board.is_published === false && (
+                                <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/30 uppercase font-bold">
+                                    Draft
+                                </span>
+                            )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 mt-1 text-[10px] opacity-60 uppercase tracking-wider">
+                            <span className="flex items-center gap-1">
+                                <Clock size={10} /> Created: {board.created_at ? format(new Date(board.created_at), 'MMM d, yyyy') : 'Recent'}
+                            </span>
+                            <span>
+                                Updated: {board.updated_at ? format(new Date(board.updated_at), 'HH:mm') : 'Just now'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* MIDDLE: Online Users */}
+                <div className="hidden md:flex items-center gap-3 bg-black/20 px-4 py-1.5 rounded-full border border-white/5">
+                    <div className="flex -space-x-2">
+                        {onlineUsers?.slice(0, 3).map((user: any) => (
+                            <img 
+                                key={user.id} 
+                                src={user.avatar_url} 
+                                className="w-6 h-6 rounded-full border-2 border-slate-800" 
+                                alt={user.full_name}
+                            />
+                        ))}
+                    </div>
+                    <span className="text-xs font-medium flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        {onlineUsers?.length || 0} Online
+                    </span>
+                </div>
+
+                {/* RIGHT: Controls (Anti-Cheat & Present) */}
+                <div className="flex items-center gap-2">
+                    {canManageBoard && (
+                        <Tooltip content={board.settings?.anonymousMode ? "Names Hidden" : "Names Visible"}>
+                            <button 
+                                onClick={() => updateBoard({ settings: { ...board.settings, anonymousMode: !board.settings?.anonymousMode }})}
+                                className={`p-2 rounded-lg transition-colors ${board.settings?.anonymousMode ? 'bg-pink-600 text-white' : 'hover:bg-white/10'}`}
+                            >
+                                {board.settings?.anonymousMode ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </Tooltip>
+                    )}
+
+                    {onTogglePresentation && (
+                        <button 
+                            onClick={onTogglePresentation}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-sm font-bold"
+                        >
+                            {isPresenting ? <Minimize2 size={18} /> : <MonitorPlay size={18} />}
+                            {isPresenting ? 'Exit' : 'Present'}
+                        </button>
+                    )}
+
+                    <button onClick={openShare} className="p-2 hover:bg-white/10 rounded-full transition-all">
+                        <Share2 size={20} />
+                    </button>
+
+                    {canManageBoard && (
+                        <button onClick={openSettings} className="p-2 hover:bg-white/10 rounded-full transition-all text-pink-400">
+                            <Settings size={20} />
+                        </button>
+                    )}
+                </div>
+            </div>
+        </header>
     );
 };
