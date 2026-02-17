@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useBoard } from '../BoardContext';
-// FIX: Default import for NoteCard
 import NoteCard from '../../NoteCard'; 
 import { EditableInput } from '../../ui/EditableInput';
 import { 
@@ -8,7 +7,6 @@ import {
     Trash2, Ghost
 } from 'lucide-react';
 
-// FIX: Inline Simple Dropdown to avoid missing file errors
 const SimpleDropdown = ({ trigger, items }: any) => {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -50,7 +48,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
         board, notes, canManageBoard, updateBoard, openAddNote, updateNote 
     } = useBoard();
 
-    // FIX: Manual implementation of section helpers since Context might miss them
     const sections = board.sections || [];
 
     const updateSection = (id: string, data: any) => {
@@ -71,7 +68,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
         updateBoard({ sections: [...sections, newSection] });
     };
 
-    // Drag and Drop State
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const dragItemRef = useRef<string | null>(null);
 
@@ -197,10 +193,10 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                     onDragStart={(e) => handleDragStart(e, note.id)}
                                     className={draggingId === note.id ? 'opacity-50' : ''}
                                 >
+                                    {/* FIX: Removed anonymousMode prop which does not exist on NoteCard */}
                                     <NoteCard 
                                         note={note} 
                                         isStudent={isStudent} 
-                                        anonymousMode={isAnon}
                                     />
                                 </div>
                             ))}

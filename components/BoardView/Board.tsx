@@ -11,7 +11,6 @@ import { MapLayout } from './Layouts/MapLayout';
 import { SandboxLayout } from './Sandbox';
 import { useBoard, BoardProvider } from './BoardContext';
 
-// FIX: Explicitly add extra props that might not be in BoardProps
 type ExtendedBoardProps = Partial<BoardProps> & {
     isPresentationMode?: boolean;
 };
@@ -31,8 +30,9 @@ export const BoardLayout: React.FC<ExtendedBoardProps> = (props) => {
 
     // 2. Determine Modes
     const embeddedMode = props.embeddedMode || isPresentationPopup;
-    // Fix: Allow props.isPresentationMode to override
-    const effectiveIsStudent = props.isStudent || parentContext.isStudent || isPresentationPopup || props.isPresentationMode;
+    
+    // FIX: Use !! to force this into a strict boolean (true/false) so it can never be undefined
+    const effectiveIsStudent = !!(props.isStudent || parentContext.isStudent || isPresentationPopup || props.isPresentationMode);
     
     const board = props.board || parentContext.board;
     const sectionIdFilter = props.sectionIdFilter || parentContext.sectionIdFilter;
