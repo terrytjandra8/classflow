@@ -93,7 +93,7 @@ export const SandboxLayout: React.FC<Partial<BoardProps>> = (props) => {
         }
 
         const note = notes.find((n: any) => n.id === id);
-        if (note && note.x !== undefined && note.y !== undefined) {
+        if (note) {
             startDragNote(e, id, note.x, note.y);
         }
     };
@@ -180,7 +180,7 @@ export const SandboxLayout: React.FC<Partial<BoardProps>> = (props) => {
                              (note.connections || []).map((targetId: any) => {
                                  const connData = parseConnection(targetId);
                                  const target = displayedNotes.find((n: any) => n.id === connData.id);
-                                 if (!target || target.x === undefined || target.y === undefined) return null;
+                                 if (!target) return null;
                                  return (
                                      <line 
                                         key={`${note.id}-${connData.id}`}
@@ -194,8 +194,8 @@ export const SandboxLayout: React.FC<Partial<BoardProps>> = (props) => {
                          ))}
                          {connectionStartId && (
                              <line 
-                                x1={notes.find((n: any) => n.id === connectionStartId)!.x! + 150} 
-                                y1={notes.find((n: any) => n.id === connectionStartId)!.y! + 100}
+                                x1={notes.find((n: any) => n.id === connectionStartId)!.x + 150} 
+                                y1={notes.find((n: any) => n.id === connectionStartId)!.y + 100}
                                 x2={mousePos.x} y2={mousePos.y}
                                 stroke="blue"
                                 strokeWidth="2"

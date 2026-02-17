@@ -39,6 +39,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Stop preview on unmount
     useEffect(() => {
         return () => stopPreview();
     }, []);
@@ -82,6 +83,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
             </div>
 
             {!isPresentationMode && (
+                // CHANGED: z-index increased to 50
                 <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#161616]/80 backdrop-blur-md relative z-50">
                     <div className="flex items-center gap-4">
                         {onBack && (
@@ -94,6 +96,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                     </div>
                     
                     <div className="flex items-center gap-3">
+                        {/* Music Picker in Setup */}
                         <div className="relative" ref={menuRef}>
                             <button 
                                 onClick={() => setIsMusicMenuOpen(!isMusicMenuOpen)}
@@ -179,7 +182,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                                         <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center font-bold text-gray-500">{idx + 1}</div>
                                         <div className="flex-1">
                                             <h4 className="font-bold text-sm text-gray-200">{q.question}</h4>
-                                            <p className="text-xs text-gray-500">{q.options.length} Options • {q.time_limit}s</p>
+                                            <p className="text-xs text-gray-500">{q.options.length} Options • {q.timeLimit}s</p>
                                         </div>
                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => setIsEditing(true)} className="p-2 hover:bg-white/10 rounded text-blue-400"><Edit2 size={16}/></button>

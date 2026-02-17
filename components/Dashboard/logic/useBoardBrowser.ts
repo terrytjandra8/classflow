@@ -4,7 +4,7 @@ import { supabase } from '../../../services/supabaseClient';
 import { Board, ClassGroup } from '../../../types';
 import { classService } from '../../../services/classService';
 
-const getDateCategory = (timestamp: string) => {
+const getDateCategory = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
     
@@ -113,7 +113,7 @@ export const useBoardBrowser = (
         } else {
             // Teacher/Admin View
             if (sidebarFilter === 'trashed') {
-                result = result.filter(b => b.isTrashed && b.ownerId === userId);
+                result = result.filter(b => b.isTrashed && b.owner_id === userId);
             } else if (sidebarFilter === 'global_trash') {
                 result = result.filter(b => b.isTrashed);
             } else if (sidebarFilter === 'all_boards') {
@@ -126,7 +126,7 @@ export const useBoardBrowser = (
                 if (sidebarFilter === 'favourites') {
                     result = result.filter(b => b.isFavorite);
                 } else if (sidebarFilter === 'made_by_me') {
-                    result = result.filter(b => b.ownerId === userId || (b.collaborators && b.collaborators.includes(userId!)));
+                    result = result.filter(b => b.owner_id === userId || (b.collaborators && b.collaborators.includes(userId!)));
                 } else if (sidebarFilter !== 'recents') {
                      result = result.filter(b => (b.targetGrade || 'General') === sidebarFilter);
                 }
@@ -138,8 +138,8 @@ export const useBoardBrowser = (
         }
 
         return result.sort((a, b) => {
-            const timeA = new Date(sortBy === 'created' ? a.createdAt : (a.updatedAt || a.createdAt)).getTime();
-            const timeB = new Date(sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt)).getTime();
+            const timeA = sortBy === 'created' ? a.createdAt : (a.updatedAt || a.createdAt);
+            const timeB = sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
             return timeB - timeA;
         });
     }, [boards, filter, sidebarFilter, userId, sortBy, selectedClass, isStudent, studentClasses]);
@@ -184,7 +184,7 @@ export const useBoardBrowser = (
         if (board) {
             setExitingBoardId(id);
             setTimeout(async () => {
-                await supabase.from('boards').update({ settings: { ...(board.settings || {}), isTrashed: false, deletedAt: null }, updatedAt: new Date().toISOString() }).eq('id', id);
+                await supabase.from('boards').update({ settings: { ...(board.settings || {}), isTrashed: false, deletedAt: null }, updated_at: new Date().toISOString() }).eq('id', id);
                 setExitingBoardId(null);
             }, 300);
         }

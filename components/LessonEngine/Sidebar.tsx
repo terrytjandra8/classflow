@@ -38,8 +38,9 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
             title: `New ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}`,
             content: '',
             options: type === 'poll' ? ['Yes', 'No'] : undefined,
-            boardSettings: type === 'board' ? { format: 'wall', allow_posting: true } : undefined
+            boardSettings: type === 'board' ? { format: 'wall', allowPosting: true } : undefined
         };
+        // Use parent atomic handler to ensure state consistency
         onAddStep(newStep);
     };
 
@@ -50,7 +51,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
     };
 
     const updateBoardSettings = (updates: any) => {
-        const currentSettings = currentStep.boardSettings || { format: 'wall', allow_posting: true };
+        const currentSettings = currentStep.boardSettings || { format: 'wall', allowPosting: true };
         updateCurrentStep({
             boardSettings: { ...currentSettings, ...updates }
         });
@@ -59,6 +60,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
     const deleteStep = (index: number) => {
         const newSteps = steps.filter((_, i) => i !== index);
         onUpdateSteps(newSteps);
+        // Adjust selection if needed
         if (index === currentIndex && newSteps.length > 0) {
             onSelectStep(Math.max(0, index - 1));
         } else if (index < currentIndex) {
@@ -66,6 +68,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
         }
     };
 
+    // --- Width Resizing Logic ---
     const startResizingWidth = (e: React.MouseEvent) => {
         isResizingWidth.current = true;
         document.addEventListener('mousemove', handleMouseMoveWidth);
@@ -84,6 +87,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
         document.removeEventListener('mouseup', stopResizingWidth);
     };
 
+    // --- Height Resizing Logic ---
     const startResizingHeight = (e: React.MouseEvent) => {
         isResizingHeight.current = true;
         document.body.style.cursor = 'row-resize';
@@ -109,6 +113,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
         <div className="flex h-full bg-[#161616] relative border-r border-white/10" style={{ width }}>
             
             <div className="flex flex-col flex-1 min-w-0 h-full">
+                {/* Header */}
                 <div className="p-3 border-b border-white/10 flex items-center justify-between bg-[#1a1a1a] shrink-0">
                     <span className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Slides ({steps.length})</span>
                     <div className="flex items-center gap-2">
@@ -124,6 +129,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                     </div>
                 </div>
 
+                {/* Step List */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar min-h-0">
                     {steps.map((step, idx) => {
                         const TypeIcon = STEP_TYPES.find(t => t.id === step.type)?.icon || FileText;
@@ -153,6 +159,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                     })}
                 </div>
 
+                {/* Properties Editor */}
                 {currentStep && (
                     <>
                         <div 
@@ -169,6 +176,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                                 </div>
                             </div>
                             <div className="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                                {/* Use Key to force re-render inputs when slide changes */}
                                 <div className="space-y-1" key={currentStep.id + '_title'}>
                                     <label className="text-[10px] uppercase font-bold text-gray-500">Title</label>
                                     <input 
@@ -178,6 +186,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                                     />
                                 </div>
 
+                                {/* URL Inputs */}
                                 {(currentStep.type === 'video' || currentStep.type === 'image' || currentStep.type === 'website') && (
                                     <div className="space-y-1" key={currentStep.id + '_url'}>
                                         <label className="text-[10px] uppercase font-bold text-gray-500">URL</label>
@@ -190,20 +199,22 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                                     </div>
                                 )}
 
+                                {/* Board Settings */}
                                 {currentStep.type === 'board' && (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between p-2 bg-[#111] rounded border border-white/10">
                                             <span className="text-xs font-bold text-gray-300">Allow Posting</span>
                                             <div 
-                                                onClick={() => updateBoardSettings({ allow_posting: !currentStep.boardSettings?.allow_posting })}
-                                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${currentStep.boardSettings?.allow_posting ? 'bg-green-500' : 'bg-gray-600'}`}
+                                                onClick={() => updateBoardSettings({ allowPosting: !currentStep.boardSettings?.allowPosting })}
+                                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${currentStep.boardSettings?.allowPosting ? 'bg-green-500' : 'bg-gray-600'}`}
                                             >
-                                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${currentStep.boardSettings?.allow_posting ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${currentStep.boardSettings?.allowPosting ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
+                                {/* Canva Integration */}
                                 {currentStep.type === 'canva' && (
                                     <div className="space-y-3" key={currentStep.id + '_canva'}>
                                         <label className="text-[10px] uppercase font-bold text-gray-500 flex items-center gap-1">
@@ -219,6 +230,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                                     </div>
                                 )}
 
+                                {/* Google Slides Integration */}
                                 {currentStep.type === 'google_slide' && (
                                     <div className="space-y-3" key={currentStep.id + '_gslide'}>
                                         <label className="text-[10px] uppercase font-bold text-gray-500 flex items-center gap-1">
@@ -267,6 +279,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                     </>
                 )}
 
+                {/* Add Step Toolbar */}
                 <div className="p-3 bg-[#1a1a1a] border-t border-white/10 shrink-0">
                     <div className="grid grid-cols-4 gap-2">
                         {STEP_TYPES.map((t) => (
@@ -284,6 +297,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                 </div>
             </div>
 
+            {/* Width Resize Handle */}
             <div 
                 className="absolute right-0 top-0 bottom-0 w-1 bg-transparent hover:bg-blue-500/50 cursor-col-resize z-50 transition-colors flex items-center justify-center group"
                 onMouseDown={startResizingWidth}

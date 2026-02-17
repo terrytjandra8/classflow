@@ -4,19 +4,20 @@ import { AuthPage } from './components/AuthPage';
 import { GuestNameModal } from './components/GuestNameModal';
 import { CreateBoardModal } from './components/CreateBoardModal';
 import { DuplicateModal } from './components/DuplicateModal'; 
-import { Board, BoardFormat, Note, Profile } from './types';
+import { Board, BoardFormat, Note } from './types';
 import { Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { boardService } from './services/boardService';
 import { profileService } from './services/profileService';
 import { noteService } from './services/noteService';
 import { mapBoard } from './utils/mappers';
 import './src/index.css';
-import { Session, User } from '@supabase/supabase-js';
 
+// Lazy load heavy views
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 const StudentDashboard = React.lazy(() => import('./components/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
 const BoardView = React.lazy(() => import('./components/BoardView').then(module => ({ default: module.BoardView })));
 
+// Error Boundary Component
 interface ErrorBoundaryProps {
   children?: ReactNode;
 }
@@ -27,10 +28,15 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  declare props: Readonly<ErrorBoundaryProps>;
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null
   };
+
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+  }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -78,28 +84,36 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'auth' | 'dashboard' | 'board'>('auth');
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [boards, setBoards] = useState<Board[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   
+  // Guest State
   const [isGuest, setIsGuest] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestAvatar, setGuestAvatar] = useState('');
   const [guestId, setGuestId] = useState<string>(''); 
 
-  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  // User Profile
+  const [userRole, setUserRole] = useState<string>('student');
+  const [userClasses, setUserClasses] = useState<string[]>([]);
+  const [username, setUsername] = useState('');
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
   const [boardError, setBoardError] = useState<string | null>(null);
   
+  // Duplicate Modal State
   const [duplicateModal, setDuplicateModal] = useState<{ isOpen: boolean; boardId: string | null }>({ isOpen: false, boardId: null });
 
+  // Access Check State for Guests
   const [accessCheckStatus, setAccessCheckStatus] = useState<'idle' | 'checking' | 'allowed' | 'denied'>('idle');
 
+  // Keep track of active board ID for realtime updates without breaking useEffect dependencies
   const activeBoardIdRef = useRef<string | null>(null);
   useEffect(() => { activeBoardIdRef.current = activeBoardId; }, [activeBoardId]);
 
@@ -120,6 +134,7 @@ function AppContent() {
             setActiveBoardId(boardId);
             setView('board');
           } else {
+            // Board not found or no access, redirect to dashboard
             setView('dashboard');
           }
         } else {
@@ -127,10 +142,11 @@ function AppContent() {
           setView('dashboard');
         }
       } else if (boardId) {
+        // Guest access logic
         setAccessCheckStatus('checking');
         const { data: board, error } = await supabase
             .from('boards')
-            .select('id, is_public, is_published, assessment_config, format, owner_id, title, description, wallpaper, quiz_state')
+            .select('id, is_public, is_published, settings, format, owner_id, title, description, wallpaper')
             .eq('id', boardId)
             .maybeSingle();
 
@@ -139,9 +155,9 @@ function AppContent() {
         } else {
             const isPublic = board.is_public;
             const isLive = board.is_published;
-            const assessmentConfig = board.assessment_config as Board['assessmentConfig'];
-            const isQuizActive = board.format === 'quiz' && board.quiz_state && board.quiz_state !== 'setup';
-            const isAssessmentActive = board.format === 'assessment' && assessmentConfig?.status === 'active';
+            const settings = board.settings as any;
+            const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
+            const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
                 setBoards([mapBoard(board as any)]);
@@ -180,12 +196,17 @@ function AppContent() {
     return () => {
         subscription.unsubscribe();
     };
-}, [isGuest]);
+}, [isGuest]); // isGuest is a dependency to re-evaluate if the user becomes a guest
 
   const fetchProfile = async () => {
       try {
         const profile = await profileService.getCurrentProfile();
-        if (profile) setUserProfile(profile as Profile);
+        if (profile) {
+            setUserRole(profile.role);
+            setUserClasses(profile.enrolledClasses || []);
+            setUsername(profile.fullName);
+            setUserAvatar(profile.avatarUrl);
+        }
       } catch (e) {
           console.error("Failed to fetch profile", e);
       }
@@ -200,6 +221,7 @@ function AppContent() {
     }
   };
 
+  // Sync theme to DOM
   useEffect(() => {
     if (theme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -208,6 +230,7 @@ function AppContent() {
     }
   }, [theme]);
 
+  // Handle Browser Back/Forward Navigation
   useEffect(() => {
       const handlePopState = () => {
           const params = new URLSearchParams(window.location.search);
@@ -226,6 +249,7 @@ function AppContent() {
       return () => window.removeEventListener('popstate', handlePopState);
   }, [session, isGuest]);
 
+  // REALTIME GATEKEEPER: Listen for Board Status Changes (Draft/Live)
   useEffect(() => {
       if (!activeBoardId) return;
 
@@ -235,12 +259,20 @@ function AppContent() {
               { event: 'UPDATE', schema: 'public', table: 'boards', filter: `id=eq.${activeBoardId}` },
               (payload) => {
                   if (payload.new) {
+                      // Immediately map and update the board in state using payload.new (No DB Call!)
+                      // This forces a re-render of the "isAllowed" check below
                       const updatedBoard = mapBoard(payload.new as any);
                       
-                      setBoards((currentBoards) => 
-                          currentBoards.map(b => b.id === updatedBoard.id ? updatedBoard : b)
-                      );
+                      setBoards((currentBoards) => {
+                          const exists = currentBoards.find(b => b.id === updatedBoard.id);
+                          if (exists) {
+                              return currentBoards.map(b => b.id === updatedBoard.id ? updatedBoard : b);
+                          } else {
+                              return [updatedBoard, ...currentBoards];
+                          }
+                      });
                       
+                      // Also update access check status for guests immediately
                       const isPublic = updatedBoard.isPublic;
                       const isLive = updatedBoard.isPublished;
                       const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
@@ -258,6 +290,7 @@ function AppContent() {
       };
   }, [activeBoardId]);
 
+  // Global Boards listener (adds/removes from dashboard list)
    useEffect(() => {
       if (!session && !isGuest) return;
       const channel = supabase.channel('public:boards')
@@ -305,14 +338,25 @@ function AppContent() {
           if (newBoard) {
               if (initialNotes.length > 0) {
                   const rawPayload = initialNotes.map(n => ({
-                      ...n,
                       board_id: newBoard.id,
-                      author_id: user.id,
+                      content: n.content,
+                      title: n.title,
+                      author: n.author,
+                      author_id: n.author_id,
+                      type: n.type,
+                      color: n.color,
+                      x: n.x,
+                      y: n.y,
+                      section_id: n.sectionId
                   }));
                   await supabase.from('notes').insert(rawPayload);
               }
               
-              setBoards(prev => [newBoard, ...prev]);
+              // Optimistic Add with correct ownership for filters
+              // Ensure we manually set owner_id if API response lags (though it shouldn't)
+              const completeBoard = { ...newBoard, owner_id: user.id };
+
+              setBoards(prev => [completeBoard, ...prev]);
               setActiveBoardId(newBoard.id);
               setView('board');
               
@@ -339,7 +383,7 @@ function AppContent() {
   const handleDeleteBoard = async (id: string) => {
       try {
           setBoards(boards.filter(b => b.id !== id));
-          await boardService.updateBoard(id, { isTrashed: true, deletedAt: new Date() });
+          await boardService.updateBoard(id, { isTrashed: true, deletedAt: Date.now() });
       } catch (e) {
           console.error("Failed to delete board", e);
       }
@@ -375,11 +419,13 @@ function AppContent() {
           isPublished: false,
           isPublic: false,
           quizState: 'setup',
-          currentStepIndex: 0,
+          currentQuestionIndex: 0,
+          quizStartTime: undefined,
+          assessmentState: 'setup',
           assessmentConfig: boardToDup.assessmentConfig ? {
               ...boardToDup.assessmentConfig,
               status: 'setup',
-              startTime: 0
+              startTime: null
           } : undefined,
           currentPollIndex: 0
       };
@@ -390,25 +436,38 @@ function AppContent() {
               ...overrideSettings
           }, user.id);
 
+          // Add to local state immediately
           setBoards(prev => [newBoard, ...prev]);
 
           if (options.includeNotes) {
               const notes = await noteService.getNotes(boardId);
               const notesToCopy = notes.filter(n => {
-                  if (n.authorId !== user.id) return false;
+                  if (n.author_id !== user.id) return false;
                   if (options.onlyPinned && !n.isPinned) return false;
                   return true;
               });
 
               if (notesToCopy.length > 0) {
                   const newNotesPayload = notesToCopy.map(n => ({
-                      ...n,
                       board_id: newBoard.id,
+                      content: n.content,
+                      title: n.title,
+                      author: n.author,
                       author_id: user.id,
-                      authorAvatar: userProfile?.avatarUrl,
+                      author_avatar: user.user_metadata?.avatar_url || userAvatar,
+                      type: n.type,
+                      color: n.color,
+                      x: n.x,
+                      y: n.y,
+                      width: n.width,
+                      height: n.height,
+                      section_id: n.sectionId,
+                      attachment_url: n.attachmentUrl,
+                      is_pinned: n.isPinned,
                       likes: 0,
                       comments: [],
                       liked_by: [],
+                      connections: []
                   }));
                   await supabase.from('notes').insert(newNotesPayload);
               }
@@ -454,19 +513,16 @@ function AppContent() {
   };
 
   const handleGuestLogin = (name: string, avatarUrl: string) => {
-    const guestUser: User = {
-        id: `guest-${Math.random().toString(36).substr(2, 9)}`,
-        email: 'guest@classboard.ai',
-        user_metadata: {
-            fullName: name,
-            avatarUrl: avatarUrl
-        },
-        app_metadata: { provider: 'email' },
-        aud: 'authenticated',
-        created_at: new Date().toISOString(),
-    };
+      const guestUser = {
+          id: `guest-${Math.random().toString(36).substr(2, 9)}`,
+          email: 'guest@classboard.ai',
+          user_metadata: {
+              full_name: name,
+              avatar_url: avatarUrl
+          }
+      };
       
-      setSession({ user: guestUser, access_token: 'guest-token', expires_at: 0, expires_in: 0, refresh_token: 'none', token_type: 'bearer' });
+      setSession({ user: guestUser });
       setIsGuest(true);
       setGuestName(name);
       setGuestAvatar(avatarUrl);
@@ -484,6 +540,7 @@ function AppContent() {
 
   if (loading) return <LoadingScreen />;
 
+  // 1. Auth / Guest Gate
   if (!session && !isGuest && view === 'auth') {
       return (
           <>
@@ -501,6 +558,7 @@ function AppContent() {
       );
   }
 
+  // 2. Board View
   if (view === 'board' && activeBoardId) {
       const activeBoard = boards.find(b => b.id === activeBoardId);
       
@@ -525,19 +583,21 @@ function AppContent() {
       }
 
       if (!activeBoard) {
+          // Only show loading if we haven't determined it's an error yet
           return <LoadingScreen />;
       }
 
-      const effectiveUsername = isGuest ? guestName : userProfile?.fullName ?? '';
-      const effectiveAvatar = isGuest ? guestAvatar : userProfile?.avatarUrl ?? null;
-      const effectiveUserId = isGuest ? guestId : (session?.user?.id) ?? '';
-      const effectiveRole = isGuest ? 'student' : userProfile?.role ?? 'student'; 
+      const effectiveUsername = isGuest ? guestName : username;
+      const effectiveAvatar = isGuest ? guestAvatar : userAvatar;
+      const effectiveUserId = isGuest ? guestId : (session?.user?.id);
+      const effectiveRole = isGuest ? 'student' : userRole; 
       const isStudent = effectiveRole === 'student';
       
+      // SECURITY CHECK: Draft Boards
       const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
-      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'inprogress' || activeBoard.assessmentConfig?.status === 'reading');
+      const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'active' || activeBoard.assessmentConfig?.status === 'reading');
       
-      const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.ownerId === effectiveUserId;
+      const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
 
       if (!isAllowed) {
            return (
@@ -577,7 +637,7 @@ function AppContent() {
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                   username={effectiveUsername}
-                  userAvatar={effectiveAvatar as string | null}
+                  userAvatar={effectiveAvatar}
                   userId={effectiveUserId}
                   isStudent={isStudent}
                   userRole={effectiveRole}
@@ -587,18 +647,20 @@ function AppContent() {
       );
   }
 
+  // 3. Dashboard View
   return (
       <Suspense fallback={<LoadingScreen />}>
-          {(userProfile?.role === 'student' || isGuest) && userProfile ? (
+          {userRole === 'student' || isGuest ? (
               <StudentDashboard 
                   boards={boards}
                   onSelectBoard={selectBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  profile={userProfile}
-                  userClasses={userProfile?.enrolledClasses ?? []}
+                  username={isGuest ? guestName : username}
+                  userAvatar={isGuest ? guestAvatar : userAvatar}
+                  userClasses={userClasses}
               />
-          ) : userProfile ? (
+          ) : (
               <Dashboard 
                   boards={boards}
                   onCreateBoard={createBoard}
@@ -610,11 +672,12 @@ function AppContent() {
                   onUpdateBoard={handleUpdateBoard}
                   theme={theme}
                   onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                  profile={userProfile}
+                  username={username}
+                  userAvatar={userAvatar}
                   userId={session?.user?.id}
                   onJoinByCode={handleJoinByCode}
               />
-          ) : null}
+          )}
 
           <DuplicateModal 
               isOpen={duplicateModal.isOpen}

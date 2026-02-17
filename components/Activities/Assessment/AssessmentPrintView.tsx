@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AssessmentQuestion } from '../../../types';
@@ -6,48 +7,33 @@ import { PrintHeader } from './PrintView/Header';
 import { PrintQuestion } from './PrintView/Question';
 import { SectionHeader } from './PrintView/SectionHeader';
 
-type Answer = string | string[] | number | null;
-
-interface GradingInfo {
-  score: number;
-  feedback: string;
-  is_correct?: boolean;
-}
-
-export interface PrintViewParticipant {
-    id?: string;
-    name?: string;
-    score?: number;
-    data: {
-        answers: Record<string, Answer>;
-        grading?: Record<string, GradingInfo | null>;
-    };
-}
-
 interface AssessmentPrintViewProps {
-    participants: PrintViewParticipant[];
+    participants: any[]; 
     questions: AssessmentQuestion[];
     ipekaLogoUrl: string;
     ibLogoUrl: string;
-    className?: string;
+    className?: string; 
     onAfterPrint: () => void;
-    showAnswerKey?: boolean;
+    showAnswerKey?: boolean; 
     includeFeedback?: boolean;
 }
 
-export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
-    participants,
-    questions,
-    ipekaLogoUrl,
-    ibLogoUrl,
-    className,
-    onAfterPrint,
+export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({ 
+    participants, 
+    questions, 
+    ipekaLogoUrl, 
+    ibLogoUrl, 
+    className, 
+    onAfterPrint, 
     showAnswerKey = false,
     includeFeedback = true
 }) => {
-    const totalPoints = questions.reduce((a, q) => a + (q.points || 0), 0);
+    const totalPoints = questions.reduce((a, q) => a + q.points, 0);
 
     useEffect(() => {
+        // Reduced delay to 300ms. 
+        // This is just enough time for the React Portal to mount into the DOM 
+        // and for the browser to apply the styles before the print dialog freezes execution.
         const timer = setTimeout(() => {
             window.print();
         }, 300);
@@ -67,7 +53,7 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
     return createPortal(
         <div id="assessment-print-view">
             <PrintStyles />
-
+            
             {participants.map((participant, pIndex) => {
                 const isRealStudent = !!participant.id && participant.id !== 'master-copy';
                 const isMasterKey = !isRealStudent && showAnswerKey;
@@ -75,21 +61,21 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
 
                 return (
                     <div key={participant.id || pIndex} className="print-student-container">
-                        <PrintHeader
+                        <PrintHeader 
                             ipekaLogoUrl={ipekaLogoUrl}
                             ibLogoUrl={ibLogoUrl}
                             isMasterKey={isMasterKey}
                             isRealStudent={isRealStudent}
-                            participantName={participant.name || ''}
-                            className={className || ''}
-                            score={participant.score || 0}
+                            participantName={participant.name}
+                            className={className}
+                            score={participant.score}
                             totalPoints={totalPoints}
                         />
 
                         <div style={{ flex: 1 }}>
                             {questions.map((q, i) => {
                                 if (q.type === 'section') {
-                                    return <SectionHeader key={q.id} title={q.question} />;
+                                    return <SectionHeader key={q.id} title={q.text} />;
                                 }
 
                                 const qNum = questions.slice(0, i + 1).filter(item => item.type !== 'section').length;
@@ -97,12 +83,12 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
                                 const gradeInfo = participant.data?.grading?.[q.id];
 
                                 return (
-                                    <PrintQuestion
+                                    <PrintQuestion 
                                         key={q.id}
                                         q={q}
                                         qNum={qNum}
-                                        answer={String(answer ?? '')}
-                                        gradeInfo={gradeInfo ?? null}
+                                        answer={answer}
+                                        gradeInfo={gradeInfo}
                                         isMasterKey={isMasterKey}
                                         isRealStudent={isRealStudent}
                                         isBlankCopy={isBlankCopy}

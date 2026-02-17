@@ -128,7 +128,7 @@ export const adminService = {
         });
 
         return {
-            classes: (classesRes.data || []).map((c: any) => ({ ...c, auto_enroll: c.auto_enroll })),
+            classes: (classesRes.data || []).map((c: any) => ({ ...c, autoEnroll: c.auto_enroll })),
             students: students,
             grades: gradesRes.data || [],
             engagementStats,
@@ -166,7 +166,7 @@ export const adminService = {
         }]).select().single();
         
         if (error) throw error;
-        return { ...data, auto_enroll: data.auto_enroll };
+        return { ...data, autoEnroll: data.auto_enroll };
     },
 
     async deleteClass(id: string) {

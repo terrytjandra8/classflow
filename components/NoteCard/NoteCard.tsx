@@ -3,7 +3,6 @@ import { EyeOff, X } from 'lucide-react';
 import { Note, CommentAttachment, NoteColor } from '../../types';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
-import { NOTE_COLORS } from '../../utils/theme';
 
 // Import Modular Components
 import { NoteHeader } from './NoteHeader';
@@ -23,6 +22,8 @@ interface NoteCardProps {
   isSelectedForConnection?: boolean;
   onMouseDown?: (e: React.MouseEvent, id: string) => void;
   domRef?: (instance: HTMLDivElement | null) => void;
+  userId?: string;
+  isStudent?: boolean;
   isLocked?: boolean; 
   commentsEnabled?: boolean;
   reactionsEnabled?: boolean;
@@ -38,13 +39,12 @@ interface NoteCardProps {
 const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
 
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
-    note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, isLocked,
-    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote
+    note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
+    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote, canDrag
 }) => {
-  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, username, highlightedUserId, isStudent: isStudentFromContext } = useBoard();
+  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, username, highlightedUserId } = useBoard();
   
-  const isStudent = isStudentFromContext
-  const effectiveUserId = contextUserId;
+  const effectiveUserId = userId || contextUserId;
   const [showMenu, setShowMenu] = useState(false);
   const localRef = useRef<HTMLDivElement | null>(null);
 
@@ -65,7 +65,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, isStudentBool, isLockedBool);
   const canCopy = BoardRules.canCopyContent(board, note.sectionId, isStudentBool);
   
-  const isTransparent = note.color === NOTE_COLORS.TRANSPARENT;
+  const isTransparent = note.color === NoteColor.TRANSPARENT;
   const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
   const isCustomColor = isHexColor(note.color);
 
@@ -74,8 +74,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const isReadOnly = (board.lockMode === 'readonly' && !canManageBoard);
 
   // Highlighting Logic
-  const isHighlighted = highlightedUserId && note.authorId === highlightedUserId;
-  const isDimmed = highlightedUserId && note.authorId !== highlightedUserId;
+  const isHighlighted = highlightedUserId && note.author_id === highlightedUserId;
+  const isDimmed = highlightedUserId && note.author_id !== highlightedUserId;
 
   // --- Handlers ---
   const setRefs = (node: HTMLDivElement | null) => {
@@ -146,7 +146,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     <div 
         ref={setRefs} 
         data-note-id={note.id} 
-        data-author-id={note.authorId}
+        data-author-id={note.author_id}
         className={containerClasses} 
         style={style}
         onMouseDown={(e) => isCanvasModeBool && onMouseDown && onMouseDown(e, note.id)}
@@ -216,7 +216,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
           <div className="relative z-10">
               <NoteFooter 
                   note={note}
-                  userId={effectiveUserId || ''}
+                  userId={effectiveUserId}
                   onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }}
                   commentsEnabled={commentsEnabledBool}
                   reactionsEnabled={reactionsEnabledBool}
@@ -227,11 +227,10 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                       comments={note.comments || []}
                       noteId={note.id}
                       userId={effectiveUserId}
-                      userRole={isStudent ? 'student' : 'teacher'}
                       onAddComment={onAddComment}
                       onUpdateNote={onUpdate}
                       reactionsEnabled={reactionsEnabledBool}
-                      noteColor={note.color as NoteColor}
+                      noteColor={note.color}
                       isStudent={isStudentBool}
                       disablePaste={disablePasteBool}
                       repliesEnabled={repliesEnabledBool}

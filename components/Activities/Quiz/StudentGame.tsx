@@ -13,12 +13,13 @@ interface StudentGameProps {
     myAnswerNote: Note | undefined;
     scores: any[];
     userId?: string;
-    submitAnswer: (index: string) => void;
+    submitAnswer: (index: number) => void;
     SoundControl: React.FC;
     backgroundStyle: any;
 }
 
 const SHAPES = ['▲', '◆', '●', '■'];
+// Matching Neon Colors
 const BTN_STYLES = [
     'border-red-500/50 bg-red-500/10 text-red-100 hover:bg-red-500/20 active:bg-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]',
     'border-blue-500/50 bg-blue-500/10 text-blue-100 hover:bg-blue-500/20 active:bg-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
@@ -30,11 +31,13 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     state, board, currentQ, timeLeft, hasAnswered, myStreak, myAnswerNote, scores, userId, submitAnswer, SoundControl, backgroundStyle
 }) => {
     
+    // Setup Screen
     if (state === 'setup') {
         return (
             <div className="h-full flex flex-col items-center justify-center bg-[#050505] text-white p-6 text-center relative overflow-hidden">
                 <div className="absolute top-4 right-4"><SoundControl /></div>
                 
+                {/* Background Animation */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-[30%] left-[50%] -translate-x-1/2 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] animate-pulse"></div>
                 </div>
@@ -50,11 +53,13 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         );
     }
 
+    // Lobby Screen
     if (state === 'lobby') {
         return (
             <div className="h-full flex flex-col items-center justify-center bg-[#050505] text-white p-6 relative overflow-hidden">
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
                 
+                {/* Visualizer Effect */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[500px] h-[500px] bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-full blur-[100px] animate-pulse"></div>
                 </div>
@@ -73,12 +78,14 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         );
     }
 
+    // Question Screen
     if (state === 'question') {
         if (hasAnswered) {
             return (
                 <div className="h-full flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 relative overflow-hidden">
                     <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
                     
+                    {/* Background Pulse */}
                     <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/20 to-black pointer-events-none"></div>
 
                     {myStreak > 1 && (
@@ -103,6 +110,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
 
         return (
             <div className="h-full flex flex-col bg-[#050505] p-6 gap-6 relative overflow-hidden">
+                {/* Header */}
                 <div className="flex justify-between items-start z-20">
                     {myStreak > 1 ? (
                         <div className="flex items-center gap-1 bg-orange-900/20 px-3 py-1 rounded-full border border-orange-500/30">
@@ -119,6 +127,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     </div>
                 </div>
 
+                {/* Optional Question Text for Student */}
                 {board.showQuestionOnStudentDevice && (
                     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-white/5 rounded-3xl border border-white/10 overflow-y-auto shadow-inner backdrop-blur-sm">
                         <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed">
@@ -127,19 +136,22 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     </div>
                 )}
 
+                {/* Options Grid - Large Touch Targets */}
                 <div className={`grid grid-cols-2 gap-4 ${board.showQuestionOnStudentDevice ? 'h-auto pb-4' : 'flex-1'}`}>
                     {currentQ?.options.map((opt, idx) => (
                         <button 
                             key={idx}
-                            onClick={() => submitAnswer(opt)}
+                            onClick={() => submitAnswer(idx)}
                             className={`
                                 ${BTN_STYLES[idx % 4]} 
                                 border-2 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-100 active:scale-95
                                 ${!board.showQuestionOnStudentDevice ? 'h-full' : 'h-32'}
                             `}
                         >
+                            {/* Shape Icon */}
                             <span className="text-4xl mb-2 drop-shadow-md transform group-active:scale-90 transition-transform text-white/90">{SHAPES[idx % 4]}</span>
                             
+                            {/* Text (If enabled) */}
                             {board.showQuestionOnStudentDevice && (
                                 <span className="text-xs font-bold text-white/80 px-4 text-center line-clamp-2 w-full">{opt}</span>
                             )}
@@ -150,12 +162,14 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         );
     }
 
+    // Result Reveal Screen
     if (state === 'reveal') {
-        const isCorrect = myAnswerNote?.content === currentQ?.correct_answer;
+        const isCorrect = myAnswerNote?.content === currentQ?.correctIndex.toString();
         return (
             <div className={`h-full flex flex-col items-center justify-center ${isCorrect ? 'bg-green-600' : 'bg-red-600'} text-white transition-colors duration-500 relative overflow-hidden`}>
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
                 
+                {/* Confetti / Shake Effect */}
                 {isCorrect && (
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
@@ -184,6 +198,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         );
     }
 
+    // Leaderboard / Finished
     const rankIndex = scores.findIndex(s => s.id === userId);
     const myRank = rankIndex !== -1 ? rankIndex + 1 : '-';
     const myScore = scores.find(s => s.id === userId)?.score || 0;
@@ -194,6 +209,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         <div className="h-full flex flex-col bg-[#050505] text-white relative overflow-hidden">
             <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
             
+            {/* Background */}
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10"></div>
             <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-black"></div>
 

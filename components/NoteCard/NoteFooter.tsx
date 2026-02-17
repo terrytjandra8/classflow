@@ -1,11 +1,11 @@
+
 import React from 'react';
 import { Heart, MessageSquare } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
-import { NOTE_COLORS } from '../../utils/theme';
 
 interface NoteFooterProps {
     note: Note;
-    userId: string;
+    userId?: string;
     onLike: (e: React.MouseEvent) => void;
     commentsEnabled: boolean;
     reactionsEnabled: boolean;
@@ -18,7 +18,7 @@ export const NoteFooter: React.FC<NoteFooterProps> = ({ note, userId, onLike, co
     if (!commentsEnabled && !reactionsEnabled) return null;
 
     // Adaptive Colors
-    const isTransparent = note.color === NOTE_COLORS.TRANSPARENT;
+    const isTransparent = note.color === NoteColor.TRANSPARENT;
     
     // VISIBILITY FIX:
     // Transparent: Adaptive colors

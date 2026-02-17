@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Board, Note, ColumnAnalyticsData } from '../../types';
 import { BoardSettingsDrawer } from '../BoardSettingsDrawer';
@@ -9,6 +10,8 @@ interface BoardOverlaysProps {
     board: Board;
     isStudent: boolean;
     username?: string;
+    
+    // UI States
     isSettingsOpen: boolean;
     setIsSettingsOpen: (v: boolean) => void;
     isShareModalOpen: boolean;
@@ -20,11 +23,17 @@ interface BoardOverlaysProps {
     isGuideOpen: boolean;
     setIsGuideOpen: (v: boolean) => void;
     isDragOver: boolean;
+    
+    // Data Handlers
     onUpdateBoard: (updates: Partial<Board>) => void;
     setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
-    onAddNote: (noteData: any) => void; 
+    onAddNote: (noteData: any) => void; // Handles both add and edit submits via wrapper in index
+    
+    // Specific Props
     pendingPasteImage: File | null;
-    editingNote: Note | null;
+    editingNote: Note | null; // New prop
+
+    // Board Analysis Props (No longer used, kept optional for interface compat if needed but ignored)
     isBoardAnalysisOpen?: boolean;
     setIsBoardAnalysisOpen?: (v: boolean) => void;
     boardAnalysisData?: ColumnAnalyticsData | null;
@@ -37,9 +46,10 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
     isSettingsOpen, setIsSettingsOpen,
     isShareModalOpen, setIsShareModalOpen,
     isModalOpen, setIsModalOpen,
+    isRecipeSidebarOpen, setIsRecipeSidebarOpen,
     isGuideOpen, setIsGuideOpen,
     isDragOver,
-    onUpdateBoard, onAddNote,
+    onUpdateBoard, setNotes, onAddNote,
     pendingPasteImage,
     editingNote,
 }) => {
@@ -48,6 +58,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
 
     return (
         <>
+            {/* Guide Sidebar */}
             {showGuide && (
                  <div className="w-[350px] bg-[#eef2f5] dark:bg-[#1a1a1a] border-l border-white/10 flex flex-col shadow-xl z-30 shrink-0">
                      <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
@@ -84,6 +95,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                  </div>
             )}
 
+            {/* Settings Drawer */}
             <BoardSettingsDrawer 
                 board={board}
                 isOpen={isSettingsOpen}
@@ -92,6 +104,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                 isStudent={isStudent}
             />
 
+            {/* Share Modal */}
             <ShareModal 
                 isOpen={isShareModalOpen}
                 onClose={() => setIsShareModalOpen(false)}
@@ -99,6 +112,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                 onUpdateBoard={onUpdateBoard}
             />
 
+            {/* Create/Edit Note Modal */}
             <CreateNoteModal 
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -111,6 +125,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                 noteToEdit={editingNote}
             />
 
+            {/* Drag Over Overlay */}
             {isDragOver && (
                 <div className="absolute inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in fade-in">
                     <div className="text-white text-center">

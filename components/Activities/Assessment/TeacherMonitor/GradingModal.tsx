@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, Lock, Unlock, ShieldCheck } from 'lucide-react';
+import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, RefreshCw, Lock, Unlock, ShieldCheck } from 'lucide-react';
 import { AssessmentQuestion } from '../../../../types';
 import { RichTextEditor, FormatState, getActiveFormat } from '../../../RichTextEditor';
 import { DebouncedInput } from '../../../ui/DebouncedInput';
@@ -8,19 +8,9 @@ import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
 import { supabase } from '../../../../services/supabaseClient';
 
-interface Participant {
-    id: string;
-    name: string;
-    status: 'online' | 'offline' | 'finished' | 'disqualified';
-    score: number;
-    progress: number;
-    lastActivity: number;
-    data?: any;
-}
-
 interface GradingModalProps {
     isOpen: boolean;
-    participant: Participant | null;
+    participant: any;
     onClose: () => void;
     questions: AssessmentQuestion[];
     currentGrades: Record<string, { score: number, feedback: string }>;
@@ -55,7 +45,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
     const answersRef = useRef(answers);
     const retryRef = useRef(retryQuestions);
     const overridesRef = useRef(teacherOverrides);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutRef = useRef<any>(null);
 
     // Initial Sync
     useEffect(() => {
@@ -259,7 +249,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                     {questions.map((q, i) => {
                         if (q.type === 'section') {
-                            return <h4 key={q.id} className="text-yellow-500 font-bold uppercase tracking-wide border-b border-white/10 pb-2 mt-4">{q.question}</h4>;
+                            return <h4 key={q.id} className="text-yellow-500 font-bold uppercase tracking-wide border-b border-white/10 pb-2 mt-4">{q.text}</h4>;
                         }
 
                         const questionNumber = questions.slice(0, i + 1).filter(item => item.type !== 'section').length;
@@ -323,7 +313,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                 
                                 <div 
                                     className="text-base font-medium text-white mb-4 rich-text-content"
-                                    dangerouslySetInnerHTML={{ __html: parseMath(q.question) }}
+                                    dangerouslySetInnerHTML={{ __html: parseMath(q.text) }}
                                 />
                                 
                                 <div className="bg-[#222] p-3 rounded-lg border border-white/5 mb-4 relative group/answer">
@@ -360,9 +350,9 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                     {q.type === 'mcq' ? (
                                         <p className="text-sm text-gray-300">
                                             {studentAns ? q.options?.[parseInt(studentAns)] : <span className="italic opacity-50">No Answer</span>}
-                                            {q.type === 'mcq' && q.answer && (
+                                            {q.type === 'mcq' && q.correctAnswer && (
                                                 <span className="ml-2 text-[10px] text-green-500 uppercase font-bold">
-                                                    {studentAns === q.answer ? '(Correct)' : `(Expected: ${q.options?.[parseInt(q.answer)]})`}
+                                                    {studentAns === q.correctAnswer ? '(Correct)' : `(Expected: ${q.options?.[parseInt(q.correctAnswer)]})`}
                                                 </span>
                                             )}
                                         </p>
@@ -423,7 +413,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
 
                 <div className="p-4 border-t border-white/10 bg-[#1a1a1a] flex justify-between items-center rounded-b-2xl">
                     <div className="text-sm text-gray-400">
-                        Total: <span className="text-white font-bold text-lg">{Object.values(currentGrades).reduce((a: number, b: { score: number, feedback: string }) => a + (b.score || 0), 0)}</span> pts
+                        Total: <span className="text-white font-bold text-lg">{Object.values(currentGrades).reduce((a: number, b: any) => a + (b.score || 0), 0)}</span> pts
                     </div>
                     <div className="flex gap-3">
                         {isReleased ? (

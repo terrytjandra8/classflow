@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useAdminData } from '../../hooks/useAdminData';
 import { UserDirectory } from './UserDirectory';
@@ -11,21 +12,10 @@ interface SystemDashboardProps {
 }
 
 export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
+    // Use 'global' scope to see ALL users and stats for system administration
     const { 
         loading, students: allProfiles, storageStats, onlineUserIds, updateUserRole, refresh 
     } = useAdminData('global');
-
-    const profiles = useMemo(() => {
-        if (!allProfiles) return [];
-        return (allProfiles as any[]).map(p => ({
-            id: p.id,
-            email: p.email,
-            fullName: p.full_name,
-            avatarUrl: p.avatar_url,
-            role: p.role,
-            createdAt: p.created_at,
-        }));
-    }, [allProfiles]);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmModal, setConfirmModal] = useState<{ 
@@ -39,13 +29,15 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
         id: null 
     });
 
-    const totalTeachers = profiles.filter(s => s.role === 'teacher').length;
-    const totalStudents = profiles.filter(s => s.role === 'student').length;
+    const totalTeachers = allProfiles.filter(s => s.role === 'teacher').length;
+    const totalStudents = allProfiles.filter(s => s.role === 'student').length;
     
-    const recentUsers = [...profiles].sort((a: any, b: any) => {
-        return (new Date(b.createdAt).getTime() || 0) - (new Date(a.createdAt).getTime() || 0);
+    // Recent Users (last 50, sorted by date)
+    const recentUsers = [...allProfiles].sort((a: any, b: any) => {
+        return (new Date(b.created_at).getTime() || 0) - (new Date(a.created_at).getTime() || 0);
     }).slice(0, 50);
 
+    // Aggregated Storage
     const totalStorageBytes = Object.values(storageStats).reduce<number>((acc, curr: any) => acc + (curr.bytes || 0), 0);
     const formatBytes = (bytes: number) => {
         if (!+bytes) return '0 Bytes';
@@ -56,12 +48,12 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
     };
 
     const openConfirmModal = (type: 'promote' | 'demote', id: string) => {
-        const user = profiles.find(s => s.id === id);
+        const user = allProfiles.find(s => s.id === id);
         setConfirmModal({ 
             isOpen: true, 
             type, 
             id, 
-            name: user?.fullName || 'this user' 
+            name: user?.full_name || 'this user' 
         });
     };
 
@@ -142,10 +134,10 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
                     {recentUsers.map((user: any) => (
                         <div key={user.id} className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                             <div className="flex items-center gap-3">
-                                <Avatar src={user.avatarUrl} name={user.fullName} size="sm" />
+                                <Avatar src={user.avatar_url} name={user.full_name} size="sm" />
                                 <div>
                                     <p className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                        {user.fullName}
+                                        {user.full_name}
                                         {onlineUserIds.has(user.id) && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Online now"></div>}
                                     </p>
                                     <p className="text-xs text-gray-500">{user.email}</p>
@@ -156,7 +148,7 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
                                     {user.role}
                                 </span>
                                 <div className="text-[9px] text-gray-400 mt-1 flex items-center gap-1 justify-end">
-                                    <Clock size={10} /> {new Date(user.createdAt).toLocaleDateString()}
+                                    <Clock size={10} /> {new Date(user.created_at).toLocaleDateString()}
                                 </div>
                             </div>
                         </div>
@@ -171,7 +163,7 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
                 </h3>
                 <UserDirectory 
                     theme={theme}
-                    users={profiles}
+                    users={allProfiles}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     onPromote={(id) => openConfirmModal('promote', id)}

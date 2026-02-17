@@ -3,28 +3,16 @@ import React from 'react';
 import { ShieldCheck, Users } from 'lucide-react';
 import { ParticipantCard } from './ParticipantCard';
 
-interface Participant {
-    id: string;
-    name: string;
-    role: string;
-    disqualified: boolean;
-    status: 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready';
-    violations: number;
-    hasLowWordCount: boolean;
-    progress: number;
-    score: number;
-}
-
 interface ParticipantsSectionProps {
-    teachers: Participant[];
-    students: Participant[];
+    teachers: any[];
+    students: any[];
     selectedStudentIds: Set<string>;
     onToggleSelect: (id: string) => void;
-    onReset: (participant: Participant) => void;
-    onContinue: (participant: Participant) => void;
-    onAllowRevision: (participant: Participant) => void;
-    onPrint: (participant: Participant) => void;
-    onGrade: (participant: Participant) => void;
+    onReset: (participant: any) => void;
+    onContinue: (participant: any) => void;
+    onAllowRevision: (participant: any) => void;
+    onPrint: (participant: any) => void;
+    onGrade: (participant: any) => void;
 }
 
 export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({ 
@@ -40,7 +28,7 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
                         <ShieldCheck size={14} /> Teachers ({teachers.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {teachers.map((t: Participant) => (
+                        {teachers.map((t: any) => (
                             <ParticipantCard 
                                 key={t.id || Math.random()} 
                                 participant={t} 
@@ -70,7 +58,7 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {students.map((s: Participant) => (
+                        {students.map((s: any) => (
                             <ParticipantCard 
                                 key={s.id || Math.random()} 
                                 participant={s} 

@@ -2,15 +2,13 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, Database, Terminal, AlertTriangle } from 'lucide-react';
 import { SUPER_ADMIN_EMAIL } from './constants';
-import { BoardFormat, Note } from '../../types';
 
 interface SetupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateBoard: (format: BoardFormat, templateData?: Partial<any>, initialNotes?: Note[]) => void;
 }
 
-export const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose, onCreateBoard }) => {
+export const SetupModal: React.FC<SetupModalProps> = ({ isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;

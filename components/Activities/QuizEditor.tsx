@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { QuizQuestion, Board } from '../../types';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
@@ -16,7 +17,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
             id: Math.random().toString(36).substr(2, 9),
             question: "New Question",
             options: ["Option 1", "Option 2", "Option 3", "Option 4"],
-            correctAnswer: 0,
+            correctIndex: 0,
             timeLimit: 20
         };
         onUpdateBoard({ quizQuestions: [...questions, newQ] });
@@ -60,9 +61,9 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                 <div key={i} className="flex items-center gap-2">
                                     <input 
                                         type="radio" 
-                                        name="correct"
-                                        checked={editingQuestion.correctAnswer === i} 
-                                        onChange={() => setEditingQuestion({...editingQuestion, correctAnswer: i})}
+                                        name="correct" 
+                                        checked={editingQuestion.correctIndex === i} 
+                                        onChange={() => setEditingQuestion({...editingQuestion, correctIndex: i})}
                                         className="accent-green-500 w-4 h-4 cursor-pointer shrink-0"
                                     />
                                     <input 
@@ -72,7 +73,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                             newOpts[i] = e.target.value;
                                             setEditingQuestion({...editingQuestion, options: newOpts});
                                         }}
-                                        className={`flex-1 bg-[#111] border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-500 ${editingQuestion.correctAnswer === i ? 'border-green-500 text-green-400 font-bold' : 'border-white/10'}`}
+                                        className={`flex-1 bg-[#111] border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-purple-500 ${editingQuestion.correctIndex === i ? 'border-green-500 text-green-400 font-bold' : 'border-white/10'}`}
                                     />
                                 </div>
                             ))}

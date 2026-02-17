@@ -19,24 +19,25 @@ export const noteService = {
         return (data as NoteRow[]).map(mapNote);
     },
 
-    async createNote(note: Partial<Note> & { boardId: string, authorId: string }) {
+    async createNote(note: Partial<Note> & { boardId: string, author_id: string }) {
         const payload: NoteInsert = {
             board_id: note.boardId,
             content: note.content,
             title: note.title,
-            author: note.author as any,
-            author_id: note.authorId,
+            author: note.author,
+            author_id: note.author_id,
+            author_role: note.authorRole,
+            author_avatar: note.authorAvatar,
             type: note.type,
             color: note.color,
             x: note.x,
             y: note.y,
             section_id: note.sectionId,
-            attachment: note.attachmentUrl,
+            attachment_url: note.attachmentUrl,
             likes: 0,
-            comments: [] as any,
+            comments: [],
             liked_by: [],
-            connections: [] as any,
-            is_watermarked: note.isWatermarked
+            connections: []
         };
 
         const { data, error } = await supabase
@@ -60,7 +61,6 @@ export const noteService = {
         if (updates.width !== undefined) dbUpdates.width = updates.width;
         if (updates.height !== undefined) dbUpdates.height = updates.height;
         if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
-        if (updates.isWatermarked !== undefined) dbUpdates.is_watermarked = updates.isWatermarked;
         if (updates.likes !== undefined) dbUpdates.likes = updates.likes;
         if (updates.likedBy !== undefined) dbUpdates.liked_by = updates.likedBy;
         if (updates.comments !== undefined) dbUpdates.comments = updates.comments as any;

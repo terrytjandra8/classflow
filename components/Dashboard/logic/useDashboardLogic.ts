@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { classService } from '../../../services/classService';
 import { SUPER_ADMIN_EMAIL } from '../constants';
-import { Profile } from '../../../types';
 
 export type TabView = 'home' | 'gallery' | 'make' | 'admin' | 'system' | 'documentation';
 
-export const useDashboardLogic = (profile: Profile, onJoinByCode: (code: string) => Promise<boolean>) => {
-    const isSuperAdmin = profile.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase();
-    const isStudent = profile.role === 'student';
+export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolean>) => {
+    const [userEmail, setUserEmail] = useState('');
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [isStudent, setIsStudent] = useState(false);
 
     const [activeTab, setActiveTabState] = useState<TabView>('home');
 
@@ -21,6 +22,7 @@ export const useDashboardLogic = (profile: Profile, onJoinByCode: (code: string)
     
     const [selectedClass, setSelectedClassState] = useState<string>('');
     const [classList, setClassList] = useState<string[]>([]);
+    const [studentClasses, setStudentClasses] = useState<string[]>([]);
 
     const [showClassMenu, setShowClassMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -39,51 +41,65 @@ export const useDashboardLogic = (profile: Profile, onJoinByCode: (code: string)
     };
 
     useEffect(() => {
-        const tabKey = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
-        const storedTab = localStorage.getItem(tabKey) as TabView;
-        setActiveTabState(storedTab || (isStudent ? 'home' : 'home'));
-        
-        const classKey = isStudent ? 'cb_student_selected_class' : 'cb_teacher_selected_class';
-        const storedClass = localStorage.getItem(classKey);
+        const fetchUserAndClasses = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                if (user.email) {
+                    setUserEmail(user.email);
+                    if (user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase()) {
+                        setIsSuperAdmin(true);
+                    }
+                }
+                const studentStatus = user.user_metadata.is_student ?? false;
+                setIsStudent(studentStatus);
 
-        const fetchClasses = async () => {
-            if (isStudent) {
-                try {
-                    const newClassList = ['All My Classes', ...(profile.enrolledClasses || [])];
-                    setClassList(newClassList);
-                    if (storedClass && newClassList.includes(storedClass)) {
-                        setSelectedClassState(storedClass);
-                    } else {
+                const tabKey = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
+                const storedTab = localStorage.getItem(tabKey) as TabView;
+                setActiveTabState(storedTab || (studentStatus ? 'home' : 'home'));
+                
+                const classKey = studentStatus ? 'cb_student_selected_class' : 'cb_teacher_selected_class';
+                const storedClass = localStorage.getItem(classKey);
+
+                if (studentStatus) {
+                    try {
+                        const fetchedClasses = await classService.getStudentClasses();
+                        setStudentClasses(fetchedClasses);
+                        const newClassList = ['All My Classes', ...fetchedClasses];
+                        setClassList(newClassList);
+                        if (storedClass && newClassList.includes(storedClass)) {
+                            setSelectedClassState(storedClass);
+                        } else {
+                            setSelectedClassState('All My Classes');
+                        }
+                    } catch (e) {
+                        console.error("Failed to load student classes", e);
+                        setClassList(['All My Classes']);
                         setSelectedClassState('All My Classes');
                     }
-                } catch (e) {
-                    console.error("Failed to load student classes", e);
-                    setClassList(['All My Classes']);
-                    setSelectedClassState('All My Classes');
-                }
-            } else { // Teacher or Super Admin
-                try {
-                    const data = await classService.getClasses();
-                    const names = data && data.length > 0 ? data.map(c => c.name) : [];
-                    const uniqueNames = Array.from(new Set(names));
-                    const fullClassList = ['All Classes', ...uniqueNames];
-                    setClassList(fullClassList);
+                } else { // Teacher or Super Admin
+                    try {
+                        const data = await classService.getClasses();
+                        const names = data && data.length > 0 ? data.map(c => c.name) : [];
+                        const uniqueNames = Array.from(new Set(names));
+                        const fullClassList = ['All Classes', ...uniqueNames];
+                        setClassList(fullClassList);
 
-                    if (storedClass && fullClassList.includes(storedClass)) {
-                         setSelectedClassState(storedClass);
-                    } else {
-                         setSelectedClassState('All Classes');
+                        if (storedClass && fullClassList.includes(storedClass)) {
+                             setSelectedClassState(storedClass);
+                        } else {
+                             setSelectedClassState('All Classes');
+                        }
+                    } catch (e) {
+                        console.error("Failed to load classes", e);
+                        setClassList(['All Classes']);
+                        setSelectedClassState('All Classes');
                     }
-                } catch (e) {
-                    console.error("Failed to load classes", e);
-                    setClassList(['All Classes']);
-                    setSelectedClassState('All Classes');
                 }
             }
         };
 
-        fetchClasses();
-    }, [profile.id, isStudent]);
+        fetchUserAndClasses();
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -122,14 +138,13 @@ export const useDashboardLogic = (profile: Profile, onJoinByCode: (code: string)
         localStorage.removeItem('cb_teacher_selected_class');
         localStorage.removeItem('cb_student_selected_class');
         await supabase.auth.signOut();
-        window.location.href = '/';
     };
 
     return {
         activeTab, setActiveTab, showJoinModal, setShowJoinModal,
         showSetupModal, setShowSetupModal, joinCode, setJoinCode, joinError,
-        isJoining, handleJoinSubmit, isSuperAdmin, isStudent, 
-        selectedClass, setSelectedClass, classList,
+        isJoining, handleJoinSubmit, userEmail, isSuperAdmin, isStudent, 
+        selectedClass, setSelectedClass, classList, studentClasses,
         showClassMenu, setShowClassMenu, showProfileMenu, setShowProfileMenu,
         profileMenuRef, handleLogout
     };

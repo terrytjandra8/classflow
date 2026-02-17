@@ -74,7 +74,7 @@ export const AttachmentPicker: React.FC<AttachmentPickerProps> = ({ onSelect, on
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
 
-        onSelect({ type: 'image', content: dataUrl, url: dataUrl });
+        onSelect({ type: 'image', content: dataUrl });
         onClose();
       }
     }
@@ -111,14 +111,14 @@ export const AttachmentPicker: React.FC<AttachmentPickerProps> = ({ onSelect, on
   const finishDrawing = () => {
       if (drawCanvasRef.current) {
           const dataUrl = drawCanvasRef.current.toDataURL('image/png');
-          onSelect({ type: 'drawing', content: dataUrl, url: dataUrl });
+          onSelect({ type: 'drawing', content: dataUrl });
           onClose();
       }
   };
 
   const handleLinkSubmit = () => {
       if (inputValue) {
-          onSelect({ type: 'link', content: inputValue, url: inputValue });
+          onSelect({ type: 'link', content: inputValue });
           onClose();
       }
   };
@@ -159,7 +159,7 @@ export const AttachmentPicker: React.FC<AttachmentPickerProps> = ({ onSelect, on
   };
 
   const handleGifSelect = (gifUrl: string) => {
-      onSelect({ type: 'image', content: gifUrl, url: gifUrl });
+      onSelect({ type: 'image', content: gifUrl });
       onClose();
   };
 

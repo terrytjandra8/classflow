@@ -3,17 +3,18 @@ import { supabase } from './supabaseClient';
 import { Board } from '../types';
 import { Database } from '../types/db';
 import { mapBoard } from '../utils/mappers';
+import { SUPER_ADMIN_EMAIL } from '../components/Dashboard/constants';
 
 type BoardRow = Database['public']['Tables']['boards']['Row'];
 type BoardInsert = Database['public']['Tables']['boards']['Insert'];
-
-const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+type BoardUpdate = Database['public']['Tables']['boards']['Update'];
 
 export const boardService = {
     async getBoards() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
 
+        // RLS policies handle visibility (Owner + Public + Published)
         const { data, error } = await supabase
             .from('boards')
             .select('*')
@@ -37,28 +38,30 @@ export const boardService = {
     async createBoard(board: Partial<Board>, userId: string) {
         const settings: any = {
             sections: board.sections || [],
-            lock_mode: board.lockMode || 'unlocked',
-            auto_lock_time: board.autoLockTime || null,
-            auto_live_time: board.autoLiveTime || null,
-            comments_enabled: board.commentsEnabled ?? true,
-            reactions_enabled: board.reactionsEnabled ?? true,
+            lockMode: board.lockMode || 'unlocked',
+            autoLockTime: board.autoLockTime || null,
+            autoLiveTime: board.autoLiveTime || null,
+            commentsEnabled: board.commentsEnabled ?? true,
+            reactionsEnabled: board.reactionsEnabled ?? true,
             wallpaper: board.wallpaper,
-            color_scheme: board.colorScheme,
+            colorScheme: board.colorScheme,
             font: board.font,
-            recipe_id: board.recipeId,
-            recipe_status: board.recipeStatus,
+            recipeId: board.recipeId,
+            recipeStatus: board.recipeStatus,
             icon: board.icon,
             guide: board.guide,
+            // Interactive Modules
             polls: board.polls,
-            quiz_questions: board.quizQuestions,
-            assessment_questions: board.assessmentQuestions,
-            assessment_state: board.assessmentState,
-            assessment_config: board.assessmentConfig,
-            grading_config: board.gradingConfig,
-            is_watermarked: board.isWatermarked
+            quizQuestions: board.quizQuestions,
+            // Capture Assessment Data
+            assessmentQuestions: board.assessmentQuestions,
+            assessmentState: board.assessmentState,
+            assessmentConfig: board.assessmentConfig,
+            // Capture Grading Config
+            gradingConfig: board.gradingConfig
         };
 
-        const payload = {
+        const payload: BoardInsert = {
             title: board.title || 'Untitled Board',
             description: board.description,
             owner_id: userId,
@@ -68,12 +71,12 @@ export const boardService = {
             settings: settings,
             target_grade: board.targetGrade || 'General',
             steps: board.steps as any,
-            current_step_index: board.currentStepIndex || 0
+            current_step_index: 0
         };
 
         const { data, error } = await supabase
             .from('boards')
-            .insert(payload as any)
+            .insert(payload)
             .select()
             .single();
 
@@ -85,6 +88,7 @@ export const boardService = {
         const { data: current } = await supabase.from('boards').select('settings').eq('id', id).single();
         const currentSettings = (current?.settings as any) || {};
 
+        // Keys that map directly to DB columns
         const dbColumns = [
             'title', 'description', 'topic', 'format', 'class_code', 'wallpaper', 
             'is_published', 'is_public', 'is_favorite', 'target_grade', 'subject', 'grading_type',
@@ -95,14 +99,26 @@ export const boardService = {
         const settingsUpdates: any = { ...currentSettings };
 
         Object.entries(updates).forEach(([key, value]) => {
-            const snakeKey = toSnakeCase(key);
-            if (dbColumns.includes(snakeKey)) {
-                dbUpdates[snakeKey] = value;
+            if (key === 'classCode') dbUpdates.class_code = value;
+            else if (key === 'isPublished') dbUpdates.is_published = value;
+            else if (key === 'isPublic') dbUpdates.is_public = value;
+            else if (key === 'isFavorite') dbUpdates.is_favorite = value;
+            else if (key === 'targetGrade') dbUpdates.target_grade = value;
+            else if (key === 'gradingType') dbUpdates.grading_type = value;
+            else if (key === 'currentStepIndex') dbUpdates.current_step_index = value;
+            else if (key === 'settings') {
+                // CRITICAL FIX: Merge nested settings properly instead of nesting them under 'settings' key
+                Object.assign(settingsUpdates, value);
+            }
+            else if (dbColumns.includes(key)) {
+                dbUpdates[key] = value;
             } else {
-                settingsUpdates[snakeKey] = value;
+                // Everything else goes to settings
+                settingsUpdates[key] = value;
             }
         });
 
+        // Always update updated_at
         dbUpdates.updated_at = new Date().toISOString();
         dbUpdates.settings = settingsUpdates;
 
@@ -117,8 +133,10 @@ export const boardService = {
         return mapBoard(data as BoardRow);
     },
 
+    // --- REPAIR TOOLS ---
     async repairAssessmentData(boardId: string) {
         console.log("Starting repair for board:", boardId);
+        // Fetch all notes
         const { data: notes } = await supabase.from('notes').select('*').eq('board_id', boardId);
         if (!notes) return 0;
 
@@ -128,6 +146,7 @@ export const boardService = {
             let needsUpdate = false;
             let newType = note.type;
 
+            // Safe Parse Connections
             let conn: any = {};
             if (typeof note.connections === 'string') {
                 try { conn = JSON.parse(note.connections); } catch {}
@@ -135,6 +154,7 @@ export const boardService = {
                 conn = note.connections;
             }
 
+            // Heuristic: If it has answers/score but wrong type
             const hasAssessmentData = conn && (conn.answers || conn.grading || conn.submitted === true || conn.score !== undefined);
             
             if (hasAssessmentData && note.type !== 'assessment_submission') {

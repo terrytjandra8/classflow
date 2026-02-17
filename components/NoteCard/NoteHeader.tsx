@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { ShieldCheck, MoreVertical, X, Pin, Ghost } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
@@ -35,15 +36,20 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     const triggerRef = useRef<HTMLButtonElement>(null);
 
     const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
-    const isAuthor = userId === note.authorId;
+    const isAuthor = userId === note.author_id;
     
+    // --- CENTRALIZED ANONYMITY LOGIC ---
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
-    const anonymousIdentity = shouldMask && note.authorId ? getAnonymousIdentity(note.authorId) : null;
+    const anonymousIdentity = shouldMask && note.author_id ? getAnonymousIdentity(note.author_id) : null;
     
+    // Display Logic with Fallback for empty strings
     const rawName = note.author && note.author.trim() !== '' ? note.author : 'Anonymous';
     const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : rawName;
     const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.authorAvatar;
 
+    // VISIBILITY FIX:
+    // Transparent -> Adaptive (Dark on Light, White on Dark)
+    // Solid (White/Colors) -> Always Dark
     const nameColor = isTransparent ? 'text-slate-900 dark:text-white' : 'text-slate-900';
     const subTextColor = isTransparent ? 'text-slate-600 dark:text-slate-400' : 'text-slate-600';
     const iconHoverBg = isTransparent ? 'hover:bg-black/5 dark:hover:bg-white/10' : 'hover:bg-black/10';
@@ -70,7 +76,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
         <div className={`p-4 pb-2 flex items-start justify-between relative ${isTransparent ? 'pl-0' : ''}`}>
             <div className="flex items-center gap-3">
                 <Avatar 
-                    src={displayAvatar as string} 
+                    src={displayAvatar} 
                     name={displayName} 
                     size="md" 
                     isTeacher={isTeacher}

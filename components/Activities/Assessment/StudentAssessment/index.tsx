@@ -1,34 +1,12 @@
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { AssessmentQuestion, Board, AssessmentConfig, SubmissionData, UserRole, ParticipantStatus } from '../../../../types';
+import { AssessmentQuestion, Board, AssessmentConfig } from '../../../../types';
 import { useFocusMode } from '../../../../hooks/useFocusMode';
 import { supabase } from '../../../../services/supabaseClient';
 import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
-import { Cloud, Loader2, AlertCircle } from 'lucide-react';
-
-// Define local types to override the global ones causing conflicts.
-interface StudentSubmission {
-    id: string;
-    name: string;
-    role: UserRole;
-    status: ParticipantStatus;
-    answers: Record<string, string>;
-    violations: any[]; // Corrected type
-    score: number;
-    submitted: boolean;
-    disqualified: boolean;
-    retry_questions: string[];
-    feedback?: string;
-    released?: boolean;
-}
-
-interface StudentBackupData {
-    answers: Record<string, string>;
-    violations: any[];
-    status: 'inprogress' | 'submitted' | 'disqualified';
-    timestamp: number;
-}
+import { Cloud, Check, Loader2, AlertCircle, Save } from 'lucide-react';
 
 interface StudentAssessmentProps {
     board: Board;
@@ -41,36 +19,27 @@ interface StudentAssessmentProps {
     onExitPreview?: () => void;
 }
 
-const defaultSubmission: StudentSubmission = {
-    id: '',
-    name: '',
-    role: 'student' as UserRole,
-    status: 'Ready' as ParticipantStatus,
-    answers: {},
-    violations: [],
-    score: 0,
-    submitted: false,
-    disqualified: false,
-    retry_questions: []
-};
-
 export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, questions, userId, config, timeLeft, isPreviewMode, onExitPreview }) => {
     const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [violations, setViolations] = useState<any[]>([]); // FIX: Was implicitly number[] causing errors
+    const [violationCount, setViolationCount] = useState(0);
     const [submitted, setSubmitted] = useState(false);
     const [isDisqualified, setIsDisqualified] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'idle'>('idle');
-    const [retryQuestions, setRetryQuestions] = useState<string[]>([]); // FIX: Was implicitly number[]
+    const [retryQuestions, setRetryQuestions] = useState<string[]>([]);
     
+    // Critical: Use Ref for ID to avoid closure staleness during rapid saves
     const submissionIdRef = useRef<string | null>(null);
     const answersRef = useRef<Record<string, string>>({});
-    const violationsRef = useRef<any[]>([]);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const isCreatingRef = useRef(false);
+    const violationCountRef = useRef(0);
+    const saveTimeoutRef = useRef<any>(null);
+    const isCreatingRef = useRef(false); // Lock for creation
 
-    const [submissionData, setSubmissionData] = useState<StudentSubmission | null>(null);
+    // Initial State Sync
+    const [submissionData, setSubmissionData] = useState<any>(null);
     
+    // Timer & Status Logic (Client-Side Enforcement)
+    // We force a check every second to ensure the UI updates exactly when the deadline passes
     const [now, setNow] = useState(Date.now());
     
     useEffect(() => {
@@ -78,53 +47,187 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return () => clearInterval(interval);
     }, []);
 
-    const isTimeExpired = board.autoLockTime ? now >= board.autoLockTime : false;
-    const isClosed = config.status === 'finished' || isTimeExpired;
+    const isTimeExpired = config.autoLockTime ? now >= config.autoLockTime : false;
+    const isClosed = config.status === 'closed' || isTimeExpired;
 
     const isReadingMode = config.status === 'reading' && !isTimeExpired;
-    const isTestActive = config.status === 'inprogress' && !isTimeExpired;
+    const isTestActive = config.status === 'active' && !isTimeExpired;
     const isPracticeMode = config.status === 'practice';
 
+    // Backup Key
     const backupKey = useMemo(() => `assessment_backup_${board.id}_${userId}`, [board.id, userId]);
 
-    const saveToBackup = (data: Omit<StudentBackupData, 'timestamp'>) => {
+    // Helper: Save to Local Storage
+    const saveToBackup = (data: any) => {
         try {
-            const backupData: StudentBackupData = {
+            localStorage.setItem(backupKey, JSON.stringify({
                 ...data,
                 timestamp: Date.now()
-            };
-            localStorage.setItem(backupKey, JSON.stringify(backupData));
+            }));
         } catch (e) { console.error("Backup failed", e); }
     };
 
-    const persistToDB = useCallback(async (currentAnswers: Record<string, string>, currentViolations: any[], disqualified: boolean, isFinalSubmit: boolean) => {
+    // 1. Initial Load (DB + Local Storage Merge)
+    const fetchSubmission = useCallback(async () => {
+        // A. Fetch Server Data
+        const { data } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('board_id', board.id)
+            .eq('author_id', userId)
+            .eq('type', 'assessment_submission')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+        
+        // B. Fetch Local Backup
+        let localBackup: any = null;
+        try {
+            const raw = localStorage.getItem(backupKey);
+            if (raw) localBackup = JSON.parse(raw);
+        } catch (e) {}
+
+        let finalAnswers = {};
+        let finalViolations = 0;
+        let finalData: any = {};
+        let dbId = null;
+
+        // --- STRATEGY: Server Authority > Local Fallback ---
+        
+        // 1. Check Server State
+        if (data) {
+            dbId = data.id;
+            submissionIdRef.current = data.id;
+            
+            if (data.connections) {
+                const submission = data.connections as any;
+                finalData = Array.isArray(submission) ? {} : submission;
+                
+                // If Server says finished, trust it absolutely
+                if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
+                    setSubmissionData(finalData);
+                    setAnswers(finalData.answers || {});
+                    answersRef.current = finalData.answers || {};
+                    setViolationCount(finalData.violations || 0);
+                    
+                    // REVISION LOGIC: If retryQuestions are present, enable re-entry
+                    const retries = finalData.retryQuestions || [];
+                    setRetryQuestions(retries);
+
+                    // Only set submitted to true if NO retries are pending
+                    if (retries.length > 0) {
+                        setSubmitted(false); // Re-open
+                        setHasStarted(true);
+                    } else {
+                        setSubmitted(true);
+                        if (finalData.disqualified) setIsDisqualified(true);
+                        setHasStarted(true);
+                    }
+                    
+                    // Clear local backup as server has final state
+                    localStorage.removeItem(backupKey);
+                    return;
+                }
+
+                finalAnswers = finalData.answers || {};
+                finalViolations = finalData.violations || 0;
+            }
+        }
+
+        // 2. Check Local Backup (If Server is not finished)
+        if (localBackup) {
+            // If local says finished (e.g. offline submit), trust local
+            if (localBackup.status === 'submitted' || localBackup.status === 'disqualified') {
+                console.log("Restoring FINAL state from local backup");
+                finalAnswers = localBackup.answers || {};
+                finalViolations = localBackup.violations || 0;
+                
+                setSubmitted(true);
+                if (localBackup.status === 'disqualified') setIsDisqualified(true);
+                setHasStarted(true);
+                
+                setAnswers(finalAnswers);
+                answersRef.current = finalAnswers;
+                setViolationCount(finalViolations);
+                violationCountRef.current = finalViolations;
+                
+                // Trigger a sync to DB to ensure server knows (self-healing)
+                // We don't await this, just fire it
+                persistToDB(finalAnswers, finalViolations, localBackup.status === 'disqualified', true);
+                return;
+            }
+
+            // If both in progress, check if local has MORE data than server
+            const localCount = Object.keys(localBackup.answers || {}).length;
+            const serverCount = Object.keys(finalAnswers).length;
+
+            if (localCount > serverCount) {
+                console.log("Restoring DRAFT from local backup (Newer Data Found)");
+                finalAnswers = { ...finalAnswers, ...localBackup.answers };
+                finalViolations = Math.max(finalViolations, localBackup.violations || 0);
+                
+                // Self-Heal: Push local data to server silently
+                persistToDB(finalAnswers, finalViolations, false, false);
+            }
+        }
+
+        // 3. Apply Merged State
+        setSubmissionData(finalData);
+        setAnswers(finalAnswers);
+        answersRef.current = finalAnswers;
+        
+        setViolationCount(finalViolations);
+        violationCountRef.current = finalViolations;
+
+        if (Object.keys(finalAnswers).length > 0 || dbId) {
+            setHasStarted(true);
+        }
+    }, [board.id, userId, isClosed, backupKey]);
+
+    useEffect(() => {
+        if (!isPreviewMode) fetchSubmission();
+        else setHasStarted(true);
+    }, [fetchSubmission, isPreviewMode]);
+
+    // 2. Auto-Submit when closed (Unless in Practice Mode, then it might stay open or handle differently)
+    useEffect(() => {
+        // Don't auto-submit if in revision mode (retryQuestions present)
+        if (!isPreviewMode && isClosed && !submitted && hasStarted && !isPracticeMode && retryQuestions.length === 0) {
+            setSubmitted(true);
+        }
+    }, [isClosed, submitted, hasStarted, isPreviewMode, isPracticeMode, retryQuestions]);
+
+    // Robust Save Function
+    const persistToDB = useCallback(async (currentAnswers: Record<string, string>, currentViolations: number, disqualified: boolean, isFinalSubmit: boolean) => {
         if (isPreviewMode) return;
         
+        // Prevent concurrent creations
         if (!submissionIdRef.current && isCreatingRef.current) return;
 
         setSaveStatus('saving');
         const { data: { user } } = await supabase.auth.getUser();
         
+        // Calculate Auto Score for MCQs
         let autoScore = 0;
         if (!disqualified) {
             questions.forEach(q => {
-                if ((q.type === 'mcq' || q.type === 'multiple_choice') && q.answer === currentAnswers[q.id]) {
-                    autoScore += (q.points || 0);
+                if (q.type === 'mcq' && q.correctAnswer === currentAnswers[q.id]) {
+                    autoScore += q.points;
                 }
             });
         }
         
-        const existingRetries = submissionData?.retry_questions || [];
+        // Preserve retries in case teacher added them
+        const existingRetries = submissionData?.retryQuestions || [];
 
-        // FIX: Avoid spreading and overwriting properties which caused TS error
-        const newSubmissionData: StudentSubmission = {
-            ...(submissionData || defaultSubmission),
+        const newSubmissionData = {
+            ...submissionData,
             answers: currentAnswers,
             violations: currentViolations,
             score: autoScore,
             submitted: isFinalSubmit || disqualified, 
             disqualified: disqualified,
-            retry_questions: existingRetries
+            retryQuestions: existingRetries // Preserve this
         };
 
         const payload = {
@@ -133,7 +236,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             title: 'Assessment Submission',
             type: 'assessment_submission',
             content: disqualified ? 'Disqualified (Violation)' : (isFinalSubmit ? 'Submitted' : 'In Progress'),
-            author_name: user?.user_metadata?.full_name || 'Student',
+            author: user?.user_metadata?.full_name || 'Student',
             color: disqualified ? 'bg-red-500' : 'bg-white',
             connections: newSubmissionData as any 
         };
@@ -153,6 +256,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             setSubmissionData(newSubmissionData);
             setSaveStatus('saved');
             
+            // Clear backup ONLY if successfully saved final state
             if (isFinalSubmit) {
                 localStorage.removeItem(backupKey);
             }
@@ -163,187 +267,97 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         }
     }, [board.id, userId, questions, isPreviewMode, submissionData, backupKey]);
 
-    const fetchSubmission = useCallback(async () => {
-        const { data } = await supabase
-            .from('notes')
-            .select('*')
-            .eq('board_id', board.id)
-            .eq('author_id', userId)
-            .eq('type', 'assessment_submission')
-            .order('createdAt', { ascending: false })
-            .limit(1)
-            .single();
-        
-        let localBackup: StudentBackupData | null = null;
-        try {
-            const raw = localStorage.getItem(backupKey);
-            if (raw) localBackup = JSON.parse(raw);
-        } catch (e) {}
-
-        let finalAnswers: Record<string, string> = {};
-        let finalViolations: any[] = [];
-        let finalData: StudentSubmission = defaultSubmission;
-
-        if (data) {
-            submissionIdRef.current = data.id;
-            
-            if (data.connections) {
-                const submission = data.connections as StudentSubmission;
-                const loadedData = Array.isArray(submission) ? defaultSubmission : submission;
-                finalData = { ...defaultSubmission, ...loadedData };
-                
-                if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
-                    setSubmissionData(finalData);
-                    setAnswers(finalData.answers || {});
-                    answersRef.current = finalData.answers || {};
-                    setViolations(finalData.violations || []);
-                    
-                    const retries = finalData.retry_questions || [];
-                    setRetryQuestions(retries);
-
-                    if (retries.length > 0) {
-                        setSubmitted(false);
-                        setHasStarted(true);
-                    } else {
-                        setSubmitted(true);
-                        if (finalData.disqualified) setIsDisqualified(true);
-                        setHasStarted(true);
-                    }
-                    
-                    localStorage.removeItem(backupKey);
-                    return;
-                }
-
-                finalAnswers = finalData.answers || {};
-                finalViolations = finalData.violations || [];
-            }
-        }
-
-        if (localBackup && localBackup.status) { // FIX: Check localBackup.status
-            if (localBackup.status === 'submitted' || localBackup.status === 'disqualified') {
-                finalAnswers = localBackup.answers || {};
-                finalViolations = localBackup.violations || [];
-                
-                setSubmitted(true);
-                if (localBackup.status === 'disqualified') setIsDisqualified(true);
-                setHasStarted(true);
-                
-                setAnswers(finalAnswers);
-                answersRef.current = finalAnswers;
-                setViolations(finalViolations); // This now works
-                violationsRef.current = finalViolations;
-                
-                persistToDB(finalAnswers, finalViolations, localBackup.status === 'disqualified', true);
-                return;
-            }
-
-            const localCount = Object.keys(localBackup.answers || {}).length;
-            const serverCount = Object.keys(finalAnswers).length;
-
-            if (localCount > serverCount) {
-                finalAnswers = { ...finalAnswers, ...localBackup.answers };
-                finalViolations = (localBackup.violations || []).length > finalViolations.length ? localBackup.violations : finalViolations;
-                
-                persistToDB(finalAnswers, finalViolations, false, false);
-            }
-        }
-
-        setSubmissionData(finalData);
-        setAnswers(finalAnswers);
-        answersRef.current = finalAnswers;
-        
-        setViolations(finalViolations); // This now works
-        violationsRef.current = finalViolations;
-
-        if (Object.keys(finalAnswers).length > 0 || submissionIdRef.current) {
-            setHasStarted(true);
-        }
-    }, [board.id, userId, isClosed, backupKey, persistToDB]);
-
-    useEffect(() => {
-        if (!isPreviewMode) fetchSubmission();
-        else setHasStarted(true);
-    }, [fetchSubmission, isPreviewMode]);
-
-    useEffect(() => {
-        if (!isPreviewMode && isClosed && !submitted && hasStarted && !isPracticeMode && retryQuestions.length === 0) {
-            setSubmitted(true);
-        }
-    }, [isClosed, submitted, hasStarted, isPreviewMode, isPracticeMode, retryQuestions]);
-
+    // --- MANUAL SYNC HANDLER ---
     const handleManualSync = async () => {
-        await persistToDB(answersRef.current, violationsRef.current, false, false);
+        // 1. Force Save Current State
+        await persistToDB(answersRef.current, violationCountRef.current, false, false);
+        // 2. Re-fetch from DB to verify sync and update UI
         await fetchSubmission();
     };
 
     const handleViolation = async () => {
+        // Enforce anti-cheating during BOTH active test AND reading time
+        // BUT SKIP IF PRACTICE MODE
         if (isPracticeMode) return; 
 
         if ((!isTestActive && !isReadingMode) || submitted || isDisqualified) return;
 
-        const newViolations = [...violationsRef.current, { type: 'focus_lost', timestamp: Date.now() }];
+        const newCount = violationCountRef.current + 1;
         
-        setViolations(newViolations); // This now works
-        violationsRef.current = newViolations;
+        // Update State & Refs
+        setViolationCount(newCount);
+        violationCountRef.current = newCount;
         
         setIsDisqualified(true);
         setSubmitted(true); 
         
+        // Immediate Backup
         saveToBackup({
             answers: answersRef.current,
-            violations: newViolations,
+            violations: newCount,
             status: 'disqualified'
         });
         
-        await persistToDB(answersRef.current, newViolations, true, true);
+        // Immediate Persist on Violation
+        await persistToDB(answersRef.current, newCount, true, true);
     };
 
+    // Activate Focus Guard (Disabled in Practice Mode)
     useFocusMode(((isTestActive || isReadingMode) && !submitted && !isDisqualified && !isPreviewMode && !isPracticeMode), handleViolation);
 
+    // OPTIMIZED: Stable callback that doesn't depend on 'answers' state
     const handleAnswerChange = useCallback((qId: string, value: string, immediate = false) => {
         if (isDisqualified || submitted || isClosed || isReadingMode) return;
         
+        // Update ref immediately for backup consistency
         answersRef.current = { ...answersRef.current, [qId]: value };
         
+        // Update React State (functional update to avoid dependency)
         setAnswers(prev => ({ ...prev, [qId]: value }));
         
+        // Instant Local Backup using Ref
         saveToBackup({
             answers: answersRef.current,
-            violations: violationsRef.current,
-            status: 'inprogress'
+            violations: violationCountRef.current,
+            status: 'active'
         });
         
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         setSaveStatus('saving');
         
         if (immediate) {
-             persistToDB(answersRef.current, violationsRef.current, false, false);
+             // Force immediate save for critical updates (like image uploads)
+             persistToDB(answersRef.current, violationCountRef.current, false, false);
         } else {
+            // Debounced DB Save with Random Jitter (Scalability Fix)
             const jitter = Math.floor(Math.random() * 1000); 
             const delay = 1500 + jitter;
 
             saveTimeoutRef.current = setTimeout(() => {
-                persistToDB(answersRef.current, violationsRef.current, false, false);
+                persistToDB(answersRef.current, violationCountRef.current, false, false);
             }, delay);
         }
-    }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB, saveToBackup]);
+    }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB]);
 
     const handleConfirmSubmit = async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         
+        // If retrying, remove questions from retry list in local state (optimistic)
+        // The next fetch or logic will handle DB sync naturally via persistToDB
         if (retryQuestions.length > 0) {
             setRetryQuestions([]); 
         }
 
         setSubmitted(true);
         
+        // Backup final state locally first (safety net)
         saveToBackup({
             answers: answersRef.current,
-            violations: violationsRef.current,
+            violations: violationCountRef.current,
             status: 'submitted'
         });
 
-        await persistToDB(answersRef.current, violationsRef.current, false, true);
+        await persistToDB(answersRef.current, violationCountRef.current, false, true);
     };
 
     const startTest = async () => {
@@ -355,7 +369,8 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             }
         }
         setHasStarted(true);
-        await persistToDB(answers, [], false, false);
+        // Initial save
+        await persistToDB(answers, 0, false, false);
     };
 
     const returnToHome = () => {
@@ -379,14 +394,21 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         });
     }, [questions, answers]);
 
-    // FIX: Cast submissionData to `any` to satisfy ReportCard's prop type temporarily.
+    // --- VIEW ROUTING ---
+
+    // Show Report Card ONLY if: 
+    // 1. Closed AND grades released
+    // 2. OR Preview mode AND submitted (with no DQ)
+    // 3. AND user is NOT currently revising (retryQuestions empty)
     if (((isClosed && submissionData?.released) || (isPreviewMode && submitted && !isDisqualified)) && retryQuestions.length === 0) {
-        return <ReportCard board={board} questions={questions} submissionData={submissionData as any} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
+        return <ReportCard board={board} questions={questions} submissionData={submissionData} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
     }
 
+    // Status overrides (DQ > Closed > Submitted)
     if (isDisqualified) return <StatusViews type="disqualified" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
-    if (isClosed) return <StatusViews type="closed" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} submissionData={submissionData as any} />;
+    if (isClosed) return <StatusViews type="closed" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} submissionData={submissionData} />;
     
+    // Show Submitted screen ONLY if genuinely submitted AND no retries pending
     if (submitted && retryQuestions.length === 0) return <StatusViews type="submitted" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
     
     if (config.status === 'setup' && !isPreviewMode) {
@@ -399,6 +421,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     return (
         <div className="h-full relative">
+            {/* Save Status Indicator */}
             <div className="absolute top-20 right-6 z-50 pointer-events-none transition-opacity duration-300">
                 {saveStatus === 'saving' && (
                     <div className="flex items-center gap-2 text-yellow-500 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg">
@@ -431,7 +454,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 onExitPreview={onExitPreview}
                 isReadingMode={isReadingMode}
                 isPracticeMode={isPracticeMode}
-                retryQuestions={retryQuestions}
+                retryQuestions={retryQuestions} // New Prop
             />
         </div>
     );

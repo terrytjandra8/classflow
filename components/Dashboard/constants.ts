@@ -31,7 +31,6 @@ export const TEMPLATES: Array<{
         wallpaper: 'url("https://www.transparenttextures.com/patterns/cork-board.png")', 
         sections: [],
         guide: {
-            id: 'padlet_wall_guide',
             title: 'Padlet Wall',
             description: 'A flexible space for sharing ideas.',
             steps: [
@@ -54,7 +53,6 @@ export const TEMPLATES: Array<{
             { id: 'bg3', title: 'Breakout group 3' }
         ],
         guide: {
-            id: 'breakout_groups_guide',
             title: 'Breakout groups',
             description: 'Create focused, smaller team groups for specific tasks or discussions.',
             steps: [
@@ -73,7 +71,6 @@ export const TEMPLATES: Array<{
         wallpaper: 'linear-gradient(to bottom right, #10b981, #3b82f6)',
         sections: [],
         guide: {
-            id: 'exit_ticket_guide',
             title: 'Exit Ticket',
             description: 'Quickly assess student understanding.',
             steps: [
@@ -91,7 +88,6 @@ export const TEMPLATES: Array<{
         wallpaper: "url('https://www.transparenttextures.com/patterns/notebook.png')",
         sections: [],
         guide: {
-            id: 'brainstorming_guide',
             title: 'Brainstorming',
             description: 'Collaborative space for ideas.',
             steps: [
@@ -114,7 +110,6 @@ export const TEMPLATES: Array<{
             { id: 's3', title: 'Rebuttals' }
         ],
         guide: {
-            id: 'class_debate_guide',
             title: 'Class Debate',
             description: 'Structure arguments for debates.',
             steps: [
@@ -136,7 +131,6 @@ export const TEMPLATES: Array<{
             { id: 's2', title: 'Cons' }
         ],
         guide: {
-            id: 'pros_cons_guide',
             title: 'Pros & Cons',
             description: 'Simple evaluation framework.',
             steps: [
@@ -158,7 +152,6 @@ export const TEMPLATES: Array<{
             { id: 's3', title: 'What I Learned' }
         ],
         guide: {
-            id: 'kwl_chart_guide',
             title: 'KWL Chart',
             description: 'Track learning progress.',
             steps: [

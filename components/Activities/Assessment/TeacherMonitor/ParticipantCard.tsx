@@ -1,26 +1,14 @@
 
 import React, { memo } from 'react';
-import { CheckSquare, Square, ShieldCheck, User, Ban, ShieldAlert, FileWarning, Activity, CheckCircle, Clock, Users, RefreshCw, Printer, ExternalLink, Unlock, RotateCcw } from 'lucide-react';
-
-interface Participant {
-    id: string;
-    name: string;
-    role: string;
-    disqualified: boolean;
-    status: 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready';
-    violations: number;
-    hasLowWordCount: boolean;
-    progress: number;
-    score: number;
-}
+import { CheckSquare, Square, ShieldCheck, User, Ban, ShieldAlert, FileWarning, Activity, CheckCircle, Clock, Users, RefreshCw, Printer, ExternalLink, PlayCircle, Unlock, RotateCcw } from 'lucide-react';
 
 interface ParticipantCardProps {
-    participant: Participant;
-    onReset: (participant: Participant) => void;
-    onContinue: (participant: Participant) => void;
-    onAllowRevision: (participant: Participant) => void;
-    onPrint: (participant: Participant) => void;
-    onGrade: (participant: Participant) => void;
+    participant: any;
+    onReset: (participant: any) => void;
+    onContinue: (participant: any) => void;
+    onAllowRevision: (participant: any) => void;
+    onPrint: (participant: any) => void;
+    onGrade: (participant: any) => void;
     isSelected: boolean;
     onToggleSelect: (id: string) => void;
 }

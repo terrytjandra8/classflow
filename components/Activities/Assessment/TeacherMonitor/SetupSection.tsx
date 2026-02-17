@@ -18,8 +18,8 @@ const SettingsIcon = () => (
 
 export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConfig }) => {
     
-    const getLocalISOString = (timestamp: number | null) => {
-        if (!timestamp) return '';
+    // Helper to handle the local timezone shift for datetime-local input
+    const getLocalISOString = (timestamp: number) => {
         const date = new Date(timestamp);
         const offset = date.getTimezoneOffset() * 60000;
         const localDate = new Date(date.getTime() - offset);
@@ -38,8 +38,8 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     </label>
                     <DebouncedInput 
                         type="number"
-                        value={config.duration_minutes || 60}
-                        onChange={(val: string) => onUpdateConfig({ duration_minutes: parseInt(val) || 60 })}
+                        value={config.durationMinutes}
+                        onChange={(val) => onUpdateConfig({ durationMinutes: parseInt(val) || 60 })}
                         min={1}
                         className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-green-500 outline-none"
                     />
@@ -50,14 +50,15 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     </label>
                     <DebouncedInput 
                         type="number"
-                        value={config.reading_minutes || 0}
-                        onChange={(val: string) => onUpdateConfig({ reading_minutes: parseInt(val) || 0 })}
+                        value={config.readingMinutes}
+                        onChange={(val) => onUpdateConfig({ readingMinutes: parseInt(val) || 0 })}
                         min={0}
                         className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 outline-none"
                     />
                     <p className="text-[10px] text-gray-500">Students can view questions but cannot answer.</p>
                 </div>
                 
+                {/* Auto Live Date */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-white flex items-center gap-2">
                         <Radio size={16} className="text-green-500" /> Scheduled Start (Auto-Live)
@@ -65,13 +66,13 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     <div className="flex gap-2 items-center">
                         <input 
                             type="datetime-local"
-                            value={getLocalISOString(config.auto_live_time)}
-                            onChange={(e) => onUpdateConfig({ auto_live_time: e.target.value ? new Date(e.target.value).getTime() : undefined })}
+                            value={config.autoLiveTime ? getLocalISOString(config.autoLiveTime) : ''}
+                            onChange={(e) => onUpdateConfig({ autoLiveTime: e.target.value ? new Date(e.target.value).getTime() : null })}
                             className="flex-1 bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-green-500 outline-none text-sm font-mono"
                         />
-                        {config.auto_live_time && (
+                        {config.autoLiveTime && (
                             <button 
-                                onClick={() => onUpdateConfig({ auto_live_time: undefined })} 
+                                onClick={() => onUpdateConfig({ autoLiveTime: null })} 
                                 className="text-xs text-red-400 hover:text-white px-3 py-2 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
                             >
                                 Clear
@@ -83,6 +84,7 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     </p>
                 </div>
 
+                {/* Auto Lock Date */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-white flex items-center gap-2">
                         <CalendarClock size={16} className="text-red-500" /> Scheduled End (Auto-Close)
@@ -90,13 +92,13 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     <div className="flex gap-2 items-center">
                         <input 
                             type="datetime-local"
-                            value={getLocalISOString(config.auto_lock_time)}
-                            onChange={(e) => onUpdateConfig({ auto_lock_time: e.target.value ? new Date(e.target.value).getTime() : undefined })}
+                            value={config.autoLockTime ? getLocalISOString(config.autoLockTime) : ''}
+                            onChange={(e) => onUpdateConfig({ autoLockTime: e.target.value ? new Date(e.target.value).getTime() : null })}
                             className="flex-1 bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-red-500 outline-none text-sm font-mono"
                         />
-                        {config.auto_lock_time && (
+                        {config.autoLockTime && (
                             <button 
-                                onClick={() => onUpdateConfig({ auto_lock_time: undefined })} 
+                                onClick={() => onUpdateConfig({ autoLockTime: null })} 
                                 className="text-xs text-red-400 hover:text-white px-3 py-2 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
                             >
                                 Clear

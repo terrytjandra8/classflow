@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Plus, FolderPlus, Lock, Unlock, Wand2, X, Eye, EyeOff, Ghost, VenetianMask, Move } from 'lucide-react';
 import { NoteCard } from '../../NoteCard/index';
@@ -78,14 +79,14 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
 
         let newCreatedAt = Date.now();
         if (prevNote && nextNote) {
-            newCreatedAt = (new Date(prevNote.createdAt).getTime() + new Date(nextNote.createdAt).getTime()) / 2;
+            newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
         } else if (prevNote) {
-            newCreatedAt = new Date(prevNote.createdAt).getTime() - 60000;
+            newCreatedAt = prevNote.createdAt - 60000;
         } else if (nextNote) {
-            newCreatedAt = new Date(nextNote.createdAt).getTime() + 60000;
+            newCreatedAt = nextNote.createdAt + 60000;
         }
 
-        updateNote(draggedId, { createdAt: new Date(newCreatedAt).toISOString() });
+        updateNote(draggedId, { createdAt: newCreatedAt });
         setDraggingId(null);
         dragItemRef.current = null;
     };

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Board, Note } from '../../types';
 import { BarChart2, Cloud, RefreshCw, Send, Check, Settings, Plus, X, MonitorPlay, Minimize2, Radio, EyeOff, ChevronRight, ChevronLeft, Trash2, Users, ChevronDown, Share2, Edit2, ArrowLeft } from 'lucide-react';
@@ -16,7 +17,7 @@ interface PollViewProps {
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
     onBack?: () => void;
-    isPresentationMode?: boolean;
+    isPresentationMode?: boolean; // New Prop
 }
 
 export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStudent, onUpdateBoard, classList, onActivity, onOpenSettings, onOpenShare, onBack, isPresentationMode }) => {
@@ -25,6 +26,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
     const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+    // Use Custom Hook
     const {
         polls, currentIndex, currentPoll, pollType, options, results, maxVotes,
         myVote, hasVoted,
@@ -51,8 +53,9 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
         setShowResetConfirm(false);
     };
 
-    const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper ?? ''), [board.wallpaper]);
+    const backgroundStyle = useMemo(() => resolveBackgroundStyle(board.wallpaper), [board.wallpaper]);
 
+    // --- STUDENT VIEW ---
     if (isStudent) {
         if (!currentPoll) return <div className="h-full flex items-center justify-center text-white">Connecting...</div>;
 
@@ -113,11 +116,13 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
         );
     }
 
+    // --- TEACHER VIEW ---
     if (!currentPoll) return <div className="h-full bg-[#111] text-white flex items-center justify-center">Loading Polls...</div>;
 
     return (
         <div className={`h-full flex flex-col bg-[#111] text-white ${isPresenting ? 'fixed inset-0 z-[100]' : ''}`}>
             
+            {/* Header - Hidden in Presentation Mode */}
             {!isPresentationMode && (
                 <header className={`h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#161616] shrink-0 ${isPresenting ? 'hidden' : 'flex'}`}>
                     <div className="flex items-center gap-4">
@@ -128,6 +133,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                         )}
                         <h1 className="font-bold text-xl truncate max-w-[200px]">{board.title}</h1>
                         
+                        {/* Class Selector */}
                         {!isStudent && (
                             <div className="relative z-50">
                                 <button 
@@ -169,6 +175,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                         </button>
                     </div>
                     
+                    {/* Poll Navigation */}
                     <div className="flex items-center gap-2 bg-[#222] p-1 rounded-lg border border-white/5">
                         <button 
                             onClick={() => navigateSlide(currentIndex - 1)}
@@ -217,6 +224,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                 </header>
             )}
 
+            {/* Presentation Overlay */}
             {(isPresenting || isPresentationMode) && (
                 <div className="fixed top-4 right-4 z-[110] flex gap-2">
                     <div className="bg-black/50 backdrop-blur px-4 py-2 rounded-full text-white font-bold text-sm border border-white/10 flex items-center gap-2">
@@ -230,6 +238,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                 </div>
             )}
 
+            {/* Presentation Arrows */}
             {(isPresenting || isPresentationMode) && (
                 <>
                     {currentIndex > 0 && (
@@ -252,6 +261,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
             )}
 
             <div className="flex-1 flex overflow-hidden relative">
+                {/* Editor Sidebar */}
                 {isEditing && !isPresenting && !isPresentationMode && (
                     <div className="w-80 bg-[#1a1a1a] border-r border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-left-10 duration-200 shrink-0 z-20">
                         <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -283,11 +293,12 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                             ))}
                         </div>
 
+                        {/* Settings */}
                         <div className="p-4 space-y-6 overflow-y-auto bg-[#161616]">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase">Question</label>
                                 <textarea 
-                                    key={currentPoll.id + '_q'}
+                                    key={currentPoll.id + '_q'} // Force remount on slide change
                                     defaultValue={currentPoll.question} 
                                     onBlur={(e) => updatePoll({ question: e.target.value })}
                                     className="w-full bg-[#111] border border-white/10 rounded-lg p-2 text-sm outline-none focus:border-blue-500 resize-none h-20"
@@ -349,6 +360,7 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                     </div>
                 )}
 
+                {/* Visualization Background */}
                 <div className="absolute inset-0 z-0" style={backgroundStyle}>
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
                 </div>

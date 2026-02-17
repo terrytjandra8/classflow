@@ -1,16 +1,15 @@
 
 import React, { useState } from 'react';
-import { CheckCircle, FileText, Key, RefreshCw, Users } from 'lucide-react';
+import { CheckCircle, FileText, Key, RefreshCw } from 'lucide-react';
 
 interface HeaderSectionProps {
     activeStudentsCount: number;
     submittedCount: number;
-    totalParticipants: number;
     onPrintMaster: (withKey: boolean) => void;
-    onForceRefresh?: () => void;
+    onForceRefresh?: () => void; // New prop
 }
 
-export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCount, submittedCount, totalParticipants, onPrintMaster, onForceRefresh }) => {
+export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCount, submittedCount, onPrintMaster, onForceRefresh }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handleRefresh = async () => {
@@ -41,9 +40,6 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCoun
             </div>
             <div className="flex flex-col items-end gap-3">
                 <div className="flex gap-4 text-sm font-bold">
-                    <div className="flex items-center gap-2 text-gray-400 bg-black/20 px-3 py-1 rounded-full border border-white/10">
-                        <Users size={14}/> {totalParticipants} Total
-                    </div>
                     <div className="flex items-center gap-2 text-green-400 bg-green-900/10 px-3 py-1 rounded-full border border-green-500/20">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/> {activeStudentsCount} Online
                     </div>
@@ -52,6 +48,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCoun
                     </div>
                 </div>
                 
+                {/* Master Copy Print Controls */}
                 <div className="flex items-center gap-2 mt-2">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Master Copy:</span>
                     <button 

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Sun, Moon, Hash, Clock, LogOut, Search, ArrowRight, Layout, BookOpen, User, Home, Grid, Filter, X, Quote, Sparkles, Trophy, Calendar, Folder, ChevronDown, ListFilter, GripVertical, Menu, GraduationCap } from 'lucide-react';
-import { Board, Profile } from '../types';
+import { Board } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { Tooltip } from './Tooltip';
 import { QUOTES } from './Dashboard/constants';
@@ -17,7 +18,8 @@ interface StudentDashboardProps {
   onSelectBoard: (boardId: string) => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  profile?: Profile;
+  username: string;
+  userAvatar: string | null;
   userClasses: string[];
 }
 
@@ -63,7 +65,7 @@ const getDateCategory = (timestamp: number) => {
 };
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
-  boards, onSelectBoard, theme, onToggleTheme, profile, userClasses 
+  boards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses 
 }) => {
   // Persist Active Tab
   const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => {
@@ -157,7 +159,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           if (!board) {
               const { data, error } = await supabase
                   .from('boards')
-                  .select('id, targetGrade, format, settings, isPublished, classCode')
+                  .select('id, target_grade, format, settings, is_published, class_code')
                   .eq('class_code', code)
                   .single();
               
@@ -263,7 +265,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }).sort((a, b) => {
       const timeA = sortBy === 'created' ? a.createdAt : (a.updatedAt || a.createdAt);
       const timeB = sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
-      return Number(timeB) - Number(timeA);
+      return timeB - timeA;
   });
 
   // Grouping
@@ -316,8 +318,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       </div>
   );
 
-  if (!profile) return null; // Or a loading state
-
   return (
     <div className={`h-screen flex ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-[#050505] text-white'} transition-colors duration-300 font-sans overflow-hidden`}>
       
@@ -326,9 +326,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           
           {/* User Profile */}
           <div className="flex mb-8 items-center gap-3">
-              <Avatar src={profile.avatarUrl} name={profile.fullName} size="lg" className="shrink-0" />
+              <Avatar src={userAvatar} name={username} size="lg" className="shrink-0" />
               <div>
-                  <h2 className={`font-bold truncate max-w-[140px] ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{profile.fullName}</h2>
+                  <h2 className={`font-bold truncate max-w-[140px] ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{username}</h2>
                   <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
               </div>
           </div>
@@ -447,12 +447,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               </div>
               <div className="relative" ref={mobileMenuRef}>
                   <div onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                      <Avatar src={profile.avatarUrl} name={profile.fullName} size="md" className="cursor-pointer border border-gray-200 dark:border-white/10" />
+                      <Avatar src={userAvatar} name={username} size="md" className="cursor-pointer border border-gray-200 dark:border-white/10" />
                   </div>
                   {isMobileMenuOpen && (
                       <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
                           <div className="p-3 border-b border-gray-100 dark:border-white/5">
-                              <p className="font-bold text-sm truncate">{profile.fullName}</p>
+                              <p className="font-bold text-sm truncate">{username}</p>
                               <p className="text-xs text-gray-500">Student</p>
                           </div>
                           <div className="p-1">
@@ -479,7 +479,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               {activeTab === 'documentation' ? (
                   <Documentation role="student" onBack={() => setActiveTab('home')} theme={theme} />
               ) : activeTab === 'grades' ? (
-                  <StudentGrades userId={currentUserId} onSelectBoard={onSelectBoard} theme={theme} userClasses={userClasses} userName={profile.fullName} />
+                  <StudentGrades userId={currentUserId} onSelectBoard={onSelectBoard} theme={theme} userClasses={userClasses} userName={username} />
               ) : activeTab === 'join' ? (
                   <div className="flex flex-col items-center justify-center py-10 animate-in fade-in slide-in-from-bottom-2 relative min-h-[50vh]">
                        <div className="w-full max-w-md bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
@@ -530,7 +530,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                   <Sparkles size={12} className="text-yellow-300" /> Daily Inspiration
                               </div>
                               <h2 className="text-2xl md:text-4xl font-extrabold mb-4 leading-tight">
-                                  Ready to learn, {profile.fullName.split(' ')[0]}?
+                                  Ready to learn, {username.split(' ')[0]}?
                               </h2>
                               <div className="flex gap-2 max-w-2xl items-start">
                                   <Quote size={20} className="text-white/50 shrink-0 mt-1" />
