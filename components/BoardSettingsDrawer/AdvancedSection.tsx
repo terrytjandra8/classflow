@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Unlock, MessageSquare, Lock, Eye, Database, RefreshCw, CheckCircle, AlertTriangle, CalendarClock, Radio } from 'lucide-react';
 import { Board } from '../../types';
 import { boardService } from '../../services/boardService';
@@ -13,6 +13,9 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
     const [isRepairing, setIsRepairing] = useState(false);
     const [repairStatus, setRepairStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [fixedCount, setFixedCount] = useState(0);
+
+    const autoLiveInputRef = useRef<HTMLInputElement>(null);
+    const autoLockInputRef = useRef<HTMLInputElement>(null);
 
     const handleRepair = async () => {
         if (!confirm("This will scan all notes and attempt to fix missing assessment data types. Continue?")) return;
@@ -85,10 +88,12 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </label>
                     <div className="flex gap-2 items-center">
                         <input 
+                            ref={autoLiveInputRef}
+                            onClick={() => autoLiveInputRef.current?.showPicker()}
                             type="datetime-local"
                             value={board.autoLiveTime ? getLocalISOString(board.autoLiveTime) : ''}
                             onChange={(e) => onUpdate({ autoLiveTime: e.target.value ? new Date(e.target.value).getTime() : null })}
-                            className="flex-1 bg-[#111] border border-white/10 rounded-lg p-2 text-white outline-none text-xs font-mono"
+                            className="flex-1 bg-[#111] border border-white/10 rounded-lg p-2 text-white outline-none text-xs font-mono cursor-pointer"
                         />
                         {board.autoLiveTime && (
                             <button 
@@ -111,10 +116,12 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </label>
                     <div className="flex gap-2 items-center">
                         <input 
+                            ref={autoLockInputRef}
+                            onClick={() => autoLockInputRef.current?.showPicker()}
                             type="datetime-local"
                             value={board.autoLockTime ? getLocalISOString(board.autoLockTime) : ''}
                             onChange={(e) => onUpdate({ autoLockTime: e.target.value ? new Date(e.target.value).getTime() : null })}
-                            className="flex-1 bg-[#111] border border-white/10 rounded-lg p-2 text-white outline-none text-xs font-mono"
+                            className="flex-1 bg-[#111] border border-white/10 rounded-lg p-2 text-white outline-none text-xs font-mono cursor-pointer"
                         />
                         {board.autoLockTime && (
                             <button 
