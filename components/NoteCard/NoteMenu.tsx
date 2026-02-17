@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Edit3, Palette, Pin, ArrowUp, ArrowDown, Link as LinkIcon, Layers, MoveUp, MoveDown, Check, CameraOff } from 'lucide-react';
-import { Note, NoteColor } from '../../types';
-import { getColorName, NOTE_COLORS } from '../../utils/theme';
-import { supabase } from '../../services/supabaseClient';
+import { Note, NoteColor } from '../../../types';
+import { getColorName, NOTE_COLORS } from '../../../utils/theme';
+import { supabase } from '../../../services/supabaseClient';
 
 interface NoteMenuProps {
     note: Note;
@@ -86,7 +86,7 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
     };
 
     const handleToggleWatermark = async () => {
-        const newValue = !note.is_watermarked;
+        const newValue = !note.isWatermarked;
         await supabase.from('notes').update({ is_watermarked: newValue }).eq('id', note.id);
         onClose();
     };
@@ -162,8 +162,8 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                                 onClick={handleToggleWatermark}
                                 className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/10 rounded-lg flex items-center gap-2 transition-colors"
                             >
-                                <CameraOff size={14} className={note.is_watermarked ? "text-yellow-500" : ""} /> 
-                                {note.is_watermarked ? 'Remove Watermark' : 'Apply Watermark'}
+                                <CameraOff size={14} className={note.isWatermarked ? "text-yellow-500" : ""} /> 
+                                {note.isWatermarked ? 'Remove Watermark' : 'Apply Watermark'}
                             </button>
                         )}
 
@@ -221,7 +221,7 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                                 onClick={() => { onPin(note.id); onClose(); }}
                                 className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/10 rounded-lg flex items-center gap-2 transition-colors"
                             >
-                                <Pin size={14} className={note.is_pinned ? "fill-white" : ""} /> {note.is_pinned ? 'Unpin post' : 'Pin post'}
+                                <Pin size={14} className={note.isPinned ? "fill-white" : ""} /> {note.isPinned ? 'Unpin post' : 'Pin post'}
                             </button>
                         )}
                     </>

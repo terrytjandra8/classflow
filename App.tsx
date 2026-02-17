@@ -423,7 +423,7 @@ function AppContent() {
       const board = boards.find(b => b.id === id);
       if (board) {
           const newVal = !board.isFavorite;
-          handleUpdate_board(id, { isFavorite: newVal });
+          handleUpdateBoard(id, { isFavorite: newVal });
       }
   };
 

@@ -26,12 +26,13 @@ interface DashboardProps {
   onUpdateBoard: (id: string, updates: Partial<Board>) => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  userId?: string;
   onJoinByCode: (code: string) => Promise<boolean>;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
     boards, profile, onCreateBoard, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash, onUpdateBoard,
-    theme, onToggleTheme, onJoinByCode
+    theme, onToggleTheme, userId, onJoinByCode
 }) => {
   
   const {
@@ -122,7 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {!isStudent && <><button onClick={() => setActiveTab('make')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'make' ? 'text-pink-500' : 'text-gray-500'}`}><PlusSquare size={20} strokeWidth={activeTab === 'make' ? 2.5 : 2} /><span className="text-[10px] font-medium">Make</span></button><button onClick={() => setActiveTab('gallery')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'gallery' ? 'text-pink-500' : 'text-gray-500'}`}><ImageIcon size={20} strokeWidth={activeTab === 'gallery' ? 2.5 : 2} /><span className="text-[10px] font-medium">Gallery</span></button><button onClick={() => setActiveTab('admin')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'admin' ? 'text-pink-500' : 'text-gray-500'}`}><Users size={20} strokeWidth={activeTab === 'admin' ? 2.5 : 2} /><span className="text-[10px] font-medium">Admin</span></button></>}
       </div>
       {showJoinModal && <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"><div className="bg-[#1a1a1a] rounded-xl shadow-2xl w-full max-w-md border border-white/10 p-6"><div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold text-white">Join a ClassBoard</h3><button onClick={() => setShowJoinModal(false)} className="text-gray-400 hover:text-white"><X size={20} /></button></div><form onSubmit={handleJoinSubmit} className="space-y-4"><div><label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Join Code</label><input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} placeholder="e.g. A3F9X2" className="w-full bg-[#111] border border-white/10 rounded-lg p-3 text-white text-lg tracking-widest font-mono text-center focus:border-pink-500 outline-none" autoFocus/>{joinError && <p className="text-red-500 text-xs mt-2">{joinError}</p>}</div><button type="submit" disabled={!joinCode || isJoining} className="w-full bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">{isJoining && <Activity size={16} className="animate-spin" />} {isJoining ? 'Joining...' : 'Join'}</button></form></div></div>}
-      {!isStudent && <SetupModal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} onCreateBoard={onCreateBoard} />}
+      {!isStudent && <SetupModal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} onCreateBoard={handleCreateBoardWrapper} />}
     </div>
   );
 };

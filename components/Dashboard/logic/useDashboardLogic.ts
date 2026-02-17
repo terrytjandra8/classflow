@@ -49,8 +49,7 @@ export const useDashboardLogic = (profile: Profile, onJoinByCode: (code: string)
         const fetchClasses = async () => {
             if (isStudent) {
                 try {
-                    const fetchedClasses = await classService.getStudentClasses(profile.id);
-                    const newClassList = ['All My Classes', ...fetchedClasses];
+                    const newClassList = ['All My Classes', ...(profile.enrolledClasses || [])];
                     setClassList(newClassList);
                     if (storedClass && newClassList.includes(storedClass)) {
                         setSelectedClassState(storedClass);

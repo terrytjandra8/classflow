@@ -35,7 +35,8 @@ export const noteService = {
             likes: 0,
             comments: [] as any,
             liked_by: [],
-            connections: [] as any
+            connections: [] as any,
+            is_watermarked: note.isWatermarked
         };
 
         const { data, error } = await supabase
@@ -59,6 +60,7 @@ export const noteService = {
         if (updates.width !== undefined) dbUpdates.width = updates.width;
         if (updates.height !== undefined) dbUpdates.height = updates.height;
         if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
+        if (updates.isWatermarked !== undefined) dbUpdates.is_watermarked = updates.isWatermarked;
         if (updates.likes !== undefined) dbUpdates.likes = updates.likes;
         if (updates.likedBy !== undefined) dbUpdates.liked_by = updates.likedBy;
         if (updates.comments !== undefined) dbUpdates.comments = updates.comments as any;

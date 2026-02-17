@@ -54,7 +54,8 @@ export const boardService = {
             assessment_questions: board.assessmentQuestions,
             assessment_state: board.assessmentState,
             assessment_config: board.assessmentConfig,
-            grading_config: board.gradingConfig
+            grading_config: board.gradingConfig,
+            is_watermarked: board.isWatermarked
         };
 
         const payload = {

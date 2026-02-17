@@ -67,6 +67,7 @@ export const mapBoard = (row: BoardRow): Board => {
         disableCopy: settings.disable_copy ?? false,
         blockScreenshots: settings.block_screenshots ?? false,
         isAnonymous: settings.is_anonymous ?? false,
+        isWatermarked: settings.is_watermarked ?? false,
         blurOtherPosts: settings.blur_other_posts ?? false,
         blurTeacherPosts: settings.blur_teacher_posts ?? false,
         gradingConfig: settings.grading_config || { mode: 'numeric', maxScore: 100 },
