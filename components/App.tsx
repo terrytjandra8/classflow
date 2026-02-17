@@ -126,6 +126,31 @@ function AppContent() {
     }
   }, [theme]);
 
+  // FIX: Handle Ctrl+V bug
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
+            const target = event.target as HTMLElement;
+            const isEditable = target.isContentEditable || 
+                               target.tagName === 'INPUT' || 
+                               target.tagName === 'TEXTAREA' ||
+                               target.closest('.ProseMirror'); // Support for TipTap/ProseMirror editors
+
+            if (isEditable) {
+                // Stop the event from bubbling up to any global listeners
+                event.stopPropagation();
+            }
+        }
+    };
+
+    // Listen in the capture phase to intercept the event early
+    window.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, []);
+
   // Handle Browser Back/Forward Navigation
   useEffect(() => {
       const handlePopState = () => {
@@ -218,7 +243,7 @@ function AppContent() {
               }
           });
       } else {
-          clearTimeout(safetyTimeout);
+          clearTimeout(safetyLabel);
           setLoading(false);
           // Handle Guest/Public access or show Auth
           if (initialBoardId) {
