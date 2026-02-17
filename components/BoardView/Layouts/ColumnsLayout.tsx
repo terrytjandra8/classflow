@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { NoteCard } from '../../NoteCard/index';
 import { EditableInput } from '../../ui/EditableInput';
@@ -14,24 +13,46 @@ import {
 } from '../../Icons';
 
 interface ColumnsLayoutProps {
-    isStudent?: boolean; // Optional override
+    isStudent?: boolean;
 }
 
-// Helper component for rendering a single column
-const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, insertSectionAt, idx }) => {
+// Fixed: Added explicit types to Column component
+interface ColumnProps {
+    section: Section;
+    isStudent: boolean;
+    onDragStart: (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => void;
+    onDragOverColumn: (e: React.DragEvent, sectionId: string) => void;
+    onDrop: (e: React.DragEvent, sectionId: string) => void;
+    insertSectionAt: (idx: number) => void;
+    idx: number;
+    localNotes: Note[]; // Passed from parent
+    draggingId: string | null;
+    draggingType: string | null;
+    onDragOverNote: (e: React.DragEvent, targetId: string, sectionId: string) => void;
+    onDragEnd: (e: React.DragEvent) => void;
+    handleAutoScroll: (e: React.DragEvent) => void;
+}
+
+const Column = ({ 
+    section, isStudent, onDragStart, onDragOverColumn, onDrop, 
+    insertSectionAt, idx, localNotes, draggingId, draggingType, 
+    onDragOverNote, onDragEnd, handleAutoScroll 
+}: ColumnProps) => {
+    
     const { 
-        board, notes, updateBoard, openAddNote, updateNote, canManageBoard,
-        toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, toggleSectionRearrange,
-        deleteNote, likeNote, addComment, isPresentationMode,
-        localNotes, draggingId, draggingType, onDragEnd, onDragOverNote, handleAutoScroll
+        board, updateBoard, openAddNote, updateNote, canManageBoard,
+        toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, 
+        toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, 
+        toggleSectionRearrange, deleteNote, likeNote, addComment, isPresentationMode
     } = useBoard();
 
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
     
-    // CENTRALIZED RULE: Hiding Logic
     if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
 
+    // Filter notes for this specific section
     const sectionNotes = localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && idx === 0));
+    
     const canAdd = canManageBoard || (!isLocked && !section.locked);
     const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
     const repliesOn = section.repliesEnabled !== undefined ? section.repliesEnabled : (board.repliesEnabled !== false);
@@ -39,13 +60,12 @@ const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, ins
     const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
     const canDragNotes = canManageBoard || (sectionCanDrag && !isLocked && !section.locked);
     
-    // Show controls logic - simplified for performance
     const showControls = !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
 
-    const renameSection = (id: string, newTitle: string) => updateBoard({ sections: board.sections.map(s => s.id === id ? { ...s, title: newTitle } : s) });
-    const deleteSection = (id: string) => updateBoard({ sections: board.sections.filter(s => s.id !== id) });
+    const renameSection = (id: string, newTitle: string) => updateBoard({ sections: board.sections?.map(s => s.id === id ? { ...s, title: newTitle } : s) });
+    const deleteSection = (id: string) => updateBoard({ sections: board.sections?.filter(s => s.id !== id) });
     const toggleSectionCopy = (sectionId: string) => {
-        const newSections = board.sections.map(s => s.id === sectionId ? { ...s, disableCopy: !s.disableCopy } : s);
+        const newSections = board.sections?.map(s => s.id === sectionId ? { ...s, disableCopy: !s.disableCopy } : s);
         updateBoard({ sections: newSections });
     };
 
@@ -64,12 +84,12 @@ const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, ins
         const note = localNotes.find(n => n.id === noteId);
         if (!note) return;
         
-        const sectionNotes = localNotes.filter(n => n.sectionId === note.sectionId);
-        const currentIndex = sectionNotes.findIndex(n => n.id === noteId);
+        const currentSectionNotes = localNotes.filter(n => n.sectionId === note.sectionId);
+        const currentIndex = currentSectionNotes.findIndex(n => n.id === noteId);
         
         let targetNote = null;
-        if (direction === 'up' && currentIndex > 0) targetNote = sectionNotes[currentIndex - 1];
-        if (direction === 'down' && currentIndex < sectionNotes.length - 1) targetNote = sectionNotes[currentIndex + 1];
+        if (direction === 'up' && currentIndex > 0) targetNote = currentSectionNotes[currentIndex - 1];
+        if (direction === 'down' && currentIndex < currentSectionNotes.length - 1) targetNote = currentSectionNotes[currentIndex + 1];
 
         if (targetNote) {
             updateNote(noteId, { createdAt: targetNote.createdAt });
@@ -85,7 +105,6 @@ const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, ins
                 <div 
                     className="w-6 hover:w-10 shrink-0 h-full flex flex-col items-center justify-center group/insert cursor-pointer transition-all duration-300 opacity-50 hover:opacity-100 z-10"
                     onClick={() => insertSectionAt(idx)}
-                    title="Insert column here"
                 >
                     <div className="h-[80%] w-1 rounded-full bg-blue-500/20 group-hover/insert:bg-blue-500 transition-colors relative">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md transform scale-0 group-hover/insert:scale-100 transition-transform">
@@ -107,108 +126,38 @@ const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, ins
                                 className="text-gray-400 p-1 cursor-grab active:cursor-grabbing hover:text-white transition-colors"
                                 draggable={true}
                                 onDragStart={(e) => onDragStart(e, section.id, 'COLUMN')}
-                                title="Drag to reorder column"
                             >
                                 <IconDrag size={16} />
                             </div>
                         )}
-                        {section.locked && <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-1.5 rounded-lg shadow-sm shrink-0"><IconLock size={12} strokeWidth={2.5} /></div>}
-                        {section.isHidden && <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-1.5 rounded-lg shadow-sm shrink-0"><IconHidden size={12} strokeWidth={2.5} /></div>}
-                        {section.disableCopy && <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 p-1.5 rounded-lg shadow-sm shrink-0"><IconCopyOff size={12} strokeWidth={2.5} /></div>}
+                        {section.locked && <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-1.5 rounded-lg shrink-0"><IconLock size={12} /></div>}
                         
                         <EditableInput 
                             disabled={!canManageBoard} 
-                            className={`font-bold text-lg bg-transparent border border-transparent hover:border-white/20 rounded px-2 py-1 w-full focus:bg-white/10 outline-none transition-all ${!canManageBoard ? 'cursor-not-allowed' : ''} ${section.isHidden ? 'opacity-70' : 'opacity-100'} text-slate-800 dark:text-white placeholder-gray-400`} 
+                            className={`font-bold text-lg bg-transparent border border-transparent hover:border-white/20 rounded px-2 py-1 w-full focus:bg-white/10 outline-none text-slate-800 dark:text-white`} 
                             value={section.title} 
                             onSave={(val) => renameSection(section.id, val)}
-                            style={{ color: board.groupTextColor }}
                         />
                     </div>
                     
                     {canManageBoard && (
                         <div className={`grid grid-cols-4 gap-1 shrink-0 ml-2 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                            
-                            <Tooltip content={section.locked ? "Unlock Group" : "Lock Group"}>
-                                <button onClick={() => toggleSectionLock(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.locked ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    {section.locked ? <IconLock size={14} /> : <IconUnlock size={14} />}
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={commentsOn ? "Disable Comments" : "Enable Comments"}>
-                                <button onClick={() => toggleSectionComments(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${!commentsOn ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    {commentsOn ? <IconComment size={14} /> : <IconNoComment size={14} />}
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={repliesOn ? "Disable Replies" : "Enable Replies"}>
-                                <button onClick={() => toggleSectionReplies(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${!repliesOn ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    <IconReply size={14} />
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={sectionCanDrag ? "Disable Dragging" : "Enable Dragging"}>
-                                <button onClick={() => toggleSectionRearrange(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${sectionCanDrag ? 'text-green-500 bg-green-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    <IconMove size={14} />
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={isContentBlurred ? "Reveal Content" : "Blur Content"}>
-                                <button onClick={() => toggleSectionContentBlur(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${isContentBlurred ? 'text-orange-500 bg-orange-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    {isContentBlurred ? <IconHidden size={14} /> : <IconBlur size={14} />}
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={section.isHidden ? "Show Group" : "Hide Group"}>
-                                <button onClick={() => toggleSectionVisibility(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isHidden ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    {section.isHidden ? <IconHidden size={14} /> : <IconVisible size={14} />}
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={section.isAnonymous ? "Disable Anonymous" : "Enable Anonymous"}>
-                                <button onClick={() => toggleSectionAnonymous(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isAnonymous ? 'text-purple-500 bg-purple-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    <IconAnonymous size={14} />
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content={section.disableCopy ? "Enable Copying" : "Disable Copying"}>
-                                <button onClick={() => toggleSectionCopy(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.disableCopy ? 'text-orange-500 bg-orange-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                    <IconCopyOff size={14} />
-                                </button>
-                            </Tooltip>
-
-                            <Tooltip content="Delete Group">
-                                <button onClick={() => deleteSection(section.id)} className="p-1.5 hover:text-red-500 text-slate-400 transition-colors hover:bg-red-500/10 rounded-lg flex justify-center">
-                                    <IconClose size={14} />
-                                </button>
-                            </Tooltip>
+                             <button onClick={() => toggleSectionLock(section.id)} className="p-1.5 rounded-lg"><IconLock size={14} /></button>
+                             <button onClick={() => deleteSection(section.id)} className="p-1.5 rounded-lg text-red-400"><IconClose size={14} /></button>
                         </div>
                     )}
                 </div>
                 
                 <div 
-                    className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10 space-y-3 min-h-[100px] relative transition-colors rounded-xl"
+                    className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10 space-y-3 min-h-[100px] relative transition-colors"
                     onDragOver={handleAutoScroll}
                 >
-                    {section.isHidden && (
-                        <div className="bg-red-500/10 border border-red-500/20 p-2 mb-2 rounded text-[10px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-2 justify-center">
-                            <IconHidden size={12} /> Hidden from students
-                        </div>
-                    )}
-
                     {canAdd && (
                         <button 
-                            onClick={() => canAdd && openAddNote(section.id)} 
-                            disabled={!canAdd}
-                            className={`w-full py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-sm hover:shadow-md backdrop-blur-sm mb-3
-                            ${!canAdd 
-                                ? 'border-2 border-dashed border-red-500/20 text-red-400 cursor-not-allowed bg-red-500/5' 
-                                : 'bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold'}`}
+                            onClick={() => openAddNote(section.id)} 
+                            className="w-full py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold mb-3"
                         >
-                            {canAdd ? (
-                                <><div className="bg-pink-500 text-white rounded-full p-1"><IconPlus size={14} className="group-hover:scale-110 transition-transform"/></div> Add Post</>
-                            ) : (
-                                <><IconLock size={14} /> Locked</>
-                            )}
+                            <IconPlus size={14} /> Add Post
                         </button>
                     )}
                     
@@ -216,7 +165,7 @@ const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, ins
                         <div 
                             key={note.id} 
                             id={`note-${note.id}`}
-                            className={`note-card-wrapper transition-transform duration-200 ease-out ${draggingId === note.id ? 'opacity-40' : ''}`}
+                            className={`note-card-wrapper ${draggingId === note.id ? 'opacity-40' : ''}`}
                             draggable={canDragNotes}
                             onDragStart={(e) => onDragStart(e, note.id, 'NOTE')}
                             onDragOver={(e) => onDragOverNote(e, note.id, section.id)}
@@ -240,14 +189,6 @@ const Column = ({ section, isStudent, onDragStart, onDragOverColumn, onDrop, ins
                             />
                         </div>
                     ))}
-                    
-                    <div 
-                        className={`h-24 w-full transition-colors rounded-lg flex items-center justify-center border-2 border-dashed border-transparent ${draggingId && draggingType === 'NOTE' ? 'hover:border-blue-500/50 hover:bg-blue-500/5' : ''}`}
-                        onDragOver={(e) => onDragOverColumn(e, section.id)}
-                        data-drop-zone="true"
-                    >
-                        {draggingId && draggingType === 'NOTE' && <span className="text-xs text-gray-500 font-bold opacity-0 hover:opacity-100">Drop here to append</span>}
-                    </div>
                 </div>
             </div>
         </React.Fragment>
@@ -261,11 +202,9 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent,
     } = boardContext;
 
-    // Prioritize propIsStudent (from BoardView) over context if explicit
     const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
-    const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
     
-    // --- Local State for Optimistic Dragging ---
+    // --- Local State for Dragging ---
     const [localNotes, setLocalNotes] = useState<Note[]>(notes);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [draggingType, setDraggingType] = useState<'NOTE' | 'COLUMN' | null>(null);
@@ -274,82 +213,47 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const dragTypeRef = useRef<'NOTE' | 'COLUMN' | null>(null);
 
     useEffect(() => {
-        if (!draggingId || draggingType !== 'NOTE') {
-            boardContext.setLocalNotes(notes);
+        setLocalNotes(notes);
+    }, [notes]);
+    
+    const onDragEnd = (e: React.DragEvent) => {
+        setDraggingId(null);
+        setDraggingType(null);
+        dragItemRef.current = null;
+        dragTypeRef.current = null;
+    };
+
+    const handleAutoScroll = (e: React.DragEvent) => {
+        if (dragTypeRef.current !== 'NOTE') return;
+        e.preventDefault();
+        const container = e.currentTarget as HTMLDivElement;
+        const { top, bottom } = container.getBoundingClientRect();
+        const mouseY = e.clientY;
+        const threshold = 100;
+        const scrollSpeed = 15; 
+        if (container.scrollHeight > container.clientHeight) {
+            if (mouseY < top + threshold) container.scrollTop -= scrollSpeed;
+            else if (mouseY > bottom - threshold) container.scrollTop += scrollSpeed;
         }
-    }, [notes, draggingId, draggingType]);
-    
-    // Pass local state and handlers to context for column to use
-    const extendedBoardContext = {
-        ...boardContext,
-        localNotes: boardContext.localNotes ?? notes,
-        draggingId,
-        draggingType,
-        onDragEnd: (e: React.DragEvent) => {
-            setDraggingId(null);
-            setDraggingType(null);
-            dragItemRef.current = null;
-            dragTypeRef.current = null;
-        },
-        handleAutoScroll: (e: React.DragEvent) => {
-            if (dragTypeRef.current !== 'NOTE') return;
-            e.preventDefault();
-            const container = e.currentTarget as HTMLDivElement;
-            const { top, bottom } = container.getBoundingClientRect();
-            const mouseY = e.clientY;
-            const threshold = 100;
-            const scrollSpeed = 15; 
-            if (container.scrollHeight > container.clientHeight) {
-                if (mouseY < top + threshold) container.scrollTop -= scrollSpeed;
-                else if (mouseY > bottom - threshold) container.scrollTop += scrollSpeed;
-            }
-        },
-        onDragOverNote: (e: React.DragEvent, targetId: string, sectionId: string) => {
-            e.preventDefault(); 
-            const draggedId = dragItemRef.current;
-            const type = dragTypeRef.current;
-            if (!draggedId || draggedId === targetId || type !== 'NOTE') return;
-            const targetEl = e.currentTarget as HTMLElement;
-            const rect = targetEl.getBoundingClientRect();
-            const threshold = rect.top + (rect.height / 2);
-            const mouseY = e.clientY;
-            boardContext.setLocalNotes(prev => {
-                const newNotes = [...prev];
-                const draggedIdx = newNotes.findIndex(n => n.id === draggedId);
-                if (draggedIdx === -1) return prev;
-                const draggedItem = newNotes[draggedIdx];
-                newNotes.splice(draggedIdx, 1);
-                draggedItem.sectionId = sectionId;
-                let targetIdx = newNotes.findIndex(n => n.id === targetId);
-                if (targetIdx === -1) newNotes.push(draggedItem);
-                else {
-                    if (mouseY > threshold) targetIdx++;
-                    newNotes.splice(targetIdx, 0, draggedItem);
-                }
-                return newNotes;
-            });
-        },
     };
 
-    if (sectionIdFilter) {
-         return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;
-    }
+    const onDragOverNote = (e: React.DragEvent, targetId: string, sectionId: string) => {
+        e.preventDefault(); 
+        const draggedId = dragItemRef.current;
+        if (!draggedId || draggedId === targetId || dragTypeRef.current !== 'NOTE') return;
 
-    const activeSections = (board.sections && board.sections.length > 0) 
-        ? board.sections 
-        : [{ id: 'default', title: 'Group 1', locked: false, isContentBlurred: false, isHidden: false, isAnonymous: false, commentsEnabled: true, repliesEnabled: true, studentsCanDrag: false }];
-    
-    const addSection = () => {
-        const currentSections = (board.sections && board.sections.length > 0) ? board.sections : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
-        updateBoard({ sections: [...currentSections, { id: Math.random().toString(36).substr(2, 9), title: `Group ${currentSections.length + 1}` }] });
-    };
-    
-    const insertSectionAt = (index: number) => {
-        const currentSections = (board.sections && board.sections.length > 0) ? board.sections : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
-        const newSection = { id: Math.random().toString(36).substr(2, 9), title: `New Group` };
-        const newSectionsList = [...currentSections];
-        newSectionsList.splice(index, 0, newSection);
-        updateBoard({ sections: newSectionsList });
+        setLocalNotes(prev => {
+            const newNotes = [...prev];
+            const draggedIdx = newNotes.findIndex(n => n.id === draggedId);
+            if (draggedIdx === -1) return prev;
+            
+            const draggedItem = { ...newNotes[draggedIdx], sectionId };
+            newNotes.splice(draggedIdx, 1);
+            
+            const targetIdx = newNotes.findIndex(n => n.id === targetId);
+            newNotes.splice(targetIdx, 0, draggedItem);
+            return newNotes;
+        });
     };
 
     const onDragStart = (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => {
@@ -364,156 +268,67 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const onDragOverColumn = (e: React.DragEvent, sectionId: string) => {
         e.preventDefault();
         const draggedId = dragItemRef.current;
-        const type = dragTypeRef.current;
-        if (!draggedId) return;
-        if (type === 'COLUMN') {
-            if (draggedId === sectionId) return;
-            const currentSections = [...activeSections];
-            const draggedIndex = currentSections.findIndex(s => s.id === draggedId);
-            const targetIndex = currentSections.findIndex(s => s.id === sectionId);
-            if (draggedIndex !== -1 && targetIndex !== -1) {
-                const [removed] = currentSections.splice(draggedIndex, 1);
-                currentSections.splice(targetIndex, 0, removed);
-                updateBoard({ sections: currentSections });
-            }
-            return;
-        }
-        if (type === 'NOTE') {
-            const notesInCol = (boardContext.localNotes ?? notes).filter(n => n.sectionId === sectionId);
-            if (notesInCol.length === 0) {
-                 boardContext.setLocalNotes(prev => {
-                     if (prev.find(n => n.id === draggedId)?.sectionId === sectionId) return prev;
-                     return prev.map(n => n.id === draggedId ? { ...n, sectionId } : n);
-                 });
-                 return;
-            }
-            if (e.currentTarget === e.target || (e.target as HTMLElement).getAttribute('data-drop-zone')) {
-                 boardContext.setLocalNotes(prev => {
-                     const newNotes = [...prev];
-                     const idx = newNotes.findIndex(n => n.id === draggedId);
-                     if (idx === -1) return prev;
-                     const item = newNotes[idx];
-                     const sectionNotes = newNotes.filter(n => n.sectionId === sectionId);
-                     if (sectionNotes.length > 0 && sectionNotes[sectionNotes.length - 1].id === draggedId) return prev;
-                     newNotes.splice(idx, 1);
-                     item.sectionId = sectionId;
-                     let lastNoteIdx = -1;
-                     for(let i = newNotes.length -1; i >= 0; i--) {
-                         if (newNotes[i].sectionId === sectionId) {
-                             lastNoteIdx = i;
-                             break;
-                         }
-                     }
-                     if (lastNoteIdx > -1) newNotes.splice(lastNoteIdx + 1, 0, item);
-                     else newNotes.push(item);
-                     return newNotes;
-                 });
-            }
-        }
+        if (!draggedId || dragTypeRef.current !== 'NOTE') return;
+
+        setLocalNotes(prev => {
+            const currentItem = prev.find(n => n.id === draggedId);
+            if (currentItem?.sectionId === sectionId) return prev;
+            return prev.map(n => n.id === draggedId ? { ...n, sectionId } : n);
+        });
     };
 
     const onDrop = async (e: React.DragEvent, sectionId: string) => {
         e.preventDefault();
         const draggedId = dragItemRef.current;
-        const type = dragTypeRef.current;
-        if (!draggedId) return;
-        if (type === 'NOTE') {
-            const sectionNotes = (boardContext.localNotes ?? notes).filter(n => n.sectionId === sectionId);
-            const newIndex = sectionNotes.findIndex(n => n.id === draggedId);
-            const prevNote = newIndex > 0 ? sectionNotes[newIndex - 1] : null;
-            const nextNote = newIndex < sectionNotes.length - 1 ? sectionNotes[newIndex + 1] : null;
-            let newCreatedAt = Date.now();
-            if (prevNote && nextNote) newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
-            else if (prevNote) newCreatedAt = prevNote.createdAt - 60000; 
-            else if (nextNote) newCreatedAt = nextNote.createdAt + 60000; 
-            await updateNote(draggedId, { sectionId: sectionId, createdAt: newCreatedAt });
+        if (!draggedId || dragTypeRef.current !== 'NOTE') return;
+
+        const finalNote = localNotes.find(n => n.id === draggedId);
+        if (finalNote) {
+            await updateNote(draggedId, { sectionId: sectionId, createdAt: finalNote.createdAt });
         }
-        setDraggingId(null);
-        setDraggingType(null);
-        dragItemRef.current = null;
-        dragTypeRef.current = null;
+        onDragEnd(e);
     };
 
-    // --- NEW GROUPING LOGIC ---
-    const columnGroups = board.columnGroups || [];
-    const sectionsById = new Map(activeSections.map(s => [s.id, s]));
-    const renderedElements: (Section | ColumnGroup)[] = [];
-    const processedSectionIds = new Set<string>();
+    if (sectionIdFilter) {
+         return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;
+    }
 
-    activeSections.forEach(section => {
-        if (processedSectionIds.has(section.id)) return;
-
-        if (section.groupId) {
-            const group = columnGroups.find(g => g.id === section.groupId);
-            if (group) {
-                renderedElements.push(group);
-                group.columnIds.forEach(id => processedSectionIds.add(id));
-            } else {
-                renderedElements.push(section);
-                processedSectionIds.add(section.id);
-            }
-        } else {
-            renderedElements.push(section);
-            processedSectionIds.add(section.id);
-        }
-    });
+    const activeSections = board.sections || [];
     
+    const addSection = () => {
+        const newSection = { id: Math.random().toString(36).substr(2, 9), title: `Group ${activeSections.length + 1}` };
+        updateBoard({ sections: [...activeSections, newSection] });
+    };
+    
+    const insertSectionAt = (index: number) => {
+        const newSection = { id: Math.random().toString(36).substr(2, 9), title: `New Group` };
+        const newSectionsList = [...activeSections];
+        newSectionsList.splice(index, 0, newSection);
+        updateBoard({ sections: newSectionsList });
+    };
+
     return (
         <div className="flex h-full overflow-x-auto gap-2 p-6 items-start pt-4">
-            <extendedBoardContext.Provider value={extendedBoardContext}>
-                {renderedElements.map((item, idx) => {
-                    if ('columnIds' in item) { // It's a ColumnGroup
-                        const group = item as ColumnGroup;
-                        const columnsToRender = group.columnIds.map(id => sectionsById.get(id)).filter(Boolean) as Section[];
-                        
-                        return (
-                            <div key={group.id} className="flex flex-col gap-3 p-3 rounded-2xl bg-black/5 dark:bg-white/5">
-                                <h2 className="font-bold text-xl px-2">{group.title}</h2>
-                                <div className="flex gap-2 items-start">
-                                    {columnsToRender.map((col, colIdx) => (
-                                        <Column 
-                                            key={col.id}
-                                            section={col}
-                                            isStudent={isStudent}
-                                            onDragStart={onDragStart}
-                                            onDragOverColumn={onDragOverColumn}
-                                            onDrop={onDrop}
-                                            insertSectionAt={insertSectionAt}
-                                            idx={activeSections.findIndex(s => s.id === col.id)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    } else { // It's a Section
-                        const section = item as Section;
-                        return (
-                             <Column 
-                                key={section.id}
-                                section={section}
-                                isStudent={isStudent}
-                                onDragStart={onDragStart}
-                                onDragOverColumn={onDragOverColumn}
-                                onDrop={onDrop}
-                                insertSectionAt={insertSectionAt}
-                                idx={activeSections.findIndex(s => s.id === section.id)}
-                            />
-                        );
-                    }
-                })}
-            </extendedBoardContext.Provider>
+            {activeSections.map((section, idx) => (
+                <Column 
+                    key={section.id}
+                    section={section}
+                    isStudent={isStudent}
+                    onDragStart={onDragStart}
+                    onDragOverColumn={onDragOverColumn}
+                    onDrop={onDrop}
+                    insertSectionAt={insertSectionAt}
+                    idx={idx}
+                    localNotes={localNotes}
+                    draggingId={draggingId}
+                    draggingType={draggingType}
+                    onDragOverNote={onDragOverNote}
+                    onDragEnd={onDragEnd}
+                    handleAutoScroll={handleAutoScroll}
+                />
+            ))}
             
             {canManageBoard && (
                 <div className="flex items-center h-full px-4">
                     <button 
-                        onClick={addSection} 
-                        className="w-16 h-full max-h-[600px] bg-white/50 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center gap-4 text-slate-500 dark:text-gray-400 border-2 border-dashed border-slate-300 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 transition-colors font-bold hover:w-32 group"
-                    >
-                        <IconPlus size={24} className="group-hover:scale-125 transition-transform" />
-                        <span className="hidden group-hover:block whitespace-nowrap text-sm animate-in fade-in">Add Group</span>
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-};
+                        onClick={addSection}
