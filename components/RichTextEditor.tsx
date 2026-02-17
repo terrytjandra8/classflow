@@ -169,14 +169,12 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         const onImageClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             if (target.tagName !== 'IMG') {
-                // Remove active class from all images if clicking outside
                 editor.querySelectorAll('img.resizable-active').forEach(img => {
                     img.classList.remove('resizable-active');
                 });
                 return;
             }
             
-            // Toggle active state on the clicked image
             const isActive = target.classList.contains('resizable-active');
             editor.querySelectorAll('img.resizable-active').forEach(img => {
                 img.classList.remove('resizable-active');
@@ -190,9 +188,12 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             const target = e.target as HTMLElement;
             if (!target.classList.contains('resizer')) return;
 
-            e.preventDefault(); // Prevent text selection
+            e.preventDefault();
             
-            const img = (target.parentNode as HTMLElement).querySelector('img');
+            const parent = target.parentElement;
+            if (!parent) return;
+
+            const img = parent.querySelector('img');
             if (!img) return;
 
             const startX = e.pageX;
@@ -214,8 +215,6 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 if (handle?.includes('top')) newHeight = startHeight - dY;
 
                 img.style.width = `${newWidth > 20 ? newWidth : 20}px`;
-                // If aspect ratio is to be maintained, adjust height based on width change
-                // For free-form resize, remove the line below
                 img.style.height = 'auto'; 
             };
 
@@ -231,29 +230,27 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         };
 
         editor.addEventListener('click', onImageClick);
-        // Wrap images with resizers dynamically
+
         const observer = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
-                    if (node instanceof HTMLImageElement && !node.parentNode.classList.contains('resizable-container')) {
-                        const container = document.createElement('div');
-                        container.className = 'resizable-container';
-                        container.style.position = 'relative';
-                        container.style.display = 'inline-block'; // Fit the image size
+                    if (node instanceof HTMLImageElement) {
+                        const parent = node.parentNode;
+                        if (parent instanceof HTMLElement && !parent.classList.contains('resizable-container')) {
+                            const container = document.createElement('div');
+                            container.className = 'resizable-container';
+                            
+                            parent.insertBefore(container, node);
+                            container.appendChild(node);
 
-                        node.parentNode?.insertBefore(container, node);
-                        container.appendChild(node);
-
-                        const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-                        handles.forEach(handle => {
-                            const resizer = document.createElement('div');
-                            resizer.className = `resizer ${handle}`;
-                            resizer.dataset.handle = handle;
-                            container.appendChild(resizer);
-                        });
-
-                        // Ensure image has relative positioning for z-index to work
-                        node.style.position = 'relative';
+                            const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+                            handles.forEach(handle => {
+                                const resizer = document.createElement('div');
+                                resizer.className = `resizer ${handle}`;
+                                resizer.dataset.handle = handle;
+                                container.appendChild(resizer);
+                            });
+                        }
                     }
                 });
             });
@@ -276,11 +273,8 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 .rich-text-content sub { vertical-align: sub; font-size: smaller; }
                 .rich-text-content sup { vertical-align: super; font-size: smaller; }
                 .rich-text-content .resizable-container { display: inline-block; position: relative; line-height: 0; }
-                .rich-text-content img { max-width: 100%; border-radius: 4px; }
+                .rich-text-content img { max-width: 100%; border-radius: 4px; vertical-align: middle; }
                 
-                .rich-text-content img.resizable-active + .resizer {
-                    display: block;
-                }
                 .resizer {
                     position: absolute;
                     width: 12px;
@@ -288,13 +282,17 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                     background: #007aff;
                     border: 2px solid white;
                     border-radius: 50%;
-                    display: none; /* Hide by default */
+                    display: none;
                     z-index: 10;
                 }
-                .resizable-container:hover .resizer, .resizable-active + .resizer {
+                
+                .resizable-container:hover .resizer, 
+                .rich-text-content img.resizable-active + .resizer,
+                .rich-text-content img.resizable-active ~ .resizer {
                     display: block;
                 }
-                img.resizable-active {
+                
+                .rich-text-content img.resizable-active {
                    outline: 2px solid #007aff;
                 }
 
