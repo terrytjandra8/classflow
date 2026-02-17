@@ -1,30 +1,24 @@
 import { supabase } from './supabaseClient';
 import { Database } from '../types/db';
 import { SUPER_ADMIN_EMAIL } from '../components/Dashboard/constants';
-import { Profile } from '../types';
+import { Profile, UserPreferences } from '../types';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
-export interface UserPreferences {
-    savedColors?: string[];
-    savedGradients?: string[];
-}
-
-const mapProfile = (dbData: ProfileRow): Profile => {
-    const data: any = dbData;
+const mapProfile = (data: any): Profile => {
     return {
-        id: data.id,
-        email: data.email || '',
-        fullName: data.full_name || 'Unknown',
-        avatarUrl: data.avatar_url || '',
-        role: (data.role as 'student' | 'teacher') || 'student',
-        enrolledClasses: data.enrolled_classes || [],
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        preferences: data.preferences as any,
-        gradeLevel: data.grade_level || undefined,
+      id: data.id,
+      fullName: data.full_name,
+      avatarUrl: data.avatar_url,
+      gradeLevel: data.grade_level,
+      enrolledClasses: data.enrolled_classes || [],
+      email: data.email,
+      role: data.role,
+      preferences: data.preferences,
+      updatedAt: data.updated_at,
+      createdAt: data.created_at,
     };
-}
+};
 
 export const profileService = {
     async getCurrentProfile(): Promise<Profile | null> {
@@ -40,11 +34,12 @@ export const profileService = {
         const isSuperAdmin = user.email?.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase();
 
         if (data) {
-            if (isSuperAdmin && data.role !== 'teacher') {
+            const profileData: any = data;
+            if (isSuperAdmin && profileData.role !== 'teacher') {
                 await supabase.from('profiles').update({ role: 'teacher' }).eq('id', user.id);
-                data.role = 'teacher';
+                profileData.role = 'teacher';
             }
-            return mapProfile(data as ProfileRow);
+            return mapProfile(profileData);
         }
         
         if (user) {
@@ -52,16 +47,16 @@ export const profileService = {
             const metaAvatar = user.user_metadata.avatar_url;
             const role = isSuperAdmin ? 'teacher' : 'student';
             
-            const newProfile: ProfileRow = {
+            const newProfile: any = {
                 id: user.id,
                 email: user.email!,
                 full_name: metaName,
                 avatar_url: metaAvatar,
                 role: role,
                 created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
                 enrolled_classes: [],
                 preferences: {},
-                updated_at: new Date().toISOString(),
                 grade_level: null
             };
             
@@ -84,6 +79,7 @@ export const profileService = {
         if (updates.role) snakeCaseUpdates.role = updates.role;
         if (updates.enrolledClasses) snakeCaseUpdates.enrolled_classes = updates.enrolledClasses;
         if (updates.preferences) snakeCaseUpdates.preferences = updates.preferences;
+        if (updates.gradeLevel) snakeCaseUpdates.grade_level = updates.gradeLevel;
 
         const { error } = await supabase.from('profiles').update(snakeCaseUpdates).eq('id', userId);
         if (error) throw error;
