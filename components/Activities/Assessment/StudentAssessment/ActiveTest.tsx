@@ -1,7 +1,7 @@
 
-import React, { useState, memo, useCallback, useMemo } from 'react';
+import React, { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
-import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Save } from 'lucide-react';
+import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript } from 'lucide-react';
 import { DrawingCanvas } from '../../../ui/DrawingCanvas';
 import { supabase } from '../../../../services/supabaseClient';
 import { parseMath } from '../../../../utils/mappers';
@@ -59,7 +59,7 @@ const QuestionItem = memo(({
     }
 
     const isEssay = q.type === 'essay';
-    const isDrawing = isEssay && answer && answer.startsWith('http');
+    const isDrawing = isEssay && (answer?.startsWith('http') || answer?.startsWith('blob'));
     const wc = isEssay && !isDrawing ? countQualityWords(answer || '') : 0;
     const rawWc = isEssay && !isDrawing ? (answer || '').trim().split(/\s+/).filter(w => w.length > 0).length : 0;
     const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5);
@@ -202,6 +202,12 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
+    const [drawingSaveStatus, setDrawingSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    
+    // State to hold the drawing blob while the modal is open. It does not trigger main component re-renders.
+    const [liveDrawingBlob, setLiveDrawingBlob] = useState<Blob | null>(null);
+    // State to hold the URL from the last successful background save.
+    const [lastSavedUrl, setLastSavedUrl] = useState<string | null>(null);
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
 
@@ -216,40 +222,84 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         setTimeout(() => setIsSyncing(false), 800);
     };
 
-    const debouncedSave = useMemo(() => 
-        debounce(async (blob: Blob, qId: string) => {
-            try {
-                const currentAnswer = answers[qId];
-                let fileName;
-
-                if (currentAnswer && currentAnswer.startsWith('http')) {
-                    const urlParts = currentAnswer.split('/');
-                    fileName = urlParts[urlParts.length - 1].split('?')[0];
-                } else {
-                    fileName = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
-                }
-
-                const { error } = await supabase.storage.from('uploads').upload(fileName, blob, { upsert: true });
-
-                if (error) throw error;
-
-                const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-                
-                const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
-
-                onAnswerChange(qId, finalUrl, true);
-            } catch (e) {
-                console.error("Drawing upload failed", e);
+    // This function saves the blob to Supabase and updates the lastSavedUrl state.
+    // It does NOT call onAnswerChange, thus preventing any re-renders of the main page.
+    const backgroundSaveDrawing = useCallback(async (blob: Blob, qId: string) => {
+        setDrawingSaveStatus('saving');
+        try {
+            const currentAnswer = answers[qId];
+            let fileName;
+            if (lastSavedUrl) { // If we have a URL from a previous save in this session, re-use the filename
+                const urlParts = lastSavedUrl.split('/');
+                fileName = urlParts[urlParts.length - 1].split('?')[0];
+            } else if (currentAnswer && currentAnswer.startsWith('http') && !currentAnswer.startsWith('blob:')) {
+                const urlParts = currentAnswer.split('/');
+                fileName = urlParts[urlParts.length - 1].split('?')[0];
+            } else {
+                fileName = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
             }
-        }, 2500)
-    , [answers, onAnswerChange]);
 
-    const handleDrawEnd = useCallback((blob: Blob) => {
-        if (activeDrawingQId) {
-            debouncedSave(blob, activeDrawingQId);
+            const { error } = await supabase.storage.from('uploads').upload(fileName, blob, { upsert: true });
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
+            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
+
+            setLastSavedUrl(finalUrl);
+            setDrawingSaveStatus('saved');
+        } catch (e) {
+            console.error("Background drawing upload failed", e);
+            setDrawingSaveStatus('error');
         }
-    }, [activeDrawingQId, debouncedSave]);
+    }, [answers, lastSavedUrl]);
 
+    // Create a debounced version of the background save function.
+    const debouncedBackgroundSave = useMemo(() => 
+        debounce((blob: Blob, qId: string) => {
+            backgroundSaveDrawing(blob, qId);
+        }, 2000) // 2-second debounce interval
+    , [backgroundSaveDrawing]);
+
+    // This effect triggers the debounced save whenever the user has drawn something new.
+    useEffect(() => {
+        if (liveDrawingBlob && activeDrawingQId) {
+            debouncedBackgroundSave(liveDrawingBlob, activeDrawingQId);
+        }
+        // Cleanup function to cancel any pending saves when the component unmounts or dependencies change
+        return () => {
+            debouncedBackgroundSave.cancel();
+        };
+    }, [liveDrawingBlob, activeDrawingQId, debouncedBackgroundSave]);
+
+    // Called when the user closes the drawing modal.
+    const handleCloseDrawingModal = useCallback(() => {
+        debouncedBackgroundSave.cancel(); // Cancel any pending background saves
+
+        // The final drawing to be saved is in liveDrawingBlob.
+        // If a background save has already completed, its URL is in lastSavedUrl.
+        const finalUrlToCommit = lastSavedUrl;
+        const finalBlobToCommit = liveDrawingBlob;
+        const qId = activeDrawingQId;
+
+        if (qId) {
+            if (finalUrlToCommit) {
+                // If a background save completed, we can use its URL.
+                // We also check if the live blob is newer than the saved one, but for simplicity, we'll just save the latest blob.
+                onAnswerChange(qId, finalUrlToCommit, true);
+            } else if (finalBlobToCommit) {
+                // If user closes before any background save, do one final save.
+                const tempUrl = URL.createObjectURL(finalBlobToCommit);
+                onAnswerChange(qId, tempUrl, false); // Optimistic update
+                backgroundSaveDrawing(finalBlobToCommit, qId).then(() => URL.revokeObjectURL(tempUrl));
+            }
+        }
+
+        // Reset all modal-related states
+        setActiveDrawingQId(null);
+        setLiveDrawingBlob(null);
+        setLastSavedUrl(null);
+        setDrawingSaveStatus('idle');
+    }, [activeDrawingQId, liveDrawingBlob, lastSavedUrl, onAnswerChange, backgroundSaveDrawing, debouncedBackgroundSave]);
 
     const activeDrawingInitialData = activeDrawingQId ? answers[activeDrawingQId] : undefined;
 
@@ -406,16 +456,25 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 <PenTool size={18} />
                                 <h2 className="font-bold text-lg">Drawing Canvas</h2>
                             </div>
-                            <button 
-                                onClick={() => setActiveDrawingQId(null)}
-                                className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-                            >
-                                <X size={20}/>
-                            </button>
+                            <div className="flex items-center gap-3">
+                                 <div className={`text-xs flex items-center gap-2 transition-opacity ${drawingSaveStatus === 'idle' ? 'opacity-50' : 'opacity-100'}`}>
+                                    {drawingSaveStatus === 'idle' && <>Waiting for changes...</>}
+                                    {drawingSaveStatus === 'saving' && <><RefreshCcw size={14} className="animate-spin"/> Saving...</>}
+                                    {drawingSaveStatus === 'saved' && <><Check size={14} className="text-green-500"/> Saved</>}
+                                    {drawingSaveStatus === 'error' && <><AlertTriangle size={14} className="text-red-500"/> Error</>}
+                                </div>
+                                <button 
+                                    onClick={handleCloseDrawingModal}
+                                    className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                                >
+                                    <X size={20}/>
+                                </button>
+                            </div>
                          </div>
                          <div className="flex-1 bg-white relative p-1">
                             <DrawingCanvas 
-                                onDrawEnd={handleDrawEnd} 
+                                key={activeDrawingQId} // Using key to ensure canvas re-mounts for a new question
+                                onDrawEnd={setLiveDrawingBlob} 
                                 initialData={activeDrawingInitialData}
                             />
                          </div>
