@@ -1,11 +1,12 @@
 
 import React, { useState, memo } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
-import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock } from 'lucide-react';
+import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered } from 'lucide-react';
 import { DrawingCanvas } from '../../../ui/DrawingCanvas';
 import { supabase } from '../../../../services/supabaseClient';
 import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
+import { RichTextEditor, FormatState } from '../../../RichTextEditor';
 
 interface ActiveTestProps {
     boardTitle: string;
@@ -31,7 +32,7 @@ const formatTime = (seconds: number) => {
 };
 
 const QuestionItem = memo(({ 
-    q, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly
+    q, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly, config
 }: {
     q: AssessmentQuestion;
     answer: string;
@@ -40,7 +41,14 @@ const QuestionItem = memo(({
     setActiveDrawingQId: (id: string) => void;
     questionNumber: number;
     isReadOnly: boolean;
+    config: AssessmentConfig
 }) => {
+    const [activeFormats, setActiveFormats] = useState<FormatState>({
+        bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
+        subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
+        alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
+    });
+    
     if (q.type === 'section') {
         return (
             <div className="pt-8 pb-2 border-b border-white/10 mb-4">
@@ -60,6 +68,13 @@ const QuestionItem = memo(({
     const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
+
+    const handleCommand = (cmd: string) => {
+        document.execCommand(cmd, false);
+    }
+
+    const getBtnClass = (isActive: boolean) => 
+        `p-1.5 rounded transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`;
 
     return (
         <div className={`rounded-2xl p-6 shadow-lg transition-all ${isReadingMode ? 'bg-[#1a1a1a]/50 border border-white/5 opacity-80' : 'bg-[#1a1a1a] border border-white/10'}`}>
@@ -102,7 +117,7 @@ const QuestionItem = memo(({
                                 className="hidden"
                                 disabled={isReadingMode || isReadOnly}
                             />
-                            <span className="text-gray-200 select-none">{opt}</span>
+                            <div className="text-gray-200 select-none" dangerouslySetInnerHTML={{__html: parseMath(opt)}} />
                         </label>
                     ))}
                 </div>
@@ -141,17 +156,22 @@ const QuestionItem = memo(({
                     )}
 
                     {allowText && !isDrawing && (
-                        <div className="relative">
-                            <textarea 
+                        <div className={`relative bg-[#111] border rounded-xl focus-within:border-blue-500 transition-colors ${isReadingMode || isReadOnly ? 'border-transparent' : 'border-white/10'}`}>
+                             <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl">
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
+                                <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
+                            </div>
+                            <RichTextEditor 
                                 value={answer || ''}
-                                onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                                disabled={isReadingMode || isReadOnly}
-                                className={`w-full bg-[#111] border rounded-xl p-4 text-white outline-none min-h-[150px] leading-relaxed transition-colors ${
-                                    isReadingMode || isReadOnly ? 'border-transparent cursor-not-allowed opacity-50' : 
-                                    (isUnderWordLimit && answer ? 'border-amber-500/50 focus:border-amber-500' : 'border-white/10 focus:border-blue-500')
-                                }`}
+                                onChange={(val) => onAnswerChange(q.id, val)}
+                                onFormatChange={setActiveFormats}
+                                imageUploadDisabled={!config.allowStudentImages}
+                                className={`w-full bg-transparent p-4 text-white outline-none min-h-[150px] leading-relaxed transition-colors ${isReadingMode || isReadOnly ? 'cursor-not-allowed opacity-50' : ''}`}
                                 placeholder={isReadingMode ? "Reading time active..." : (isReadOnly ? "Question is locked." : "Type your answer here...")}
-                                onPaste={(e) => e.preventDefault()}
                             />
                             {isSpamming && (
                                 <div className="absolute bottom-4 right-4 text-xs font-bold text-red-500 flex items-center gap-1 bg-black/50 backdrop-blur px-2 py-1 rounded">
@@ -297,6 +317,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 setActiveDrawingQId={setActiveDrawingQId}
                                 questionNumber={questionNumber}
                                 isReadOnly={isQuestionReadOnly ?? false}
+                                config={config}
                             />
                         );
                     })}

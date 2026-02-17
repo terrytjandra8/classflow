@@ -177,6 +177,7 @@ export interface AssessmentConfig {
     status: AssessmentState;
     autoLockTime?: number | null; // New: Timestamp for auto-locking
     autoLiveTime?: number | null; // New: Timestamp for auto-start
+    allowStudentImages?: boolean;
 }
 
 export interface LessonStep {

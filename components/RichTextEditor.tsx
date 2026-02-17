@@ -5,18 +5,33 @@ import { supabase } from '../services/supabaseClient'; // Ensure this path is co
 export interface FormatState {
     bold: boolean;
     italic: boolean;
+    underline: boolean;
+    strikeThrough: boolean;
     list: boolean;
+    orderedList: boolean;
     subscript: boolean;
     superscript: boolean;
+    blockquote: boolean;
+    h1: boolean;
+    h2: boolean;
+    h3: boolean;
+    h4: boolean;
+    alignLeft: boolean;
+    alignCenter: boolean;
+    alignRight: boolean;
+    alignJustify: boolean;
 }
 
 export const getActiveFormat = (cmd: string, tags: string[] = []): boolean => {
     if (typeof document === 'undefined') return false;
-    if (document.queryCommandState(cmd)) return true;
+    if (cmd && document.queryCommandState(cmd)) return true;
+    
     const sel = window.getSelection();
     if (!sel || !sel.anchorNode) return false;
+
     let node: Node | null = sel.anchorNode;
     if (node.nodeType === 3) node = node.parentNode;
+
     if (node instanceof HTMLElement && tags.length > 0) {
         return node.closest(tags.join(',')) !== null;
     }
@@ -24,7 +39,7 @@ export const getActiveFormat = (cmd: string, tags: string[] = []): boolean => {
 };
 
 interface RichTextEditorProps {
-    id?: string; // Add id prop
+    id?: string;
     value: string;
     onChange: (html: string) => void;
     placeholder?: string;
@@ -34,14 +49,19 @@ interface RichTextEditorProps {
     onPaste?: (e: React.ClipboardEvent) => void;
     autoFocus?: boolean;
     style?: React.CSSProperties;
+    imageUploadDisabled?: boolean;
 }
 
 const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({ 
-    id, // Destructure id
-    value, onChange, placeholder, className, onKeyDown, onFormatChange, onPaste, autoFocus, style 
+    id, value, onChange, placeholder, className, onKeyDown, onFormatChange, onPaste, autoFocus, style, imageUploadDisabled = false 
 }) => {
     const editorRef = useRef<HTMLDivElement>(null);
-    const lastFormats = useRef<FormatState>({ bold: false, italic: false, list: false, subscript: false, superscript: false });
+    const lastFormats = useRef<FormatState>({
+        bold: false, italic: false, underline: false, strikeThrough: false,
+        list: false, orderedList: false, subscript: false, superscript: false,
+        blockquote: false, h1: false, h2: false, h3: false, h4: false,
+        alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
+    });
     const isInternalChange = useRef(false);
 
     useEffect(() => {
@@ -68,15 +88,44 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             if (!selection || !editorRef.current || !editorRef.current.contains(selection.anchorNode)) {
                 return;
             }
-            const newFormats = {
-                bold: getActiveFormat('bold', ['B', 'STRONG']),
-                italic: getActiveFormat('italic', ['I', 'EM']),
+
+            const getParentTag = (selection: Selection) => {
+                let node = selection.anchorNode;
+                if (node && node.nodeType === 3) node = node.parentNode;
+                while (node) {
+                    if (node.nodeName.match(/^(H[1-4]|P|DIV|BLOCKQUOTE)$/)) return node.nodeName;
+                    if ((node as HTMLElement).isContentEditable === false) break;
+                    node = node.parentNode;
+                }
+                return null;
+            }
+            
+            const parentTag = getParentTag(selection);
+
+            const newFormats: FormatState = {
+                bold: document.queryCommandState('bold'),
+                italic: document.queryCommandState('italic'),
+                underline: document.queryCommandState('underline'),
+                strikeThrough: document.queryCommandState('strikeThrough'),
                 list: document.queryCommandState('insertUnorderedList'),
-                subscript: getActiveFormat('subscript', ['SUB']),
-                superscript: getActiveFormat('superscript', ['SUP'])
+                orderedList: document.queryCommandState('insertOrderedList'),
+                subscript: document.queryCommandState('subscript'),
+                superscript: document.queryCommandState('superscript'),
+                blockquote: getActiveFormat('', ['BLOCKQUOTE']),
+                h1: parentTag === 'H1',
+                h2: parentTag === 'H2',
+                h3: parentTag === 'H3',
+                h4: parentTag === 'H4',
+                alignLeft: document.queryCommandState('justifyLeft'),
+                alignCenter: document.queryCommandState('justifyCenter'),
+                alignRight: document.queryCommandState('justifyRight'),
+                alignJustify: document.queryCommandState('justifyFull'),
             };
-            lastFormats.current = newFormats;
-            onFormatChange(newFormats);
+
+            if (JSON.stringify(lastFormats.current) !== JSON.stringify(newFormats)) {
+                lastFormats.current = newFormats;
+                onFormatChange(newFormats);
+            }
         }
     }, [onFormatChange]);
 
@@ -96,12 +145,15 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         if (onKeyDown) onKeyDown(e);
         if (e.ctrlKey || e.metaKey) {
             const key = e.key.toLowerCase();
-            if (['b', 'i', 'z', 'y'].includes(key)) e.preventDefault();
+            if (['b', 'i', 'u', 'z', 'y'].includes(key)) e.preventDefault();
+            
             if (key === 'b') document.execCommand('bold', false);
             else if (key === 'i') document.execCommand('italic', false);
+            else if (key === 'u') document.execCommand('underline', false);
             else if (key === 'z') document.execCommand(e.shiftKey ? 'redo' : 'undo', false);
             else if (key === 'y') document.execCommand('redo', false);
-            if (['b', 'i', 'z', 'y'].includes(key) && editorRef.current) {
+            
+            if (['b', 'i', 'u', 'z', 'y'].includes(key) && editorRef.current) {
                 isInternalChange.current = true;
                 onChange(editorRef.current.innerHTML);
                 checkFormats();
@@ -123,7 +175,7 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         const items = Array.from(e.clipboardData.items);
         const imageItem = items.find(item => item.type.startsWith('image'));
 
-        if (imageItem) {
+        if (imageItem && !imageUploadDisabled) {
             const file = imageItem.getAsFile();
             if (!file) return;
 
@@ -163,7 +215,6 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         }
     };
 
-    // Image resizing logic with handles
     useEffect(() => {
         if (!editorRef.current) return;
         const editor = editorRef.current;
@@ -207,14 +258,10 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
 
             const onMouseMove = (moveE: MouseEvent) => {
                 let newWidth = startWidth;
-                let newHeight = startHeight;
                 const dX = moveE.pageX - startX;
-                const dY = moveE.pageY - startY;
 
                 if (handle?.includes('right')) newWidth = startWidth + dX;
                 if (handle?.includes('left')) newWidth = startWidth - dX;
-                if (handle?.includes('bottom')) newHeight = startHeight + dY;
-                if (handle?.includes('top')) newHeight = startHeight - dY;
 
                 img.style.width = `${newWidth > 20 ? newWidth : 20}px`;
                 img.style.height = 'auto'; 
@@ -237,16 +284,13 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node instanceof HTMLImageElement) {
-                        const parent = node.parentNode;
-                        if (parent instanceof HTMLElement && !parent.classList.contains('resizable-container')) {
+                        if (!node.closest('.resizable-container')) {
                             const container = document.createElement('div');
                             container.className = 'resizable-container';
-                            
-                            parent.insertBefore(container, node);
+                            node.parentNode?.insertBefore(container, node);
                             container.appendChild(node);
 
-                            const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-                            handles.forEach(handle => {
+                            ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handle => {
                                 const resizer = document.createElement('div');
                                 resizer.className = `resizer ${handle}`;
                                 resizer.dataset.handle = handle;
@@ -274,37 +318,19 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             <style>{`
                 .rich-text-content sub { vertical-align: sub; font-size: smaller; }
                 .rich-text-content sup { vertical-align: super; font-size: smaller; }
+                .rich-text-content blockquote { border-left: 4px solid #4a5568; margin-left: 1rem; padding-left: 1rem; color: #a0aec0; font-style: italic; }
                 .rich-text-content .resizable-container { display: inline-block; position: relative; line-height: 0; }
                 .rich-text-content img { max-width: 100%; border-radius: 4px; vertical-align: middle; }
-                
-                .resizer {
-                    position: absolute;
-                    width: 12px;
-                    height: 12px;
-                    background: #007aff;
-                    border: 2px solid white;
-                    border-radius: 50%;
-                    display: none;
-                    z-index: 10;
-                }
-                
-                .resizable-container:hover .resizer, 
-                .rich-text-content img.resizable-active + .resizer,
-                .rich-text-content img.resizable-active ~ .resizer {
-                    display: block;
-                }
-                
-                .rich-text-content img.resizable-active {
-                   outline: 2px solid #007aff;
-                }
-
+                .resizer { position: absolute; width: 12px; height: 12px; background: #007aff; border: 2px solid white; border-radius: 50%; display: none; z-index: 10; }
+                .resizable-container:hover .resizer, .rich-text-content img.resizable-active + .resizer, .rich-text-content img.resizable-active ~ .resizer { display: block; }
+                .rich-text-content img.resizable-active { outline: 2px solid #007aff; }
                 .resizer.top-left { top: -6px; left: -6px; cursor: nwse-resize; }
                 .resizer.top-right { top: -6px; right: -6px; cursor: nesw-resize; }
                 .resizer.bottom-left { bottom: -6px; left: -6px; cursor: nesw-resize; }
                 .resizer.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
             `}</style>
             <div
-                id={id} // Apply id
+                id={id}
                 ref={editorRef}
                 contentEditable
                 className={`rich-text-content outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500 cursor-text overflow-auto break-words whitespace-pre-wrap ${className}`}

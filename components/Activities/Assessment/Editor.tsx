@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AssessmentQuestion, Board } from '../../../types';
-import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, Subscript, Superscript, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText, UploadCloud, Loader2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, Subscript, Superscript, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText, UploadCloud, Loader2, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4 } from 'lucide-react';
 import { useSortableList } from '../../../src/logic/dnd/useSortableList';
 import { RichTextEditor, FormatState, getActiveFormat } from '../../RichTextEditor';
 import { DebouncedInput } from '../../ui/DebouncedInput';
@@ -16,7 +16,11 @@ interface EditorProps {
 export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [activeEditor, setActiveEditor] = useState<string | null>(null);
-    const [activeFormats, setActiveFormats] = useState<FormatState>({ bold: false, italic: false, list: false, subscript: false, superscript: false });
+    const [activeFormats, setActiveFormats] = useState<FormatState>({
+        bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
+        subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
+        alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
+    });
     const [isUploading, setIsUploading] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,33 +73,47 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
 
     const getQuestionNumber = (index: number) => questions.slice(0, index + 1).filter(q => q.type !== 'section').length;
 
-    const handleCommand = (cmd: string) => {
-        document.execCommand(cmd, false, undefined);
-
-        if (!activeEditor) return;
-        const editor = document.getElementById(activeEditor);
-        if (!editor) return;
-
-        const html = editor.innerHTML;
-        const [qId, field, optIdx] = activeEditor.split('-');
-        const question = questions.find(q => q.id === qId);
-        if (!question) return;
-
-        if (field === 'options' && optIdx) {
-            const newOptions = [...(question.options || [])];
-            newOptions[parseInt(optIdx)] = html;
-            updateQuestion(qId, { options: newOptions });
-        } else if (field === 'text' || field === 'notes') {
-            updateQuestion(qId, { [field]: html });
+    const handleCommand = (cmd: string, value?: string) => {
+        document.execCommand(cmd, false, value);
+        if (activeEditor) {
+            const editor = document.getElementById(activeEditor);
+            if (editor) {
+                const html = editor.innerHTML;
+                const [qId, field, optIdx] = activeEditor.split('-');
+                if (field === 'options' && optIdx) {
+                    const q = questions.find(q => q.id === qId);
+                    const newOptions = [...(q?.options || [])];
+                    newOptions[parseInt(optIdx)] = html;
+                    updateQuestion(qId, { options: newOptions });
+                } else {
+                    updateQuestion(qId, { [field]: html });
+                }
+            }
         }
-
-        setActiveFormats({
-            bold: getActiveFormat('bold', ['B', 'STRONG']),
-            italic: getActiveFormat('italic', ['I', 'EM']),
+        // Manually trigger format check after command
+        const selection = window.getSelection();
+        if (selection) {
+          const parentTag = (selection.anchorNode?.parentNode as HTMLElement)?.tagName;
+          setActiveFormats({
+            bold: document.queryCommandState('bold'),
+            italic: document.queryCommandState('italic'),
+            underline: document.queryCommandState('underline'),
+            strikeThrough: document.queryCommandState('strikeThrough'),
             list: document.queryCommandState('insertUnorderedList'),
-            subscript: getActiveFormat('subscript', ['SUB']),
-            superscript: getActiveFormat('superscript', ['SUP'])
-        });
+            orderedList: document.queryCommandState('insertOrderedList'),
+            subscript: document.queryCommandState('subscript'),
+            superscript: document.queryCommandState('superscript'),
+            blockquote: getActiveFormat('', ['BLOCKQUOTE']),
+            h1: parentTag === 'H1',
+            h2: parentTag === 'H2',
+            h3: parentTag === 'H3',
+            h4: parentTag === 'H4',
+            alignLeft: document.queryCommandState('justifyLeft'),
+            alignCenter: document.queryCommandState('justifyCenter'),
+            alignRight: document.queryCommandState('justifyRight'),
+            alignJustify: document.queryCommandState('justifyFull'),
+          });
+        }
     };
 
     const handleImageUpload = async (file: File) => {
@@ -135,19 +153,53 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
 
     const renderToolbar = (editorKey: string) => {
         if (activeEditor !== editorKey) return null;
+        
+        const formatBlock = (tag: string) => handleCommand('formatBlock', `<${tag}>`);
+        
         return (
-            <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
+            <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
+                {/* Undo/Redo */}
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('undo'); }} className={getBtnClass(false)} title="Undo (Ctrl+Z)"><Undo size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('redo'); }} className={getBtnClass(false)} title="Redo (Ctrl+Y)"><Redo size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                {/* Headings */}
+                <button onMouseDown={e => { e.preventDefault(); formatBlock('h1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); formatBlock('h2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); formatBlock('h3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); formatBlock('h4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
+                <div className="w-px h-4 bg-white/10 mx-1"></div>
+                
+                {/* Basic Formatting */}
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('strikeThrough'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Strikethrough"><Strikethrough size={14}/></button>
+                <div className="w-px h-4 bg-white/10 mx-1"></div>
+                
+                {/* Sub/Superscript */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                {/* Lists & Quote */}
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List (Ctrl+Shift+8)"><ListIcon size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><List size={14} /></button>
+                <button onMouseDown={e => { e.preventDefault(); formatBlock('blockquote'); }} className={getBtnClass(activeFormats.blockquote)} title="Blockquote"><Quote size={14}/></button>
+                <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                {/* Alignment */}
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyLeft'); }} className={getBtnClass(activeFormats.alignLeft)} title="Align Left"><AlignLeft size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyCenter'); }} className={getBtnClass(activeFormats.alignCenter)} title="Align Center"><AlignCenter size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyRight'); }} className={getBtnClass(activeFormats.alignRight)} title="Align Right"><AlignRight size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyFull'); }} className={getBtnClass(activeFormats.alignJustify)} title="Justify"><AlignJustify size={14}/></button>
+                <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                {/* Image Upload */}
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
                 <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isUploading === editorKey ? 'text-yellow-500' : ''}`} title="Upload Image" disabled={!!isUploading}>
                     {isUploading === editorKey ? <Loader2 size={14} className="animate-spin"/> : <Image size={14}/>}
                 </button>
-                <span className="ml-auto text-[9px] text-gray-600 font-medium">Rich Text Enabled</span>
             </div>
         );
     };
