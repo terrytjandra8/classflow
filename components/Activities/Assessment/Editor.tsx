@@ -13,32 +13,6 @@ interface EditorProps {
     onUpdateBoard: (updates: Partial<Board>) => void;
 }
 
-// A specific Rich Text Editor component for the Question Editor
-const QuestionRichTextEditor = ({ value, onChange, placeholder, className }: any) => {
-    const [currentValue, setCurrentValue] = useState(value);
-
-    useEffect(() => {
-        if (value !== currentValue) {
-            setCurrentValue(value);
-        }
-    }, [value]);
-
-    const handleChange = (html: string) => {
-        setCurrentValue(html);
-        onChange(html); // Directly call the passed onChange
-    };
-
-    return (
-        <RichTextEditor 
-            value={currentValue} 
-            onChange={handleChange}
-            className={className}
-            placeholder={placeholder}
-        />
-    );
-};
-
-
 export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [activeEditor, setActiveEditor] = useState<string | null>(null);
@@ -95,24 +69,33 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
 
     const getQuestionNumber = (index: number) => questions.slice(0, index + 1).filter(q => q.type !== 'section').length;
 
-    const execCmd = (cmd: string) => {
+    const handleCommand = (cmd: string) => {
         document.execCommand(cmd, false, undefined);
-        if (activeEditor) {
-            const editor = document.getElementById(activeEditor);
-            if (editor) {
-                const [qId, field, optIdx] = activeEditor.split('-');
-                let html = editor.innerHTML;
-                
-                if (field === 'options' && optIdx) {
-                    const question = questions.find(q => q.id === qId);
-                    const newOptions = [...(question?.options || [])];
-                    newOptions[parseInt(optIdx)] = html;
-                    updateQuestion(qId, { options: newOptions });
-                } else {
-                    updateQuestion(qId, { [field]: html });
-                }
-            }
+
+        if (!activeEditor) return;
+        const editor = document.getElementById(activeEditor);
+        if (!editor) return;
+
+        const html = editor.innerHTML;
+        const [qId, field, optIdx] = activeEditor.split('-');
+        const question = questions.find(q => q.id === qId);
+        if (!question) return;
+
+        if (field === 'options' && optIdx) {
+            const newOptions = [...(question.options || [])];
+            newOptions[parseInt(optIdx)] = html;
+            updateQuestion(qId, { options: newOptions });
+        } else if (field === 'text' || field === 'notes') {
+            updateQuestion(qId, { [field]: html });
         }
+
+        setActiveFormats({
+            bold: getActiveFormat('bold', ['B', 'STRONG']),
+            italic: getActiveFormat('italic', ['I', 'EM']),
+            list: document.queryCommandState('insertUnorderedList'),
+            subscript: getActiveFormat('subscript', ['SUB']),
+            superscript: getActiveFormat('superscript', ['SUP'])
+        });
     };
 
     const handleImageUpload = async (file: File) => {
@@ -128,7 +111,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             const imageHtml = `<img src="${publicUrl}" style="max-width: 100%; border-radius: 8px;"/>`;
             document.execCommand('insertHTML', false, imageHtml);
             
-            // Trigger update after execCommand
             const editor = document.getElementById(activeEditor);
             if (editor) {
                 const [qId, field, optIdx] = activeEditor.split('-');
@@ -155,11 +137,11 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         if (activeEditor !== editorKey) return null;
         return (
             <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
-                <button onMouseDown={e => { e.preventDefault(); execCmd('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); execCmd('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-                <button onMouseDown={e => { e.preventDefault(); execCmd('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); execCmd('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
                 <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isUploading === editorKey ? 'text-yellow-500' : ''}`} title="Upload Image" disabled={!!isUploading}>
