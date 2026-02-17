@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Board, Note } from '../../types';
+import { Board, Note, Profile } from '../../types';
 import { LessonManager } from '../LessonEngine/LessonManager';
 
 interface LessonLayoutProps {
@@ -19,8 +19,9 @@ interface LessonLayoutProps {
     onOpenSettings: () => void;
     onOpenShare?: () => void; 
     isPresentationMode?: boolean; // New prop
+    userProfile: Profile;
 }
 
-export const LessonLayout: React.FC<LessonLayoutProps> = (props) => {
-    return <LessonManager {...props} />;
+export const LessonLayout: React.FC<LessonLayoutProps> = ({ userProfile, ...props }) => {
+    return <LessonManager {...props} profile={userProfile} />;
 };

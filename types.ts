@@ -20,7 +20,7 @@ export type NewPostPosition = 'first' | 'last';
 export type ColorScheme = string;
 export type Font = string;
 export type RecipeStatus = string;
-export type ParticipantStatus = 'Submitted' | 'Graded' | 'In Progress' | 'Revising' | 'Ready' | 'Disqualified' | 'finished';
+export type ParticipantStatus = "Submitted" | "Graded" | "In Progress" | "Revising" | "Ready" | "Disqualified" | "finished" | "offline" | "online" | "disqualified";
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 

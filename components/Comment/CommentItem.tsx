@@ -48,18 +48,18 @@ export const CommentItem: React.FC<CommentItemProps> = ({
 
     const CHAR_LIMIT = 120;
     const isLong = comment.content.length > CHAR_LIMIT;
-    const isCommentLiked = comment.liked_by?.includes(userId || '');
+    const isCommentLiked = comment.likedBy?.includes(userId || '');
     const hasReplies = comment.replies && comment.replies.length > 0;
     
-    const canManage = isTeacher || (userId && comment.author_id === userId);
+    const canManage = isTeacher || (userId && comment.authorId === userId);
     const canReply = repliesEnabled !== false && !isReadOnly; 
-    const isAuthor = userId === comment.author_id;
+    const isAuthor = userId === comment.authorId;
 
     const shouldMask = BoardRules.shouldAnonymizeComment(board, isSectionAnonymous, comment, userId, !!isStudent, !!isPresentationMode);
-    const anonymousIdentity = shouldMask && comment.author_id ? getAnonymousIdentity(comment.author_id) : null;
+    const anonymousIdentity = shouldMask && comment.authorId ? getAnonymousIdentity(comment.authorId) : null;
     
-    const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : comment.author_name;
-    const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : comment.author_avatar;
+    const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : comment.authorName;
+    const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : comment.authorAvatar;
 
     const MAX_INDENT_DEPTH = 3;
     const shouldIndent = depth < MAX_INDENT_DEPTH;
@@ -112,13 +112,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <div className={`p-3 rounded-2xl relative border transition-colors shadow-sm ${bgClass}`}>
                 <div className="flex items-center justify-between mb-1 gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                        <Avatar src={displayAvatar as string} name={displayName || 'User'} size="xs" isTeacher={comment.author_role === 'teacher'} />
+                        <Avatar src={displayAvatar as string} name={displayName || 'User'} size="xs" isTeacher={comment.authorRole === 'teacher'} />
                         <Tooltip content={displayName} position="top" className="min-w-0">
-                            <span className={`font-bold flex items-center gap-1 truncate ${(comment.author_role === 'teacher') ? (isColoredCard ? 'text-pink-600' : 'text-pink-600 dark:text-pink-400') : authorTextClass}`}>
+                            <span className={`font-bold flex items-center gap-1 truncate ${(comment.authorRole === 'teacher') ? (isColoredCard ? 'text-pink-600' : 'text-pink-600 dark:text-pink-400') : authorTextClass}`}>
                                 {displayName}
                                 {shouldMask && isAuthor && <span className="opacity-60 text-[9px] font-normal ml-0.5">(You)</span>}
                                 {shouldMask && <Ghost size={8} className="text-gray-400" />}
-                                {(comment.author_role === 'teacher') && <ShieldCheck size={10} className="fill-pink-100 text-pink-600 shrink-0" />}
+                                {(comment.authorRole === 'teacher') && <ShieldCheck size={10} className="fill-pink-100 text-pink-600 shrink-0" />}
                             </span>
                         </Tooltip>
                     </div>

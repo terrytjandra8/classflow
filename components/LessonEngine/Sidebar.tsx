@@ -38,7 +38,7 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
             title: `New ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}`,
             content: '',
             options: type === 'poll' ? ['Yes', 'No'] : undefined,
-            board_settings: type === 'board' ? { format: 'wall', allow_posting: true } : undefined
+            boardSettings: type === 'board' ? { format: 'wall', allow_posting: true } : undefined
         };
         onAddStep(newStep);
     };
@@ -50,9 +50,9 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
     };
 
     const updateBoardSettings = (updates: any) => {
-        const currentSettings = currentStep.board_settings || { format: 'wall', allow_posting: true };
+        const currentSettings = currentStep.boardSettings || { format: 'wall', allow_posting: true };
         updateCurrentStep({
-            board_settings: { ...currentSettings, ...updates }
+            boardSettings: { ...currentSettings, ...updates }
         });
     };
 
@@ -195,10 +195,10 @@ export const LessonSidebar: React.FC<SidebarProps> = ({ steps, currentIndex, onS
                                         <div className="flex items-center justify-between p-2 bg-[#111] rounded border border-white/10">
                                             <span className="text-xs font-bold text-gray-300">Allow Posting</span>
                                             <div 
-                                                onClick={() => updateBoardSettings({ allow_posting: !currentStep.board_settings?.allow_posting })}
-                                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${currentStep.board_settings?.allow_posting ? 'bg-green-500' : 'bg-gray-600'}`}
+                                                onClick={() => updateBoardSettings({ allow_posting: !currentStep.boardSettings?.allow_posting })}
+                                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${currentStep.boardSettings?.allow_posting ? 'bg-green-500' : 'bg-gray-600'}`}
                                             >
-                                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${currentStep.board_settings?.allow_posting ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${currentStep.boardSettings?.allow_posting ? 'translate-x-4' : 'translate-x-0'}`}></div>
                                             </div>
                                         </div>
                                     </div>

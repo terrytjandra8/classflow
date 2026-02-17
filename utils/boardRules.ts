@@ -18,7 +18,7 @@ export const BoardRules = {
     canManageBoard: (board: Board, userId?: string): boolean => {
         if (!userId) return false;
         // Owners and Collaborators can manage
-        const isOwner = board.owner_id === userId;
+        const isOwner = board.ownerId === userId;
         const isCollaborator = board.collaborators?.includes(userId);
         return isOwner || !!isCollaborator;
     },
@@ -51,7 +51,7 @@ export const BoardRules = {
         if (!isStudent) return true; 
         
         // Students can only edit their own notes
-        return !!userId && note.author_id === userId;
+        return !!userId && note.authorId === userId;
     },
 
     /**
@@ -69,7 +69,7 @@ export const BoardRules = {
         if (!isStudent) return true; 
         
         // Students can only delete their own notes
-        return !!userId && note.author_id === userId;
+        return !!userId && note.authorId === userId;
     },
 
     /**
@@ -117,16 +117,16 @@ export const BoardRules = {
         const effectiveViewerId = isPresentationMode ? null : viewerId;
 
         // 2. Authors always see their own content
-        const isAuthor = effectiveViewerId === note.author_id;
+        const isAuthor = effectiveViewerId === note.authorId;
         if (isAuthor) return false;
 
         // 3. Teacher Posts logic
         // Fix: Check if note author is board owner OR explicitly marked as teacher
-        const isOwner = note.author_id === board.owner_id;
+        const isOwner = note.authorId === board.ownerId;
         // Check collaborators too if available
-        const isCollaborator = board.collaborators?.includes(note.author_id || '');
+        const isCollaborator = board.collaborators?.includes(note.authorId || '');
         
-        const isTeacherNote = note.author_role === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
+        const isTeacherNote = note.authorRole === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
         
         if (isTeacherNote) {
             // Only blur teacher posts if explicitly configured (default: visible)
@@ -154,9 +154,9 @@ export const BoardRules = {
         if (!isStudent && !isPresentationMode) return false;
 
         // 2. Teacher posts are never anonymous to students (unless specifically requested in future)
-        const isOwner = note.author_id === board.owner_id;
-        const isCollaborator = board.collaborators?.includes(note.author_id || '');
-        const isTeacherNote = note.author_role === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
+        const isOwner = note.authorId === board.ownerId;
+        const isCollaborator = board.collaborators?.includes(note.authorId || '');
+        const isTeacherNote = note.authorRole === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
         
         if (isTeacherNote) return false;
 
@@ -180,9 +180,9 @@ export const BoardRules = {
     ): boolean => {
         if (!isStudent && !isPresentationMode) return false;
 
-        const isOwner = comment.author_id === board.owner_id;
-        const isCollaborator = board.collaborators?.includes(comment.author_id || '');
-        const isTeacherComment = comment.author_role === 'teacher' || isOwner || isCollaborator;
+        const isOwner = comment.authorId === board.ownerId;
+        const isCollaborator = board.collaborators?.includes(comment.authorId || '');
+        const isTeacherComment = comment.authorRole === 'teacher' || isOwner || isCollaborator;
         
         if (isTeacherComment) return false;
 

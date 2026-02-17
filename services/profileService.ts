@@ -10,18 +10,21 @@ export interface UserPreferences {
     savedGradients?: string[];
 }
 
-const mapProfile = (row: ProfileRow): Profile => ({
-    id: row.id,
-    email: row.email || '',
-    fullName: row.full_name || 'Unknown',
-    avatarUrl: row.avatar_url || '',
-    role: (row.role as 'student' | 'teacher') || 'student',
-    enrolledClasses: row.enrolled_classes || [],
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    preferences: row.preferences as any,
-    gradeLevel: row.grade_level || undefined,
-});
+const mapProfile = (dbData: ProfileRow): Profile => {
+    const data: any = dbData;
+    return {
+        id: data.id,
+        email: data.email || '',
+        fullName: data.full_name || 'Unknown',
+        avatarUrl: data.avatar_url || '',
+        role: (data.role as 'student' | 'teacher') || 'student',
+        enrolledClasses: data.enrolled_classes || [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        preferences: data.preferences as any,
+        gradeLevel: data.grade_level || undefined,
+    };
+}
 
 export const profileService = {
     async getCurrentProfile(): Promise<Profile | null> {
