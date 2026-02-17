@@ -355,26 +355,29 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                 <div key={idx} className="flex items-center gap-3 group relative">
                                                     <button 
                                                         onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })}
-                                                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}
+                                                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 self-start mt-2 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}
                                                     >
                                                         <CheckCircle size={16}/>
                                                     </button>
-                                                    <DebouncedInput 
-                                                        key={`opt-${q.id}-${idx}`}
-                                                        value={opt}
-                                                        onChange={(val: string) => {
-                                                            const newOpts = [...(q.options || [])];
-                                                            newOpts[idx] = val;
-                                                            updateQuestion(q.id, { options: newOpts });
-                                                        }}
-                                                        className={`flex-1 bg-[#111] border rounded-lg p-3 text-sm text-white outline-none focus:border-blue-500 transition-colors ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'}`}
-                                                    />
+                                                    <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'}`}>
+                                                        <DebouncedRichTextEditor 
+                                                            key={`opt-${q.id}-${idx}`}
+                                                            value={opt}
+                                                            onChange={(val: string) => {
+                                                                const newOpts = [...(q.options || [])];
+                                                                newOpts[idx] = val;
+                                                                updateQuestion(q.id, { options: newOpts });
+                                                            }}
+                                                            placeholder={`Option ${idx + 1}`}
+                                                            small
+                                                        />
+                                                    </div>
                                                     <button 
                                                         onClick={() => {
                                                             const newOpts = q.options?.filter((_, i) => i !== idx);
                                                             updateQuestion(q.id, { options: newOpts });
                                                         }}
-                                                        className="absolute right-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                        className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
                                                     >
                                                         <X size={16}/>
                                                     </button>
