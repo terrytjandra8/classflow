@@ -12,7 +12,7 @@ export const BoardHeader: React.FC = () => {
     const { board, canManageBoard, updateBoard } = useBoard();
 
     const handleGroupColumn = (sectionId: string) => {
-        if (!canManageBoard) return;
+        if (!canManageBoard || !board || !board.sections) return;
 
         const newGroupId = `group-${Math.random().toString(36).substr(2, 9)}`;
         const newColumnGroups = [...(board.columnGroups || []), { id: newGroupId, title: 'New Group', columnIds: [sectionId] }];
@@ -22,7 +22,7 @@ export const BoardHeader: React.FC = () => {
     };
 
     const handleUngroupColumn = (sectionId: string) => {
-        if (!canManageBoard) return;
+        if (!canManageBoard || !board || !board.sections) return;
 
         const section = board.sections.find(s => s.id === sectionId);
         if (!section || !section.groupId) return;
@@ -35,6 +35,8 @@ export const BoardHeader: React.FC = () => {
         updateBoard({ sections: newSections, columnGroups: newColumnGroups });
     };
     
+    if (!board) return null; // Guard against board being undefined
+
     return (
         <div className="bg-white/50 dark:bg-black/20 backdrop-blur-lg shadow-md p-3 rounded-b-2xl border-b border-white/10 dark:border-black/10 z-20 relative">
             <div className="flex justify-between items-center">
@@ -50,7 +52,7 @@ export const BoardHeader: React.FC = () => {
 
             {board.format === 'columns' && canManageBoard && (
                 <div className="mt-2 flex gap-2 items-center">
-                    {board.sections.map(section => (
+                    {(board.sections || []).map(section => (
                         <div key={section.id} className="flex items-center gap-1 p-1 rounded-md bg-black/5 dark:bg-white/5">
                            {section.groupId ? (
                                 <Tooltip content="Ungroup Column">
