@@ -1,138 +1,129 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useBoard } from '../BoardContext';
-// Note: Adjusted paths to ../.. because we are inside BoardView/Header/
 import { EditableInput } from '../../ui/EditableInput'; 
 import { Tooltip } from '../../Tooltip';
 import { 
-    Settings, Share2, ArrowLeft, MonitorPlay, Minimize2, 
-    Users, Clock, Eye, EyeOff 
+    Settings, Share2, ArrowLeft, MonitorPlay, 
+    Users, MoreHorizontal, Copy, ExternalLink, QrCode
 } from 'lucide-react';
 
-interface BoardHeaderProps {
-    isPresenting?: boolean;
-    onTogglePresentation?: () => void;
-}
-
-export const BoardHeader: React.FC<BoardHeaderProps> = ({ 
-    isPresenting, 
-    onTogglePresentation 
-}) => {
+export const BoardHeader: React.FC = () => {
     const { 
         board, updateBoard, goBack, openSettings, openShare, 
         canManageBoard, onlineUsers 
     } = useBoard();
+    
+    // Helper to format dates safely without external libraries
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric'
+        });
+    };
 
     const handleTitleSave = (newTitle: string) => {
         updateBoard({ title: newTitle });
     };
 
-    // Helper to format dates without external libraries
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return 'Recent';
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric'
-        });
+    const openPresentationWindow = () => {
+        const width = 1280;
+        const height = 720;
+        const left = (window.screen.width - width) / 2;
+        const top = (window.screen.height - height) / 2;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('present', 'true');
+
+        window.open(
+            url.toString(), 
+            'ClassboardPresentation', 
+            `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,location=no,status=no`
+        );
     };
 
-    const formatTime = (dateString?: string) => {
-        if (!dateString) return 'Just now';
-        return new Date(dateString).toLocaleTimeString('en-US', {
-            hour: '2-digit', minute: '2-digit'
-        });
-    };
-
-    // Safely access properties, preferring camelCase (TS) but falling back if needed
+    // Fix variable names to match your TypeScript types (camelCase)
+    // We check both camelCase (TS) and snake_case (DB) to be safe
     const isPublished = (board as any).isPublished ?? (board as any).is_published;
     const createdAt = (board as any).createdAt ?? (board as any).created_at;
-    const updatedAt = (board as any).updatedAt ?? (board as any).updated_at;
 
     return (
-        <header className="relative z-20 flex flex-col w-full bg-white/10 backdrop-blur-xl border-b border-white/10 text-white p-4">
-            <div className="flex items-center justify-between">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-40 shadow-sm">
+            {/* LEFT: Navigation & Title */}
+            <div className="flex items-center gap-3 md:gap-4 flex-1">
+                <button 
+                    onClick={goBack} 
+                    className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+                    title="Back to Dashboard"
+                >
+                    <ArrowLeft size={20} />
+                </button>
                 
-                {/* LEFT: Back Button & Title */}
-                <div className="flex items-center gap-4">
-                    <button onClick={goBack} className="p-2 hover:bg-white/10 rounded-full transition-all">
-                        <ArrowLeft size={20} />
-                    </button>
-                    
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <EditableInput 
-                                value={board.title || 'Untitled Board'} 
-                                onSave={handleTitleSave}
-                                disabled={!canManageBoard}
-                                className="font-bold text-xl bg-transparent border-none focus:ring-0 p-0 cursor-pointer hover:opacity-80"
-                            />
-                            {isPublished === false && (
-                                <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/30 uppercase font-bold">
-                                    Draft
-                                </span>
-                            )}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 mt-1 text-[10px] opacity-60 uppercase tracking-wider">
-                            <span className="flex items-center gap-1">
-                                <Clock size={10} /> Created: {formatDate(createdAt)}
+                <div className="flex flex-col justify-center">
+                    <div className="flex items-center gap-2">
+                        <EditableInput 
+                            value={board.title || 'Untitled Board'} 
+                            onSave={handleTitleSave}
+                            disabled={!canManageBoard}
+                            className="font-bold text-lg md:text-xl text-slate-800 bg-transparent border-none focus:ring-0 p-0 h-auto"
+                        />
+                        {!isPublished && (
+                            <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-200 uppercase tracking-wide">
+                                Draft
                             </span>
-                            <span>
-                                Updated: {formatTime(updatedAt)}
-                            </span>
-                        </div>
+                        )}
                     </div>
+                    {createdAt && (
+                        <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider hidden md:block">
+                            Created {formatDate(createdAt)}
+                        </div>
+                    )}
                 </div>
+            </div>
 
-                {/* MIDDLE: Online Users */}
-                <div className="hidden md:flex items-center gap-3 bg-black/20 px-4 py-1.5 rounded-full border border-white/5">
-                    <div className="flex -space-x-2">
-                        {onlineUsers?.slice(0, 3).map((user: any) => (
+            {/* RIGHT: Actions */}
+            <div className="flex items-center gap-2 md:gap-3">
+                {/* Online Users */}
+                <div className="hidden md:flex items-center -space-x-2 mr-2">
+                    {onlineUsers?.slice(0, 4).map((user: any) => (
+                        <Tooltip key={user.id} content={user.full_name}>
                             <img 
-                                key={user.id} 
-                                src={user.avatar_url} 
-                                className="w-6 h-6 rounded-full border-2 border-slate-800" 
+                                src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.full_name}`} 
+                                className="w-8 h-8 rounded-full border-2 border-white bg-slate-200"
                                 alt={user.full_name}
                             />
-                        ))}
-                    </div>
-                    <span className="text-xs font-medium flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        {onlineUsers?.length || 0} Online
-                    </span>
-                </div>
-
-                {/* RIGHT: Controls (Anti-Cheat & Present) */}
-                <div className="flex items-center gap-2">
-                    {canManageBoard && (
-                        <Tooltip content={board.settings?.anonymousMode ? "Names Hidden" : "Names Visible"}>
-                            <button 
-                                onClick={() => updateBoard({ settings: { ...board.settings, anonymousMode: !board.settings?.anonymousMode }})}
-                                className={`p-2 rounded-lg transition-colors ${board.settings?.anonymousMode ? 'bg-pink-600 text-white' : 'hover:bg-white/10'}`}
-                            >
-                                {board.settings?.anonymousMode ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </button>
                         </Tooltip>
-                    )}
-
-                    {onTogglePresentation && (
-                        <button 
-                            onClick={onTogglePresentation}
-                            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-sm font-bold"
-                        >
-                            {isPresenting ? <Minimize2 size={18} /> : <MonitorPlay size={18} />}
-                            {isPresenting ? 'Exit' : 'Present'}
-                        </button>
-                    )}
-
-                    <button onClick={openShare} className="p-2 hover:bg-white/10 rounded-full transition-all">
-                        <Share2 size={20} />
-                    </button>
-
-                    {canManageBoard && (
-                        <button onClick={openSettings} className="p-2 hover:bg-white/10 rounded-full transition-all text-pink-400">
-                            <Settings size={20} />
-                        </button>
+                    ))}
+                    {onlineUsers?.length > 4 && (
+                         <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                            +{onlineUsers.length - 4}
+                        </div>
                     )}
                 </div>
+
+                <button 
+                    onClick={openShare}
+                    className="hidden md:flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors"
+                >
+                    <Users size={18} />
+                    <span>Share</span>
+                </button>
+
+                <button 
+                    onClick={openPresentationWindow}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95"
+                >
+                    <MonitorPlay size={18} />
+                    <span className="hidden md:inline font-semibold">Start Presenting</span>
+                </button>
+
+                {canManageBoard && (
+                    <button 
+                        onClick={openSettings}
+                        className="p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors"
+                    >
+                        <Settings size={20} />
+                    </button>
+                )}
             </div>
         </header>
     );

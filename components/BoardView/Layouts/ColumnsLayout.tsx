@@ -1,177 +1,188 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { NoteCard } from '../../NoteCard/index';
-import { EditableInput } from '../../ui/EditableInput';
-import { Tooltip } from '../../Tooltip';
+import React, { useRef, useState, useEffect } from 'react';
 import { useBoard } from '../BoardContext';
-import { Note, Section } from '../../../types';
-import { BoardRules } from '../../../utils/boardRules';
+import { NoteCard } from '../../NoteCard';
+import { EditableInput } from '../../ui/EditableInput';
 import { 
-    IconLock, IconUnlock, IconVisible, IconHidden, IconBlur, 
-    IconAnonymous, IconComment, IconNoComment, IconReply, 
-    IconMove, IconDrag, IconClose, IconPlus,
-    IconCopyOff
-} from '../../Icons';
+    Plus, MoreVertical, Eye, EyeOff, Lock, Unlock, 
+    Trash2, Ghost, GripHorizontal 
+} from 'lucide-react';
+import { Dropdown } from '../../ui/Dropdown'; // Ensure you have this or replace with your menu component
 
 interface ColumnsLayoutProps {
     isStudent?: boolean;
 }
 
-interface ColumnProps {
-    section: Section;
-    isStudent: boolean;
-    onDragStart: (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => void;
-    onDragOverColumn: (e: React.DragEvent, sectionId: string) => void;
-    onDrop: (e: React.DragEvent, sectionId: string) => void;
-    insertSectionAt: (idx: number) => void;
-    idx: number;
-    localNotes: Note[];
-    draggingId: string | null;
-    draggingType: string | null;
-    onDragOverNote: (e: React.DragEvent, targetId: string, sectionId: string) => void;
-    onDragEnd: (e: React.DragEvent) => void;
-    handleAutoScroll: (e: React.DragEvent) => void;
-}
-
-const Column = ({ 
-    section, isStudent, onDragStart, onDragOverColumn, onDrop, 
-    insertSectionAt, idx, localNotes, draggingId, draggingType, 
-    onDragOverNote, onDragEnd, handleAutoScroll 
-}: ColumnProps) => {
-    
+export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
     const { 
-        board, updateBoard, openAddNote, updateNote, canManageBoard,
-        toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, 
-        toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, 
-        toggleSectionRearrange, deleteNote, likeNote, addComment, isPresentationMode
+        board, sections, notes, canManageBoard, 
+        updateSection, deleteSection, addSection, openAddNote,
+        updateNote // Needed for drag and drop
     } = useBoard();
 
-    const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
-    
-    if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
+    // 1. Get Active Sections (CamelCase safe)
+    const activeSections = sections || [];
 
-    const sectionNotes = localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && idx === 0));
-    const canAdd = canManageBoard || (!isLocked && !section.locked);
-    const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
-    const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
-    const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
-    const canDragNotes = canManageBoard || (sectionCanDrag && !isLocked && !section.locked);
-    
-    const renameSection = (id: string, newTitle: string) => updateBoard({ sections: board.sections?.map(s => s.id === id ? { ...s, title: newTitle } : s) });
-    const deleteSection = (id: string) => updateBoard({ sections: board.sections?.filter(s => s.id !== id) });
-
-    return (
-        <div 
-            className={`w-80 shrink-0 flex flex-col gap-3 max-h-full transition-transform ${draggingId === section.id && draggingType === 'COLUMN' ? 'opacity-50 scale-95' : ''}`}
-            onDragOver={(e) => onDragOverColumn(e, section.id)} 
-            onDrop={(e) => onDrop(e, section.id)}
-        >
-            <div className={`flex items-center justify-between group p-1.5 rounded-xl border border-transparent bg-black/5 dark:bg-white/5`}>
-                <div className="flex items-center gap-2 w-full min-w-0">
-                    <EditableInput 
-                        disabled={!canManageBoard} 
-                        className={`font-bold text-lg bg-transparent border border-transparent rounded px-2 py-1 w-full text-slate-800 dark:text-white`} 
-                        value={section.title} 
-                        onSave={(val) => renameSection(section.id, val)}
-                    />
-                </div>
-                {canManageBoard && (
-                    <button onClick={() => deleteSection(section.id)} className="p-1.5 hover:text-red-500 transition-colors">
-                        <IconClose size={14} />
-                    </button>
-                )}
-            </div>
-            
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10 space-y-3 min-h-[100px]" onDragOver={handleAutoScroll}>
-                {canAdd && (
-                    <button 
-                        onClick={() => openAddNote(section.id)} 
-                        className="w-full py-4 rounded-xl flex items-center justify-center gap-2 bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold mb-3"
-                    >
-                        <IconPlus size={14} /> Add Post
-                    </button>
-                )}
-                
-                {sectionNotes.map((note: any) => (
-                    <div 
-                        key={note.id} 
-                        className={`${draggingId === note.id ? 'opacity-40' : ''}`}
-                        draggable={canDragNotes}
-                        onDragStart={(e) => onDragStart(e, note.id, 'NOTE')}
-                        onDragOver={(e) => onDragOverNote(e, note.id, section.id)}
-                        onDragEnd={onDragEnd}
-                    >
-                        <NoteCard 
-                            note={note} 
-                            canDrag={canDragNotes}
-                            isStudent={isStudent}
-                            onDelete={deleteNote}
-                            onLike={likeNote}
-                            onAddComment={addComment}
-                            onUpdate={updateNote}
-                        />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsStudent }) => {
-    const boardContext = useBoard();
-    const { board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent } = boardContext;
-    const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
-
-    const [localNotes, setLocalNotes] = useState<Note[]>(notes);
+    // 2. Drag and Drop State
     const [draggingId, setDraggingId] = useState<string | null>(null);
-    const [draggingType, setDraggingType] = useState<'NOTE' | 'COLUMN' | null>(null);
-    const dragItemRef = useRef<string | null>(null); 
-    const dragTypeRef = useRef<'NOTE' | 'COLUMN' | null>(null);
+    const dragItemRef = useRef<string | null>(null);
 
-    useEffect(() => { setLocalNotes(notes); }, [notes]);
-    
-    const onDragEnd = () => { setDraggingId(null); setDraggingType(null); dragItemRef.current = null; dragTypeRef.current = null; };
-    const onDragStart = (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => {
-        setDraggingId(id); setDraggingType(type); dragItemRef.current = id; dragTypeRef.current = type;
+    const handleDragStart = (e: React.DragEvent, id: string) => {
+        setDraggingId(id);
+        dragItemRef.current = id;
     };
-    const handleAutoScroll = (e: React.DragEvent) => { e.preventDefault(); };
-    const onDragOverNote = (e: React.DragEvent) => { e.preventDefault(); };
-    const onDragOverColumn = (e: React.DragEvent) => { e.preventDefault(); };
-    const onDrop = async (e: React.DragEvent, sectionId: string) => {
+
+    const handleDrop = async (e: React.DragEvent, sectionId: string) => {
         e.preventDefault();
-        if (dragItemRef.current) await updateNote(dragItemRef.current, { sectionId });
-        onDragEnd();
+        const noteId = dragItemRef.current;
+        if (noteId) {
+            await updateNote(noteId, { sectionId: sectionId });
+        }
+        setDraggingId(null);
+        dragItemRef.current = null;
     };
 
-    if (sectionIdFilter) return <div className="p-10 text-center">Single slide mode active.</div>;
+    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
-    const activeSections = board.sections || [];
+    // 3. Helper to filter notes
+    const getNotesForSection = (sectionId: string) => {
+        // Handle both snake_case and camelCase just in case
+        return notes.filter((note: any) => {
+            const nSectionId = note.sectionId || note.section_id;
+            return nSectionId === sectionId;
+        });
+    };
+
+    const handleAddColumn = async () => {
+        await addSection({ 
+            title: 'New Group', 
+            orderIndex: activeSections.length // Use camelCase if your DB expects it
+        });
+    };
 
     return (
-        <div className="flex h-full overflow-x-auto gap-4 p-6 items-start">
-            {activeSections.map((section, idx) => (
-                <Column 
-                    key={section.id}
-                    section={section}
-                    isStudent={isStudent}
-                    onDragStart={onDragStart}
-                    onDragOverColumn={onDragOverColumn}
-                    onDrop={onDrop}
-                    insertSectionAt={() => {}}
-                    idx={idx}
-                    localNotes={localNotes}
-                    draggingId={draggingId}
-                    draggingType={draggingType}
-                    onDragOverNote={onDragOverNote}
-                    onDragEnd={onDragEnd}
-                    handleAutoScroll={handleAutoScroll}
-                />
-            ))}
+        <div className="flex h-full gap-4 overflow-x-auto p-4 md:p-6 items-start">
+            {activeSections.map((section: any) => {
+                // Safe Property Access (Camel vs Snake)
+                const isHidden = section.isHidden ?? section.is_hidden;
+                const isLocked = section.isLocked ?? section.is_locked;
+                const isBlurred = section.isBlurred ?? section.is_blurred;
+                const isAnon = section.anonymousMode ?? section.anonymous_mode;
+
+                // Hide from students if hidden
+                if (isHidden && isStudent) return null;
+
+                return (
+                    <div 
+                        key={section.id} 
+                        className={`flex-shrink-0 w-80 md:w-96 flex flex-col max-h-full rounded-xl transition-all border ${isHidden ? 'bg-slate-50 border-dashed border-slate-300 opacity-70' : 'bg-slate-100/50 border-transparent'}`}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, section.id)}
+                    >
+                        {/* --- HEADER --- */}
+                        <div className="p-3 flex items-start justify-between group">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <EditableInput
+                                        value={section.title}
+                                        onSave={(val) => updateSection(section.id, { title: val })}
+                                        disabled={!canManageBoard}
+                                        className="font-bold text-slate-800 text-lg bg-transparent border-none focus:bg-white px-1 rounded w-full"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 px-1 mt-1">
+                                    <span className="text-xs font-medium text-slate-500">
+                                        {getNotesForSection(section.id).length} notes
+                                    </span>
+                                    {isLocked && <Lock size={12} className="text-red-500" />}
+                                    {isAnon && <Ghost size={12} className="text-purple-500" />}
+                                    {isBlurred && <EyeOff size={12} className="text-slate-400" />}
+                                </div>
+                            </div>
+
+                            {/* --- CONTROLS --- */}
+                            {canManageBoard && (
+                                <Dropdown
+                                    trigger={
+                                        <button className="p-1.5 hover:bg-black/5 rounded text-slate-500 transition-colors">
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    }
+                                    items={[
+                                        {
+                                            label: isLocked ? 'Unlock Group' : 'Lock Group',
+                                            icon: isLocked ? <Unlock size={14}/> : <Lock size={14}/>,
+                                            onClick: () => updateSection(section.id, { isLocked: !isLocked }), // Use camelCase for update
+                                            className: isLocked ? 'text-green-600' : 'text-slate-700'
+                                        },
+                                        {
+                                            label: isAnon ? 'Show Names' : 'Make Anonymous',
+                                            icon: <Ghost size={14}/>,
+                                            onClick: () => updateSection(section.id, { anonymousMode: !isAnon }),
+                                            className: isAnon ? 'text-purple-600' : 'text-slate-700'
+                                        },
+                                        {
+                                            label: isBlurred ? 'Unblur Content' : 'Blur Content',
+                                            icon: isBlurred ? <Eye size={14}/> : <EyeOff size={14}/>,
+                                            onClick: () => updateSection(section.id, { isBlurred: !isBlurred })
+                                        },
+                                        {
+                                            label: isHidden ? 'Show Group' : 'Hide Group',
+                                            icon: isHidden ? <Eye size={14}/> : <EyeOff size={14}/>,
+                                            onClick: () => updateSection(section.id, { isHidden: !isHidden })
+                                        },
+                                        { divider: true },
+                                        {
+                                            label: 'Delete Group',
+                                            icon: <Trash2 size={14}/>,
+                                            onClick: () => {
+                                                if(confirm('Delete this group?')) deleteSection(section.id);
+                                            },
+                                            className: 'text-red-600'
+                                        }
+                                    ]}
+                                />
+                            )}
+                        </div>
+
+                        {/* --- CONTENT --- */}
+                        <div className={`flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar ${isBlurred && isStudent ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                            
+                            {/* Add Button */}
+                            {!isLocked && (!isStudent || !isHidden) && (
+                                <button
+                                    onClick={() => openAddNote(section.id)}
+                                    className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:text-slate-600 hover:border-slate-400 hover:bg-white/50 transition-all flex items-center justify-center gap-2 font-bold text-sm"
+                                >
+                                    <Plus size={16} /> Add Post
+                                </button>
+                            )}
+
+                            {getNotesForSection(section.id).map((note: any) => (
+                                <div 
+                                    key={note.id}
+                                    draggable={!isLocked && !isStudent}
+                                    onDragStart={(e) => handleDragStart(e, note.id)}
+                                    className={draggingId === note.id ? 'opacity-50' : ''}
+                                >
+                                    <NoteCard 
+                                        note={note} 
+                                        isStudent={isStudent} 
+                                        anonymousMode={isAnon}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+
+            {/* --- ADD NEW COLUMN BUTTON --- */}
             {canManageBoard && (
-                <button 
-                    onClick={() => updateBoard({ sections: [...activeSections, { id: Math.random().toString(36).substr(2, 9), title: 'New Group' }] })}
-                    className="w-16 h-40 bg-white/5 rounded-xl flex items-center justify-center border-2 border-dashed border-white/10 hover:bg-white/10 transition-all shrink-0"
+                <button
+                    onClick={handleAddColumn}
+                    className="flex-shrink-0 w-16 h-full min-h-[200px] bg-white/20 hover:bg-slate-100 border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl transition-all duration-300 flex items-center justify-center text-slate-400 hover:text-slate-600 group"
                 >
-                    <IconPlus size={24} />
+                     <Plus size={24} className="group-hover:scale-110 transition-transform" />
                 </button>
             )}
         </div>
