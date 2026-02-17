@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { classService } from '../../../services/classService';
 import { SUPER_ADMIN_EMAIL } from '../constants';
@@ -40,66 +40,72 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         localStorage.setItem(key, className);
     };
 
-    useEffect(() => {
-        const fetchUserAndClasses = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                if (user.email) {
-                    setUserEmail(user.email);
-                    if (user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase()) {
-                        setIsSuperAdmin(true);
-                    }
-                }
-                const studentStatus = user.user_metadata.is_student ?? false;
-                setIsStudent(studentStatus);
-
-                const tabKey = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
-                const storedTab = localStorage.getItem(tabKey) as TabView;
-                setActiveTabState(storedTab || (studentStatus ? 'home' : 'home'));
-                
-                const classKey = studentStatus ? 'cb_student_selected_class' : 'cb_teacher_selected_class';
-                const storedClass = localStorage.getItem(classKey);
-
-                if (studentStatus) {
-                    try {
-                        const fetchedClasses = await classService.getStudentClasses();
-                        setStudentClasses(fetchedClasses);
-                        const newClassList = ['All My Classes', ...fetchedClasses];
-                        setClassList(newClassList);
-                        if (storedClass && newClassList.includes(storedClass)) {
-                            setSelectedClassState(storedClass);
-                        } else {
-                            setSelectedClassState('All My Classes');
-                        }
-                    } catch (e) {
-                        console.error("Failed to load student classes", e);
-                        setClassList(['All My Classes']);
-                        setSelectedClassState('All My Classes');
-                    }
-                } else { // Teacher or Super Admin
-                    try {
-                        const data = await classService.getClasses();
-                        const names = data && data.length > 0 ? data.map(c => c.name) : [];
-                        const uniqueNames = Array.from(new Set(names));
-                        const fullClassList = ['All Classes', ...uniqueNames];
-                        setClassList(fullClassList);
-
-                        if (storedClass && fullClassList.includes(storedClass)) {
-                             setSelectedClassState(storedClass);
-                        } else {
-                             setSelectedClassState('All Classes');
-                        }
-                    } catch (e) {
-                        console.error("Failed to load classes", e);
-                        setClassList(['All Classes']);
-                        setSelectedClassState('All Classes');
-                    }
+    const fetchUserAndClasses = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            if (user.email) {
+                setUserEmail(user.email);
+                if (user.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase()) {
+                    setIsSuperAdmin(true);
                 }
             }
-        };
+            const studentStatus = user.user_metadata.is_student ?? false;
+            setIsStudent(studentStatus);
 
-        fetchUserAndClasses();
+            const tabKey = studentStatus ? 'cb_student_tab' : 'cb_teacher_tab';
+            const storedTab = localStorage.getItem(tabKey) as TabView;
+            setActiveTabState(storedTab || (studentStatus ? 'home' : 'home'));
+            
+            const classKey = studentStatus ? 'cb_student_selected_class' : 'cb_teacher_selected_class';
+            const storedClass = localStorage.getItem(classKey);
+
+            if (studentStatus) {
+                try {
+                    const fetchedClasses = await classService.getStudentClasses();
+                    setStudentClasses(fetchedClasses);
+                    const newClassList = ['All My Classes', ...fetchedClasses];
+                    setClassList(newClassList);
+                    if (storedClass && newClassList.includes(storedClass)) {
+                        setSelectedClassState(storedClass);
+                    } else {
+                        setSelectedClassState('All My Classes');
+                    }
+                } catch (e) {
+                    console.error("Failed to load student classes", e);
+                    setClassList(['All My Classes']);
+                    setSelectedClassState('All My Classes');
+                }
+            } else { // Teacher or Super Admin
+                try {
+                    const data = await classService.getClasses();
+                    const names = data && data.length > 0 ? data.map(c => c.name) : [];
+                    const uniqueNames = Array.from(new Set(names));
+                    const fullClassList = ['All Classes', ...uniqueNames];
+                    setClassList(fullClassList);
+
+                    if (storedClass && fullClassList.includes(storedClass)) {
+                         setSelectedClassState(storedClass);
+                    } else {
+                         setSelectedClassState('All Classes');
+                    }
+                } catch (e) {
+                    console.error("Failed to load classes", e);
+                    setClassList(['All Classes']);
+                    setSelectedClassState('All Classes');
+                }
+            }
+        }
     }, []);
+
+    useEffect(() => {
+        fetchUserAndClasses();
+
+        window.addEventListener('focus', fetchUserAndClasses);
+
+        return () => {
+            window.removeEventListener('focus', fetchUserAndClasses);
+        };
+    }, [fetchUserAndClasses]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -121,7 +127,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
             if (success) {
                 setShowJoinModal(false);
                 setJoinCode('');
-                window.location.reload(); // Reload to refetch classes
+                fetchUserAndClasses(); // Refetch classes after joining
             } else {
                 setJoinError('Invalid Join Code. Please check and try again.');
             }
