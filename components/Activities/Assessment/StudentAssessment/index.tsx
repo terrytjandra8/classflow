@@ -367,7 +367,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return <StatusViews type="intro" board={board} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onStartTest={startTest} config={config} />;
     }
 
-    const isGuardEnabled = board.blockScreenshots && (isTestActive || isReadingMode || isPracticeMode) && !isDisqualified && !submitted;
+    const isGuardEnabled = !!board.blockScreenshots && (isTestActive || isReadingMode || isPracticeMode) && !isDisqualified && !submitted;
 
     return (
         <ScreenshotGuard isEnabled={isGuardEnabled} username={userName}>
