@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, RefreshCw, Lock, Unlock, ShieldCheck, ImagePlus } from 'lucide-react';
+import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, RefreshCw, Lock, Unlock, ShieldCheck, ImagePlus, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4, AlignLeft, List, ListOrdered } from 'lucide-react';
 import { AssessmentQuestion } from '../../../../types';
 import { RichTextEditor, FormatState, getActiveFormat } from '../../../RichTextEditor';
 import { DebouncedInput } from '../../../ui/DebouncedInput';
@@ -33,8 +33,10 @@ export const GradingModal: React.FC<GradingModalProps> = ({
     const [retryQuestions, setRetryQuestions] = useState<string[]>([]);
     const [teacherOverrides, setTeacherOverrides] = useState<Record<string, boolean>>({});
     
-    const [activeFormats, setActiveFormats] = useState<FormatState>({ 
-        bold: false, italic: false, list: false, subscript: false, superscript: false 
+    const [activeFormats, setActiveFormats] = useState<FormatState>({
+        bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
+        subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
+        alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
     });
     
     const gradesRef = useRef(currentGrades);
@@ -168,16 +170,14 @@ export const GradingModal: React.FC<GradingModalProps> = ({
         triggerSave(undefined, newRetries);
     };
 
-    const execCmd = (cmd: string) => {
-        document.execCommand(cmd, false, undefined);
-        
-        setActiveFormats({
-            bold: getActiveFormat('bold', ['B', 'STRONG']),
-            italic: getActiveFormat('italic', ['I', 'EM']),
-            list: document.queryCommandState('insertUnorderedList'),
-            subscript: getActiveFormat('subscript', ['SUB']),
-            superscript: getActiveFormat('superscript', ['SUP']),
-        });
+    const handleCommand = (cmd: string, value?: string) => {
+        document.execCommand(cmd, false, value);
+        if (activeFeedbackId) {
+            const editor = document.getElementById(`feedback-editor-${activeFeedbackId}`)?.querySelector('.rich-text-content');
+            if (editor) {
+                handleUpdate(activeFeedbackId, { feedback: editor.innerHTML });
+            }
+        }
     };
 
     if (!isOpen || !participant) return null;
@@ -280,10 +280,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                         {isEssay && q.minWords && q.minWords > 0 && <span className={`text-[10px] font-bold ${isUnderLimit ? 'text-amber-500' : 'text-green-500'}`}>{wordCount} / {q.minWords} valid words</span>}
                                     </div>
                                     {q.type === 'mcq' ? (
-                                        <p className="text-sm text-gray-300">
-                                            {studentAns ? q.options?.[parseInt(studentAns)] : <span className="italic opacity-50">No Answer</span>}
-                                            {q.type === 'mcq' && q.correctAnswer && <span className="ml-2 text-[10px] text-green-500 uppercase font-bold">{studentAns === q.correctAnswer ? '(Correct)' : `(Expected: ${q.options?.[parseInt(q.correctAnswer)]})`}</span>}
-                                        </p>
+                                        <div className="text-sm text-gray-300" dangerouslySetInnerHTML={{__html: studentAns ? parseMath(q.options?.[parseInt(studentAns)]) : '<span class="italic opacity-50">No Answer</span>'}} />
                                     ) : (
                                         isImageAnswer(studentAns) ? (
                                             <div className="relative group">
@@ -291,31 +288,36 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                                 <a href={studentAns} target="_blank" rel="noopener noreferrer" className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View Full</a>
                                             </div>
                                         ) : (
-                                            <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{studentAns || <span className="italic opacity-50">No Answer</span>}</p>
+                                            <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed rich-text-content" dangerouslySetInnerHTML={{ __html: studentAns ? parseMath(studentAns) : '<span class="italic opacity-50">No Answer</span>' }} />
                                         )
                                     )}
                                 </div>
                                 <div className={`bg-black/20 rounded-lg border transition-colors ${isFocused ? 'border-blue-500/50' : 'border-white/5'}`} onFocus={() => setActiveFeedbackId(q.id)}>
                                     {isFocused && (
-                                        <div className="flex items-center gap-2 p-2 border-b border-white/5 bg-[#161616] rounded-t-lg animate-in fade-in slide-in-from-top-1">
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
+                                        <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/5 bg-[#161616] rounded-t-lg animate-in fade-in slide-in-from-top-1">
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline"><Underline size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('strikeThrough'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Strikethrough"><Strikethrough size={14}/></button>
                                             <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
-                                            <button onMouseDown={(e) => { e.preventDefault(); execCmd('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
+                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
                                             <div className="w-px h-4 bg-white/10 mx-1"></div>
                                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) { handleFeedbackUpload(q.id, e.target.files[0]) } }} />
                                             <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isFeedbackUploading === q.id ? 'text-yellow-500' : ''}`} title="Upload Image" disabled={isFeedbackUploading === q.id}>
                                                 {isFeedbackUploading === q.id ? <Loader2 size={14} className="animate-spin"/> : <ImagePlus size={14}/>}
                                             </button>
-                                            <span className="ml-auto text-[9px] text-gray-600 font-medium">Rich Text Enabled</span>
                                         </div>
                                     )}
                                     {!isFocused && <span className="text-[10px] font-bold text-blue-400 uppercase block p-3 pb-0">Feedback</span>}
-                                    <div className="p-3">
-                                        <div id={`feedback-editor-${q.id}`}>
-                                            <RichTextEditor value={parseMath(grade.feedback)} onChange={(html) => handleUpdate(q.id, { feedback: html })} onFormatChange={setActiveFormats} placeholder="Enter teacher feedback here..." className="w-full text-xs text-blue-100 placeholder-white/20 min-h-[40px] focus:outline-none" />
-                                        </div>
+                                    <div className="p-3" id={`feedback-editor-${q.id}`}>
+                                        <RichTextEditor 
+                                            value={grade.feedback}
+                                            onChange={(html) => handleUpdate(q.id, { feedback: html })}
+                                            onFormatChange={setActiveFormats}
+                                            placeholder="Enter teacher feedback here..."
+                                            className="w-full text-xs text-blue-100 placeholder-white/20 min-h-[40px] focus:outline-none bg-transparent"
+                                        />
                                     </div>
                                 </div>
                             </div>
