@@ -138,9 +138,9 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
                 
                 if (editorRef.current) {
-                    const placeholderImg = editorRef.current.querySelector(`#${placeholderId}`);
+                    const placeholderImg = editorRef.current.querySelector<HTMLImageElement>(`#${placeholderId}`);
                     if (placeholderImg) {
-                        placeholderImg.setAttribute('src', publicUrl);
+                        placeholderImg.src = publicUrl;
                         placeholderImg.removeAttribute('id');
                         placeholderImg.style.opacity = '1';
                         placeholderImg.style.cursor = 'pointer';
