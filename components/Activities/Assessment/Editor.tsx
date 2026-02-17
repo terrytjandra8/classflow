@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AssessmentQuestion, Board } from '../../../types';
 import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, Subscript, Superscript, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText, UploadCloud, Loader2, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4 } from 'lucide-react';
@@ -7,6 +6,37 @@ import { RichTextEditor, FormatState, getActiveFormat } from '../../RichTextEdit
 import { DebouncedInput } from '../../ui/DebouncedInput';
 import { parseMath } from '../../../utils/mappers';
 import { supabase } from '../../../services/supabaseClient';
+
+// --- NEW COMPONENT: Debounced Wrapper to fix cursor jumping ---
+const DebouncedRichTextEditor = ({ value, onChange, ...props }: any) => {
+    const [localValue, setLocalValue] = useState(value);
+
+    // Sync local state if the user switches questions (prop changes externally)
+    useEffect(() => {
+        setLocalValue(value || '');
+    }, [value]);
+
+    // The Magic: Wait 500ms before telling the parent to update
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            // Only update parent if content is different
+            if (localValue !== value) {
+                onChange(localValue);
+            }
+        }, 500);
+
+        return () => clearTimeout(handler);
+    }, [localValue, onChange, value]);
+
+    return (
+        <RichTextEditor
+            {...props}
+            value={localValue}
+            onChange={setLocalValue} // Update local state instantly
+        />
+    );
+};
+// -------------------------------------------------------------
 
 interface EditorProps {
     questions: AssessmentQuestion[];
@@ -213,7 +243,8 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isSection ? 'Section Title' : 'Question Prompt'}</label>
                                     <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-text` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-text`)}>
                                         {renderToolbar(`${q.id}-text`)}
-                                        <RichTextEditor id={`${q.id}-text`} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
+                                        {/* CHANGED: Use DebouncedRichTextEditor */}
+                                        <DebouncedRichTextEditor id={`${q.id}-text`} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
                                     </div>
                                 </div>
 
@@ -222,7 +253,8 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Sub-text / Notes (Optional)</label>
                                         <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-notes` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-notes`)}>
                                             {renderToolbar(`${q.id}-notes`)}
-                                            <RichTextEditor id={`${q.id}-notes`} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Add instructions, hints, or context..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
+                                            {/* CHANGED: Use DebouncedRichTextEditor */}
+                                            <DebouncedRichTextEditor id={`${q.id}-notes`} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Add instructions, hints, or context..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
                                         </div>
                                     </div>
                                 )}
@@ -244,7 +276,8 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     <button onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-8 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}><CheckCircle size={16}/></button>
                                                     <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'} ${activeEditor === `${q.id}-options-${idx}` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-options-${idx}`)}>
                                                         {renderToolbar(`${q.id}-options-${idx}`)}
-                                                        <RichTextEditor id={`${q.id}-options-${idx}`} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
+                                                        {/* CHANGED: Use DebouncedRichTextEditor */}
+                                                        <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
                                                     </div>
                                                     <button onClick={() => updateQuestion(q.id, { options: q.options?.filter((_, i) => i !== idx) })} className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><X size={16}/></button>
                                                 </div>
