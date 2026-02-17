@@ -21,7 +21,9 @@ const SimpleDropdown = ({ trigger, items }: any) => {
 
     return (
         <div className="relative" ref={ref}>
-            <div onClick={() => setOpen(!open)} className="cursor-pointer">{trigger}</div>
+            <div onClick={(e) => { e.stopPropagation(); setOpen(!open); }} className="cursor-pointer">
+                {trigger}
+            </div>
             {open && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-50 border border-slate-200 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {items.map((item: any, idx: number) => (
@@ -40,18 +42,17 @@ const SimpleDropdown = ({ trigger, items }: any) => {
     );
 };
 
-// --- Helper: Add Column Divider ---
-const AddColumnDivider = ({ onAdd, showAlways = false }: { onAdd: () => void, showAlways?: boolean }) => (
-    <div className={`group w-4 flex flex-col items-center justify-center transition-all duration-300 ${showAlways ? 'opacity-100' : 'opacity-0 hover:opacity-100 hover:w-12'}`}>
-        <div className="h-full w-[2px] bg-slate-200 group-hover:bg-indigo-500/50 transition-colors relative flex items-center justify-center">
-            <button 
-                onClick={onAdd}
-                className="w-8 h-8 bg-white border border-slate-200 shadow-sm rounded-full flex items-center justify-center text-slate-500 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 transition-all transform scale-75 group-hover:scale-100"
-                title="Insert Column Here"
-            >
-                <Plus size={16} />
-            </button>
-        </div>
+// --- Helper: Add Column Divider (The "Gap" Button) ---
+const AddColumnDivider = ({ onAdd }: { onAdd: () => void }) => (
+    <div className="w-4 hover:w-12 transition-all duration-300 flex flex-col items-center justify-center group h-auto min-h-[200px] -mx-2 z-10 relative">
+        <div className="h-full w-[2px] bg-transparent group-hover:bg-indigo-500/30 transition-colors absolute top-0 bottom-0 left-1/2 -translate-x-1/2" />
+        <button 
+            onClick={onAdd}
+            className="w-8 h-8 bg-white border border-slate-200 shadow-md rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 transition-all transform scale-0 group-hover:scale-100 z-20"
+            title="Insert Column Here"
+        >
+            <Plus size={16} />
+        </button>
     </div>
 );
 
@@ -102,8 +103,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
         e.preventDefault();
         const noteId = dragItemRef.current;
         if (noteId) {
-            // FIX: Removed 'section_id' to satisfy Partial<Note> type.
-            // The backend/adapter should handle mapping 'sectionId' to 'section_id'.
+            // FIX: Only using 'sectionId' to satisfy TypeScript.
             await updateNote(noteId, { sectionId: sectionId });
         }
         setDraggingId(null);
@@ -114,7 +114,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
     const getNotesForSection = (sectionId: string) => {
         return notes.filter((note: any) => {
-            // Check both camelCase (frontend) and snake_case (DB schema)
             const nSectionId = note.sectionId || note.section_id;
             return nSectionId === sectionId;
         });
@@ -122,11 +121,11 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
     return (
         <div className="flex h-full overflow-x-auto p-4 md:p-6 items-start">
-            {/* Initial Add Button if empty */}
+            {/* If empty, show big add button */}
             {canManageBoard && sections.length === 0 && (
                 <button 
                     onClick={() => addSectionAt(0)}
-                    className="w-80 h-40 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50"
+                    className="w-80 h-40 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
                 >
                     <Plus size={20} className="mr-2"/> Add First Group
                 </button>
@@ -143,36 +142,41 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
                 return (
                     <React.Fragment key={section.id}>
-                        {/* Insert Button Before Column */}
-                        {canManageBoard && (
+                        {/* Insert Divider Before Column (if enabled) */}
+                        {canManageBoard && idx > 0 && (
                             <AddColumnDivider onAdd={() => addSectionAt(idx)} />
                         )}
 
                         <div 
-                            className={`flex-shrink-0 w-80 md:w-[340px] flex flex-col max-h-full rounded-xl transition-all border shadow-sm mx-2
+                            className={`flex-shrink-0 w-80 md:w-[320px] lg:w-[350px] flex flex-col max-h-full rounded-xl transition-all border shadow-sm mx-2
                                 ${isHidden 
-                                    ? 'bg-slate-50 border-dashed border-slate-300' 
-                                    : 'bg-slate-100/80 border-slate-200/60 dark:bg-white/5'
+                                    ? 'bg-slate-50 border-dashed border-slate-300 opacity-75' 
+                                    : 'bg-slate-100/80 border-slate-200/60 dark:bg-white/5 backdrop-blur-sm'
                                 }`}
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, section.id)}
                         >
                             {/* --- HEADER --- */}
-                            <div className={`p-3 border-b border-black/5 flex items-start gap-2 ${section.headerColor || ''}`}>
-                                <div className="mt-1.5 cursor-grab active:cursor-grabbing text-slate-400">
-                                    <GripVertical size={14} />
-                                </div>
+                            <div className={`p-3 border-b border-black/5 flex items-start gap-2 ${section.headerColor ? `bg-${section.headerColor}-100` : ''}`}>
+                                {canManageBoard && (
+                                    <div className="mt-1.5 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                                        <GripVertical size={14} />
+                                    </div>
+                                )}
                                 
                                 <div className="flex-1 min-w-0">
-                                    <EditableInput
-                                        value={section.title}
-                                        onSave={(val) => updateSection(section.id, { title: val })}
-                                        disabled={!canManageBoard}
-                                        className="font-bold text-slate-800 text-lg bg-transparent border-none focus:bg-white px-1 -ml-1 rounded w-full truncate"
-                                    />
+                                    {/* Title Input: min-w-0 prevents clipping flex items */}
+                                    <div className="min-w-0">
+                                        <EditableInput
+                                            value={section.title}
+                                            onSave={(val) => updateSection(section.id, { title: val })}
+                                            disabled={!canManageBoard}
+                                            className="font-bold text-slate-800 text-lg bg-transparent border-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 px-1 -ml-1 rounded w-full block break-words leading-tight"
+                                        />
+                                    </div>
                                     
-                                    <div className="flex items-center gap-3 mt-1 px-0.5">
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide bg-slate-200/50 px-1.5 py-0.5 rounded">
+                                    <div className="flex items-center gap-2 mt-1 px-0.5">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-200/50 px-1.5 py-0.5 rounded">
                                             {sectionNotes.length} Notes
                                         </span>
                                         <div className="flex gap-1">
@@ -232,7 +236,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                 {!isLocked && (!isStudent || !isHidden) && (
                                     <button
                                         onClick={() => openAddNote(section.id)}
-                                        className="w-full py-3 bg-white/50 hover:bg-white border-2 border-transparent hover:border-indigo-200 shadow-sm hover:shadow text-slate-500 hover:text-indigo-600 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
+                                        className="w-full py-3 bg-white/60 hover:bg-white border-2 border-transparent hover:border-indigo-200 shadow-sm hover:shadow text-slate-500 hover:text-indigo-600 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
                                     >
                                         <Plus size={16} /> Add Post
                                     </button>
@@ -243,7 +247,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                         key={note.id}
                                         draggable={!isLocked && !isStudent}
                                         onDragStart={(e) => handleDragStart(e, note.id)}
-                                        className={`transition-opacity duration-200 ${draggingId === note.id ? 'opacity-40' : 'opacity-100'}`}
+                                        className={`transform transition-all duration-200 ${draggingId === note.id ? 'opacity-40 scale-95' : 'opacity-100'}`}
                                     >
                                         <NoteCard 
                                             note={note} 
@@ -259,7 +263,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
             {/* Final Add Button at the end */}
             {canManageBoard && sections.length > 0 && (
-                <AddColumnDivider onAdd={() => addSectionAt(sections.length)} showAlways={true} />
+                 <AddColumnDivider onAdd={() => addSectionAt(sections.length)} />
             )}
         </div>
     );
