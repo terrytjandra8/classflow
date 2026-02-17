@@ -24,6 +24,7 @@ export const getActiveFormat = (cmd: string, tags: string[] = []): boolean => {
 };
 
 interface RichTextEditorProps {
+    id?: string; // Add id prop
     value: string;
     onChange: (html: string) => void;
     placeholder?: string;
@@ -36,6 +37,7 @@ interface RichTextEditorProps {
 }
 
 const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({ 
+    id, // Destructure id
     value, onChange, placeholder, className, onKeyDown, onFormatChange, onPaste, autoFocus, style 
 }) => {
     const editorRef = useRef<HTMLDivElement>(null);
@@ -302,13 +304,14 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 .resizer.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
             `}</style>
             <div
+                id={id} // Apply id
                 ref={editorRef}
                 contentEditable
                 className={`rich-text-content outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500 cursor-text overflow-auto break-words whitespace-pre-wrap ${className}`}
                 onInput={handleInput}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePasteLogic}
-                onMouseUp={checkFormats}
+                onMouseUp={check.formats}
                 onKeyUp={checkFormats}
                 data-placeholder={placeholder}
                 style={{ overflowWrap: 'break-word', wordBreak: 'break-word', ...style }}
