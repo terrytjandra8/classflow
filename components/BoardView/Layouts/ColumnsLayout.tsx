@@ -102,8 +102,9 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
         e.preventDefault();
         const noteId = dragItemRef.current;
         if (noteId) {
-            // FIX: Ensure we use snake_case 'section_id' to match DB schema if needed
-            await updateNote(noteId, { sectionId: sectionId, section_id: sectionId });
+            // FIX: Removed 'section_id' to satisfy Partial<Note> type.
+            // The backend/adapter should handle mapping 'sectionId' to 'section_id'.
+            await updateNote(noteId, { sectionId: sectionId });
         }
         setDraggingId(null);
         dragItemRef.current = null;
