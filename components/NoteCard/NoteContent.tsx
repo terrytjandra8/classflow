@@ -380,7 +380,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
         <>
             <div 
                 className={`
-                    px-4 pb-2 text-sm leading-relaxed whitespace-pre-wrap break-words flex-1 
+                    px-4 pb-2 text-base leading-relaxed whitespace-pre-wrap break-words flex-1 
                     ${isTransparent ? 'p-0 text-slate-900 dark:text-white' : 'text-slate-800'} 
                     ${isStickyNote ? 'p-5 flex flex-col justify-start overflow-hidden' : ''}
                     ${isCopyDisabled ? 'select-none' : 'select-text'}
@@ -393,7 +393,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
                 onContextMenu={onContextMenu}
             >
                 {note.title && (
-                    <div className={`font-bold mb-3 leading-tight break-words whitespace-pre-wrap ${isTransparent ? 'text-2xl' : 'text-xl'} ${note.isWatermarked ? 'mb-4' : ''}`}>
+                    <div className={`font-bold mb-3 leading-tight break-words whitespace-pre-wrap ${isTransparent ? 'text-xl' : 'text-lg'}`}>
                         {isExitTicket && <CheckSquare className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {note.type === 'drawing' && <PenTool className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {note.isWatermarked ? poisonText(note.title) : note.title}
