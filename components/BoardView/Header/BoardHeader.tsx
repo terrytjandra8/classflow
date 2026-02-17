@@ -1,59 +1,80 @@
 
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
-import { useHeaderLogic } from './useHeaderLogic';
+import { useBoard } from '../BoardContext';
 import { HeaderTitle } from './HeaderTitle';
-import { HeaderBadges } from './HeaderBadges';
 import { HeaderMeta } from './HeaderMeta';
+import { HeaderBadges } from './HeaderBadges';
 import { HeaderActions } from './HeaderActions';
+import { IconPlus, IconClose } from '../../Icons';
+import { Tooltip } from '../../Tooltip';
 
-interface BoardHeaderProps {
-    isPresenting: boolean;
-    onTogglePresentation: () => void;
-}
+export const BoardHeader: React.FC = () => {
+    const { board, canManageBoard, updateBoard } = useBoard();
 
-export const BoardHeader: React.FC<BoardHeaderProps> = ({ isPresenting }) => {
-    const { goBack, isPresentationMode } = useHeaderLogic();
+    const handleGroupColumn = (sectionId: string) => {
+        if (!canManageBoard) return;
 
-    if (isPresenting) return null;
+        const newGroupId = `group-${Math.random().toString(36).substr(2, 9)}`;
+        const newColumnGroups = [...(board.columnGroups || []), { id: newGroupId, title: 'New Group', columnIds: [sectionId] }];
+        const newSections = board.sections.map(s => s.id === sectionId ? { ...s, groupId: newGroupId } : s);
 
+        updateBoard({ sections: newSections, columnGroups: newColumnGroups });
+    };
+
+    const handleUngroupColumn = (sectionId: string) => {
+        if (!canManageBoard) return;
+
+        const section = board.sections.find(s => s.id === sectionId);
+        if (!section || !section.groupId) return;
+
+        const newSections = board.sections.map(s => s.id === sectionId ? { ...s, groupId: undefined } : s);
+        const newColumnGroups = (board.columnGroups || [])
+            .map(g => ({ ...g, columnIds: g.columnIds.filter(id => id !== sectionId) }))
+            .filter(g => g.columnIds.length > 0);
+
+        updateBoard({ sections: newSections, columnGroups: newColumnGroups });
+    };
+    
     return (
-        <div className="relative w-full z-50 pointer-events-none flex flex-col md:flex-row items-start justify-between px-8 pt-8 pb-6 shrink-0 bg-transparent gap-6">
-            {/* Backdrop Gradient - Increased opacity at top for better text contrast */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none z-[-1]" />
-            
-            {/* Left: Branding & Meta */}
-            <div className="flex items-start gap-5 pointer-events-auto flex-1 min-w-0">
-                {!isPresentationMode && (
-                    <button 
-                        onClick={goBack} 
-                        className="mt-2 p-2.5 bg-white/5 hover:bg-white/10 backdrop-blur-xl rounded-xl text-white/80 hover:text-white transition-all shadow-lg border border-white/5 shrink-0 group"
-                        title="Back to Dashboard"
-                    >
-                        <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-                    </button>
-                )}
-                
-                <div className="flex flex-col min-w-0 w-full gap-2">
-                    {/* Top Row: Icon + Title + Badges */}
-                    <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 w-full relative">
-                        <HeaderTitle />
-                        <div className="md:mt-1">
-                            <HeaderBadges />
-                        </div>
-                    </div>
-
-                    {/* Bottom Row: Metadata */}
-                    <div className="pl-1">
-                        <HeaderMeta />
-                    </div>
+        <div className="bg-white/50 dark:bg-black/20 backdrop-blur-lg shadow-md p-3 rounded-b-2xl border-b border-white/10 dark:border-black/10 z-20 relative">
+            <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4 min-w-0">
+                    <HeaderTitle />
+                    <HeaderMeta />
+                </div>
+                <div className="flex items-center gap-2">
+                    <HeaderBadges />
+                    <HeaderActions />
                 </div>
             </div>
 
-            {/* Right: Controls & Live Presence - Aligned to top for balance */}
-            <div className="md:mt-1">
-                <HeaderActions />
-            </div>
+            {board.format === 'columns' && canManageBoard && (
+                <div className="mt-2 flex gap-2 items-center">
+                    {board.sections.map(section => (
+                        <div key={section.id} className="flex items-center gap-1 p-1 rounded-md bg-black/5 dark:bg-white/5">
+                           {section.groupId ? (
+                                <Tooltip content="Ungroup Column">
+                                    <button 
+                                        onClick={() => handleUngroupColumn(section.id)} 
+                                        className="p-1.5 rounded-lg transition-colors text-red-500 bg-red-500/10 hover:bg-red-500/20"
+                                    >
+                                        <IconClose size={14} />
+                                    </button>
+                                </Tooltip>
+                            ) : (
+                                <Tooltip content="Group Column">
+                                    <button 
+                                        onClick={() => handleGroupColumn(section.id)} 
+                                        className="p-1.5 rounded-lg transition-colors text-gray-400 hover:text-white hover:bg-white/10"
+                                    >
+                                        <IconPlus size={14} />
+                                    </button>
+                                </Tooltip>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

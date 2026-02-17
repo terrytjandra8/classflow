@@ -126,6 +126,7 @@ export interface ColumnAnalyticsData {
 export interface Section {
   id: string;
   title: string;
+  groupId?: string; // NEW: The ID of the group this column belongs to
   locked?: boolean;
   isContentBlurred?: boolean; 
   isHidden?: boolean;         
@@ -204,6 +205,13 @@ export interface GradingConfig {
     maxScore: number;
 }
 
+// NEW: Column Group Interface
+export interface ColumnGroup {
+  id: string;
+  title: string;
+  columnIds: string[];
+}
+
 export interface Board {
   id: string;
   title: string;
@@ -217,6 +225,7 @@ export interface Board {
   
   // Settings
   sections?: Section[];
+  columnGroups?: ColumnGroup[]; // NEW: The groups of columns
   lockMode: LockMode;
   autoLockTime?: number | null; // New: Auto-Lock absolute timestamp for regular boards
   autoLiveTime?: number | null; // New: Auto-Live absolute timestamp
