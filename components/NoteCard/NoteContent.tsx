@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckSquare, PenTool, ChevronUp, ChevronDown, X, ZoomIn, PlayCircle, FileText, Globe, ExternalLink, Maximize2, Minimize2, BookOpen, Palette, CopyX } from 'lucide-react';
-import { Note, NoteColor } from '../../../types';
+import { Note, NoteColor } from '../../types';
 import { renderFormattedContent } from './utils';
-import { useCopyProtection } from '../../../hooks/useSecurity';
-import { NOTE_COLORS } from '../../../utils/theme';
+import { useCopyProtection } from '../../hooks/useSecurity';
+import { NOTE_COLORS } from '../../utils/theme';
 
 interface NoteContentProps {
     note: Note;

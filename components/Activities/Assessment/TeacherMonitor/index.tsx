@@ -16,6 +16,7 @@ interface MonitorParticipant extends Participant {
     hasLowWordCount: boolean;
     data: any;
     lastActivity: string;
+    status: ParticipantStatus;
 }
 
 interface ActiveStudent {
@@ -49,7 +50,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             const { data } = await supabase
                 .from('notes')
                 .select('*')
-                .eq('boardId', board.id)
+                .eq('board_id', board.id)
                 .eq('type', 'assessment_submission');
             
             if (data) {
@@ -372,8 +373,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
         if (board.id && participant.id) {
              await supabase.from('grades').upsert({
-                studentId: participant.id,
-                boardId: board.id,
+                student_id: participant.id,
+                board_id: board.id,
                 score: totalScore,
                 feedback: release ? 'See assessment details' : undefined
             }, { onConflict: 'student_id, board_id' });
@@ -453,14 +454,14 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
             <RetryModal 
                 isOpen={retryModal.isOpen} 
-                participant={retryModal.participant as Participant}
+                participant={retryModal.participant as Participant | null}
                 onClose={() => setRetryModal({ isOpen: false, participant: null })}
                 onConfirm={confirmReset}
             />
 
             <GradingModal 
                 isOpen={gradingModal.isOpen}
-                participant={gradingModal.participant as Participant}
+                participant={gradingModal.participant as Participant | null}
                 onClose={() => setGradingModal({ isOpen: false, participant: null })}
                 questions={questions}
                 currentGrades={currentGrades}

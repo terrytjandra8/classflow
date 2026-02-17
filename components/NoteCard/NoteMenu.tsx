@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Edit3, Palette, Pin, ArrowUp, ArrowDown, Link as LinkIcon, Layers, MoveUp, MoveDown, Check, CameraOff } from 'lucide-react';
-import { Note, NoteColor } from '../../../types';
-import { getColorName, NOTE_COLORS } from '../../../utils/theme';
-import { supabase } from '../../../services/supabaseClient';
+import { Note, NoteColor } from '../../types';
+import { getColorName, NOTE_COLORS } from '../../utils/theme';
+import { supabase } from '../../services/supabaseClient';
 
 interface NoteMenuProps {
     note: Note;

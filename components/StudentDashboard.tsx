@@ -17,7 +17,7 @@ interface StudentDashboardProps {
   onSelectBoard: (boardId: string) => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  profile: Profile;
+  profile?: Profile;
   userClasses: string[];
 }
 
@@ -158,7 +158,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               const { data, error } = await supabase
                   .from('boards')
                   .select('id, targetGrade, format, settings, isPublished, classCode')
-                  .eq('classCode', code)
+                  .eq('class_code', code)
                   .single();
               
               if (data && !error) {
@@ -315,6 +315,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           })}
       </div>
   );
+
+  if (!profile) return null; // Or a loading state
 
   return (
     <div className={`h-screen flex ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-[#050505] text-white'} transition-colors duration-300 font-sans overflow-hidden`}>

@@ -130,17 +130,17 @@ function AppContent() {
         setAccessCheckStatus('checking');
         const { data: board, error } = await supabase
             .from('boards')
-            .select('id, isPublic, isPublished, assessmentConfig, format, ownerId, title, description, wallpaper, quizState')
+            .select('id, is_public, is_published, assessment_config, format, owner_id, title, description, wallpaper, quiz_state')
             .eq('id', boardId)
             .maybeSingle();
 
         if (error || !board) {
             setAccessCheckStatus('denied');
         } else {
-            const isPublic = board.isPublic;
-            const isLive = board.isPublished;
-            const assessmentConfig = board.assessmentConfig as Board['assessmentConfig'];
-            const isQuizActive = board.format === 'quiz' && board.quizState && board.quizState !== 'setup';
+            const isPublic = board.is_public;
+            const isLive = board.is_published;
+            const assessmentConfig = board.assessment_config as Board['assessmentConfig'];
+            const isQuizActive = board.format === 'quiz' && board.quiz_state && board.quiz_state !== 'setup';
             const isAssessmentActive = board.format === 'assessment' && assessmentConfig?.status === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
@@ -306,8 +306,8 @@ function AppContent() {
               if (initialNotes.length > 0) {
                   const rawPayload = initialNotes.map(n => ({
                       ...n,
-                      boardId: newBoard.id,
-                      authorId: user.id,
+                      board_id: newBoard.id,
+                      author_id: user.id,
                   }));
                   await supabase.from('notes').insert(rawPayload);
               }
@@ -403,12 +403,12 @@ function AppContent() {
               if (notesToCopy.length > 0) {
                   const newNotesPayload = notesToCopy.map(n => ({
                       ...n,
-                      boardId: newBoard.id,
-                      authorId: user.id,
+                      board_id: newBoard.id,
+                      author_id: user.id,
                       authorAvatar: userProfile?.avatarUrl,
                       likes: 0,
                       comments: [],
-                      likedBy: [],
+                      liked_by: [],
                   }));
                   await supabase.from('notes').insert(newNotesPayload);
               }
@@ -439,7 +439,7 @@ function AppContent() {
       const { data: board, error } = await supabase
           .from('boards')
           .select('*')
-          .eq('classCode', code)
+          .eq('class_code', code)
           .single();
       
       if (error || !board) return false;
