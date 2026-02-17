@@ -374,23 +374,43 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             )}
 
-            {/* Drawing Modal */}
-            {activeDrawingQId && (
-                <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-                     <div className="w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                         <button 
-                            onClick={() => setActiveDrawingQId(null)}
-                            className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-50"
-                         >
-                             <X size={24}/>
-                         </button>
-                         <div className="flex-1 bg-white relative">
-                            <DrawingCanvas 
-                                onSave={handleSaveDrawing} 
-                                manualSave={true} 
-                            />
-                         </div>
-                     </div>
+           {/* FIXED Drawing Modal - Zoom & Scroll Friendly */}
+{activeDrawingQId && (
+    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-2 md:p-4">
+         <div className="w-full max-w-6xl h-full max-h-[95vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
+             
+             {/* Header - Fixed */}
+             <div className="flex justify-between items-center p-3 border-b border-white/10 bg-[#1a1a1a] z-10">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Drawing Workspace</span>
+                <button 
+                    onClick={() => setActiveDrawingQId(null)}
+                    className="bg-red-500/10 text-red-500 p-1.5 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
+                >
+                    <X size={18}/>
+                </button>
+             </div>
+
+             {/* Drawing Area - Scrollable if Zoomed */}
+             <div className="flex-1 overflow-auto bg-[#f0f0f0] custom-scrollbar">
+                 <div className="min-w-fit min-h-fit p-4 flex items-center justify-center">
+                    {/* @ts-ignore */}
+                    <DrawingCanvas 
+                        width={1200}
+                        height={800}
+                        onSave={handleSaveDrawing}
+                        manualSave={true}
+                        // We remove the max-h-full here so the canvas can maintain its 
+                        // size and be scrolled if the user zooms in
+                        className="shadow-2xl bg-white" 
+                    />
+                 </div>
+             </div>
+
+             {/* Footer Note */}
+                <div className="p-2 bg-black/40 text-[10px] text-center text-gray-500 italic border-t border-white/5">
+                    Tip: Use two fingers to pan/scroll if zoomed in.
+                </div>
+            </div>
                 </div>
             )}
         </div>

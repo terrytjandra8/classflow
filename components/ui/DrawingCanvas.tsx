@@ -7,12 +7,13 @@ interface DrawingCanvasProps {
     width?: number;
     height?: number;
     className?: string;
-    style?: React.CSSProperties; // Added to fix TS2322 error
+    style?: React.CSSProperties;
     strokeColor?: string;
     manualSave?: boolean;
 }
 
 const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+const STROKE_SIZES = [3, 6, 12]; // Small, Medium, Large
 
 export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
     onSave, 
@@ -28,6 +29,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasContent, setHasContent] = useState(false);
     const [activeColor, setActiveColor] = useState(strokeColor);
+    const [strokeWidth, setStrokeWidth] = useState(STROKE_SIZES[0]);
     const [isEraser, setIsEraser] = useState(false);
     const [history, setHistory] = useState<ImageData[]>([]);
     const [historyStep, setHistoryStep] = useState(0);
@@ -43,7 +45,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 ctx.fillRect(0, 0, width, height);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = strokeWidth;
                 const blank = ctx.getImageData(0, 0, width, height);
                 setHistory([blank]);
                 setHistoryStep(0);
@@ -52,7 +54,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         setHasContent(false);
         setIsEraser(false);
         setActiveColor(strokeColor);
-    }, [width, height, strokeColor]);
+    }, [width, height, strokeColor, strokeWidth]);
 
     const saveHistoryStep = () => {
         const canvas = canvasRef.current;
@@ -158,7 +160,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.strokeStyle = isEraser ? '#ffffff' : activeColor;
-        ctx.lineWidth = isEraser ? 20 : 3;
+        ctx.lineWidth = isEraser ? 20 : strokeWidth;
     };
 
     const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -220,6 +222,16 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     >
                         <Eraser size={16} />
                     </button>
+                </div>
+                 <div className="flex items-center justify-center gap-3 bg-black/5 dark:bg-white/5 p-2 rounded-xl">
+                    {STROKE_SIZES.map(size => (
+                        <button key={size} onClick={() => setStrokeWidth(size)}
+                            className={`h-8 rounded-lg flex items-center justify-center transition-all ${strokeWidth === size && !isEraser ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'}`}>
+                            <div className="w-6 h-6 flex items-center justify-center">
+                                <div className="rounded-full" style={{ width: size, height: size, backgroundColor: 'black' }} />
+                            </div>
+                        </button>
+                    ))}
                 </div>
                 <div className="flex justify-between items-center">
                     <div className="text-xs text-gray-400 flex items-center gap-1 font-medium">
