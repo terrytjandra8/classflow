@@ -4,7 +4,6 @@ import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
 import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock } from 'lucide-react';
 import { DrawingCanvas } from '../../../ui/DrawingCanvas';
 import { supabase } from '../../../../services/supabaseClient';
-import { createPortal } from 'react-dom';
 import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
 
@@ -31,21 +30,18 @@ const formatTime = (seconds: number) => {
     return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-// --- MEMOIZED QUESTION COMPONENT FOR PERFORMANCE ---
 const QuestionItem = memo(({ 
-    q, idx, answer, onAnswerChange, isReadingMode, allowInteractions, setActiveDrawingQId, questionNumber, isReadOnly
+    q, idx, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly
 }: {
     q: AssessmentQuestion;
     idx: number;
     answer: string;
     onAnswerChange: (id: string, val: string) => void;
     isReadingMode: boolean;
-    allowInteractions: boolean;
     setActiveDrawingQId: (id: string) => void;
     questionNumber: number;
     isReadOnly: boolean;
 }) => {
-    // Section Header Logic
     if (q.type === 'section') {
         return (
             <div className="pt-8 pb-2 border-b border-white/10 mb-4">
@@ -54,21 +50,13 @@ const QuestionItem = memo(({
         );
     }
 
-    // Question Card Logic
     const isEssay = q.type === 'essay';
     const isDrawing = isEssay && answer && answer.startsWith('http');
-    
-    // SPAM CHECK LOGIC
     const wc = isEssay && !isDrawing ? countQualityWords(answer || '') : 0;
     const rawWc = isEssay && !isDrawing ? (answer || '').trim().split(/\s+/).filter(w => w.length > 0).length : 0;
-    const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5); // If >5 garbage words detected
-    
+    const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5);
     const isUnderWordLimit = isEssay && q.minWords && wc < q.minWords && !isDrawing;
-    
-    // Parse Math Symbols in Question Text
     const renderedText = parseMath(q.text);
-
-    // Response Capability Logic
     const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
@@ -81,7 +69,7 @@ const QuestionItem = memo(({
             </div>
             
             <div 
-                className={`text-lg font-medium mb-6 leading-relaxed rich-text-content ${allowInteractions && !isReadOnly ? 'select-text' : 'select-none'}`}
+                className="text-lg font-medium mb-6 leading-relaxed rich-text-content select-none"
                 dangerouslySetInnerHTML={{ __html: renderedText }}
             />
 
@@ -156,7 +144,7 @@ const QuestionItem = memo(({
                                     (isUnderWordLimit && answer ? 'border-amber-500/50 focus:border-amber-500' : 'border-white/10 focus:border-blue-500')
                                 }`}
                                 placeholder={isReadingMode ? "Reading time active..." : (isReadOnly ? "Question is locked." : "Type your answer here...")}
-                                onPaste={(e) => !allowInteractions && e.preventDefault()}
+                                onPaste={(e) => e.preventDefault()}
                             />
                             {isSpamming && (
                                 <div className="absolute bottom-4 right-4 text-xs font-bold text-red-500 flex items-center gap-1 bg-black/50 backdrop-blur px-2 py-1 rounded">
@@ -184,8 +172,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
 
-    // In Practice Mode, we relax security restrictions
-    const allowInteractions = !!isPracticeMode;
     const isRevision = retryQuestions && retryQuestions.length > 0;
 
     const handleConfirmSubmit = () => {
@@ -210,7 +196,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
             
-            // FORCE IMMEDIATE SAVE for image uploads
             onAnswerChange(activeDrawingQId, publicUrl, true);
             setActiveDrawingQId(null);
         } catch (e) {
@@ -222,7 +207,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     return (
         <div 
             className="h-full flex flex-col bg-[#111] text-white overflow-hidden relative" 
-            onContextMenu={e => !allowInteractions && e.preventDefault()}
+            onContextMenu={e => e.preventDefault()}
         >
             
             {isPreviewMode && (
@@ -232,19 +217,15 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             )}
             
-            {/* Revision Banner */}
             {isRevision && (
                 <div className="bg-orange-600 text-white px-4 py-2 flex justify-center items-center z-50 sticky top-0 shadow-md shrink-0 text-xs font-bold uppercase tracking-wider gap-2">
                     <Unlock size={14} /> Revision Mode: Only unlocked questions can be edited
                 </div>
             )}
 
-            {/* STICKY HEADER WITH TIMER */}
             <div className={`h-16 shrink-0 flex items-center justify-between px-6 border-b z-20 ${isReadingMode ? 'bg-blue-900/20 border-blue-500/30' : (isPracticeMode ? 'bg-teal-900/20 border-teal-500/30' : 'bg-[#161616] border-white/10')}`}>
                 <div className="flex items-center gap-4">
                     <div className="font-bold truncate max-w-[200px]">{boardTitle}</div>
-                    
-                    {/* Manual Sync Button */}
                     <button 
                         onClick={handleSync}
                         disabled={isSyncing}
@@ -253,8 +234,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                     >
                         <RefreshCcw size={14} />
                     </button>
-
-                    {/* Deadline Display (Hide for Practice) */}
                     {config.autoLockTime && !isPracticeMode && (
                         <div className="text-xs text-red-300 font-bold flex items-center gap-1 bg-red-900/20 px-2 py-1 rounded border border-red-500/20 shadow-sm">
                             <Clock size={12} /> Due: {new Date(config.autoLockTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -288,7 +267,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             </div>
 
-            {/* READING MODE WARNING OVERLAY (Non-intrusive) */}
             {isReadingMode && (
                 <div className="bg-blue-600/20 border-b border-blue-500/30 p-2 text-center text-blue-200 text-xs font-bold">
                     <AlertCircle size={12} className="inline mr-2" />
@@ -300,7 +278,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 <div className="max-w-3xl mx-auto space-y-8 pb-20">
                     {questions.map((q, idx) => {
                         const questionNumber = questions.filter((item, i) => i <= idx && item.type !== 'section').length;
-                        // If in revision mode, only allow editing if q.id is in retryQuestions
                         const isQuestionReadOnly = isRevision && !retryQuestions?.includes(q.id);
 
                         return (
@@ -309,9 +286,8 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 q={q}
                                 idx={idx}
                                 answer={answers[q.id]}
-                                onAnswerChange={(id, val) => onAnswerChange(id, val, false)} // Text uses debounce (false)
+                                onAnswerChange={(id, val) => onAnswerChange(id, val, false)}
                                 isReadingMode={isReadingMode}
-                                allowInteractions={allowInteractions}
                                 setActiveDrawingQId={setActiveDrawingQId}
                                 questionNumber={questionNumber}
                                 isReadOnly={isQuestionReadOnly ?? false}
@@ -338,7 +314,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             </div>
 
-            {/* Custom Confirm Modal */}
             {showSubmitModal && (
                 <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -374,43 +349,22 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 </div>
             )}
 
-           {/* FIXED Drawing Modal - Zoom & Scroll Friendly */}
-{activeDrawingQId && (
-    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-2 md:p-4">
-         <div className="w-full max-w-6xl h-full max-h-[95vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
-             
-             {/* Header - Fixed */}
-             <div className="flex justify-between items-center p-3 border-b border-white/10 bg-[#1a1a1a] z-10">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Drawing Workspace</span>
-                <button 
-                    onClick={() => setActiveDrawingQId(null)}
-                    className="bg-red-500/10 text-red-500 p-1.5 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
-                >
-                    <X size={18}/>
-                </button>
-             </div>
-
-             {/* Drawing Area - Scrollable if Zoomed */}
-             <div className="flex-1 overflow-auto bg-[#f0f0f0] custom-scrollbar">
-                 <div className="min-w-fit min-h-fit p-4 flex items-center justify-center">
-                    {/* @ts-ignore */}
-                    <DrawingCanvas 
-                        width={1200}
-                        height={800}
-                        onSave={handleSaveDrawing}
-                        manualSave={true}
-                        // We remove the max-h-full here so the canvas can maintain its 
-                        // size and be scrolled if the user zooms in
-                        className="shadow-2xl bg-white" 
-                    />
-                 </div>
-             </div>
-
-             {/* Footer Note */}
-                <div className="p-2 bg-black/40 text-[10px] text-center text-gray-500 italic border-t border-white/5">
-                    Tip: Use two fingers to pan/scroll if zoomed in.
-                </div>
-            </div>
+            {activeDrawingQId && (
+                <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+                     <div className="w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-y-auto relative">
+                         <button 
+                            onClick={() => setActiveDrawingQId(null)}
+                            className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-50"
+                         >
+                             <X size={24}/>
+                         </button>
+                         <div className="flex-1 bg-white relative">
+                            <DrawingCanvas 
+                                onSave={handleSaveDrawing} 
+                                manualSave={true} 
+                            />
+                         </div>
+                     </div>
                 </div>
             )}
         </div>
