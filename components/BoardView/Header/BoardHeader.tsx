@@ -7,7 +7,6 @@ import {
     Settings, Share2, ArrowLeft, MonitorPlay, Minimize2, 
     Users, Clock, Eye, EyeOff 
 } from 'lucide-react';
-import { format } from 'date-fns';
 
 interface BoardHeaderProps {
     isPresenting?: boolean;
@@ -27,6 +26,26 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
         updateBoard({ title: newTitle });
     };
 
+    // Helper to format dates without external libraries
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return 'Recent';
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+        });
+    };
+
+    const formatTime = (dateString?: string) => {
+        if (!dateString) return 'Just now';
+        return new Date(dateString).toLocaleTimeString('en-US', {
+            hour: '2-digit', minute: '2-digit'
+        });
+    };
+
+    // Safely access properties, preferring camelCase (TS) but falling back if needed
+    const isPublished = (board as any).isPublished ?? (board as any).is_published;
+    const createdAt = (board as any).createdAt ?? (board as any).created_at;
+    const updatedAt = (board as any).updatedAt ?? (board as any).updated_at;
+
     return (
         <header className="relative z-20 flex flex-col w-full bg-white/10 backdrop-blur-xl border-b border-white/10 text-white p-4">
             <div className="flex items-center justify-between">
@@ -45,7 +64,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
                                 disabled={!canManageBoard}
                                 className="font-bold text-xl bg-transparent border-none focus:ring-0 p-0 cursor-pointer hover:opacity-80"
                             />
-                            {board.is_published === false && (
+                            {isPublished === false && (
                                 <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/30 uppercase font-bold">
                                     Draft
                                 </span>
@@ -54,10 +73,10 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
                         
                         <div className="flex items-center gap-4 mt-1 text-[10px] opacity-60 uppercase tracking-wider">
                             <span className="flex items-center gap-1">
-                                <Clock size={10} /> Created: {board.created_at ? format(new Date(board.created_at), 'MMM d, yyyy') : 'Recent'}
+                                <Clock size={10} /> Created: {formatDate(createdAt)}
                             </span>
                             <span>
-                                Updated: {board.updated_at ? format(new Date(board.updated_at), 'HH:mm') : 'Just now'}
+                                Updated: {formatTime(updatedAt)}
                             </span>
                         </div>
                     </div>
