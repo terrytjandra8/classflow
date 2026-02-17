@@ -280,7 +280,14 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                         {isEssay && q.minWords && q.minWords > 0 && <span className={`text-[10px] font-bold ${isUnderLimit ? 'text-amber-500' : 'text-green-500'}`}>{wordCount} / {q.minWords} valid words</span>}
                                     </div>
                                     {q.type === 'mcq' ? (
-                                        <div className="text-sm text-gray-300" dangerouslySetInnerHTML={{__html: studentAns ? parseMath(q.options?.[parseInt(studentAns)]) : '<span class="italic opacity-50">No Answer</span>'}} />
+                                        <p className="text-sm text-gray-300">
+                                            <span dangerouslySetInnerHTML={{ __html: studentAns != null ? parseMath(q.options?.[parseInt(studentAns)] || '') : '<span class="italic opacity-50">No Answer</span>' }} />
+                                            {q.correctAnswer && studentAns != null &&
+                                                <span className="ml-2 text-[10px] text-green-500 uppercase font-bold">
+                                                    {studentAns === q.correctAnswer ? '(Correct)' : `(Expected: ${q.options?.[parseInt(q.correctAnswer)] || ''})`}
+                                                </span>
+                                            }
+                                        </p>
                                     ) : (
                                         isImageAnswer(studentAns) ? (
                                             <div className="relative group">
