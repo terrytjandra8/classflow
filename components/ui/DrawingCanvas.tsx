@@ -10,6 +10,7 @@ interface DrawingCanvasProps {
     style?: React.CSSProperties;
     strokeColor?: string;
     manualSave?: boolean;
+    initialData?: string;
 }
 
 const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
@@ -23,11 +24,12 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     className = "",
     style,
     strokeColor = '#000000',
-    manualSave = false
+    manualSave = false,
+    initialData
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
-    const [hasContent, setHasContent] = useState(false);
+    const [hasContent, setHasContent] = useState(!!initialData);
     const [activeColor, setActiveColor] = useState(strokeColor);
     const [strokeWidth, setStrokeWidth] = useState(STROKE_SIZES[0]);
     const [isEraser, setIsEraser] = useState(false);
@@ -41,19 +43,35 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             canvas.height = height;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if(ctx) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, width, height);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                const blank = ctx.getImageData(0, 0, width, height);
-                setHistory([blank]);
-                setHistoryStep(0);
+                
+                const resetCanvas = () => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
+                    if (initialData) {
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const initial = ctx.getImageData(0, 0, width, height);
+                            setHistory([initial]);
+                            setHistoryStep(0);
+                            setHasContent(true);
+                        };
+                        img.src = initialData;
+                    } else {
+                        const blank = ctx.getImageData(0, 0, width, height);
+                        setHistory([blank]);
+                        setHistoryStep(0);
+                        setHasContent(false);
+                    }
+                }
+                resetCanvas();
             }
         }
-        setHasContent(false);
-        setIsEraser(false);
         setActiveColor(strokeColor);
-    }, [width, height, strokeColor]);
+        setIsEraser(false);
+    }, [width, height, strokeColor, initialData]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -107,13 +125,13 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             if (canvas && ctx && previousState) {
                 ctx.putImageData(previousState, 0, 0);
                 setHistoryStep(newStep);
-                setHasContent(newStep > 0);
+                setHasContent(newStep > 0 || !!initialData);
                 if (!manualSave) {
                      canvas.toBlob((blob) => { if (blob && onSave) onSave(blob); });
                 }
             }
         }
-    }, [history, historyStep, onSave, manualSave]);
+    }, [history, historyStep, onSave, manualSave, initialData]);
 
     const handleRedo = useCallback(() => {
         if (historyStep < history.length - 1) {
@@ -124,7 +142,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             if (canvas && ctx && nextState) {
                 ctx.putImageData(nextState, 0, 0);
                 setHistoryStep(newStep);
-                setHasContent(newStep > 0);
+                setHasContent(true);
                 if (!manualSave) {
                     canvas.toBlob((blob) => { if (blob && onSave) onSave(blob); });
                 }

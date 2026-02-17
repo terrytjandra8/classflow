@@ -234,6 +234,8 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         }
     };
 
+    const activeDrawingInitialData = activeDrawingQId ? answers[activeDrawingQId] : undefined;
+
     return (
         <div 
             className="h-full flex flex-col bg-[#111] text-white overflow-hidden relative" 
@@ -392,6 +394,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                             <DrawingCanvas 
                                 onSave={handleSaveDrawing} 
                                 manualSave={true} 
+                                initialData={activeDrawingInitialData}
                             />
                          </div>
                      </div>
