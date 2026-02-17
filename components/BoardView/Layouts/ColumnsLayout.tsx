@@ -4,9 +4,10 @@ import NoteCard from '../../NoteCard';
 import { EditableInput } from '../../ui/EditableInput';
 import { 
     Plus, MoreVertical, Eye, EyeOff, Lock, Unlock, 
-    Trash2, Ghost
+    Trash2, Ghost, GripVertical
 } from 'lucide-react';
 
+// --- Helper: Simple Dropdown ---
 const SimpleDropdown = ({ trigger, items }: any) => {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -20,14 +21,14 @@ const SimpleDropdown = ({ trigger, items }: any) => {
 
     return (
         <div className="relative" ref={ref}>
-            <div onClick={() => setOpen(!open)}>{trigger}</div>
+            <div onClick={() => setOpen(!open)} className="cursor-pointer">{trigger}</div>
             {open && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-slate-100 py-1">
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-50 border border-slate-200 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {items.map((item: any, idx: number) => (
                         item.divider ? <div key={idx} className="h-[1px] bg-slate-100 my-1"/> :
                         <button 
                             key={idx} 
-                            onClick={() => { item.onClick(); setOpen(false); }}
+                            onClick={(e) => { e.stopPropagation(); item.onClick(); setOpen(false); }}
                             className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2 ${item.className || 'text-slate-700'}`}
                         >
                             {item.icon} {item.label}
@@ -38,6 +39,21 @@ const SimpleDropdown = ({ trigger, items }: any) => {
         </div>
     );
 };
+
+// --- Helper: Add Column Divider ---
+const AddColumnDivider = ({ onAdd, showAlways = false }: { onAdd: () => void, showAlways?: boolean }) => (
+    <div className={`group w-4 flex flex-col items-center justify-center transition-all duration-300 ${showAlways ? 'opacity-100' : 'opacity-0 hover:opacity-100 hover:w-12'}`}>
+        <div className="h-full w-[2px] bg-slate-200 group-hover:bg-indigo-500/50 transition-colors relative flex items-center justify-center">
+            <button 
+                onClick={onAdd}
+                className="w-8 h-8 bg-white border border-slate-200 shadow-sm rounded-full flex items-center justify-center text-slate-500 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 transition-all transform scale-75 group-hover:scale-100"
+                title="Insert Column Here"
+            >
+                <Plus size={16} />
+            </button>
+        </div>
+    </div>
+);
 
 interface ColumnsLayoutProps {
     isStudent?: boolean;
@@ -50,6 +66,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
     const sections = board.sections || [];
 
+    // --- Actions ---
     const updateSection = (id: string, data: any) => {
         const newSections = sections.map((s: any) => s.id === id ? { ...s, ...data } : s);
         updateBoard({ sections: newSections });
@@ -60,14 +77,19 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
         updateBoard({ sections: newSections });
     };
 
-    const addSection = (data: any) => {
+    const addSectionAt = (index: number) => {
         const newSection = { 
             id: Math.random().toString(36).substr(2, 9), 
-            ...data 
+            title: 'New Group',
+            isLocked: false,
+            isHidden: false
         };
-        updateBoard({ sections: [...sections, newSection] });
+        const newSections = [...sections];
+        newSections.splice(index, 0, newSection);
+        updateBoard({ sections: newSections });
     };
 
+    // --- Drag & Drop ---
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const dragItemRef = useRef<string | null>(null);
 
@@ -80,7 +102,8 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
         e.preventDefault();
         const noteId = dragItemRef.current;
         if (noteId) {
-            await updateNote(noteId, { sectionId: sectionId });
+            // FIX: Ensure we use snake_case 'section_id' to match DB schema if needed
+            await updateNote(noteId, { sectionId: sectionId, section_id: sectionId });
         }
         setDraggingId(null);
         dragItemRef.current = null;
@@ -90,128 +113,152 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
     const getNotesForSection = (sectionId: string) => {
         return notes.filter((note: any) => {
+            // Check both camelCase (frontend) and snake_case (DB schema)
             const nSectionId = note.sectionId || note.section_id;
             return nSectionId === sectionId;
         });
     };
 
     return (
-        <div className="flex h-full gap-4 overflow-x-auto p-4 md:p-6 items-start">
-            {sections.map((section: any) => {
-                const isHidden = section.isHidden ?? section.is_hidden;
-                const isLocked = section.isLocked ?? section.is_locked;
-                const isBlurred = section.isBlurred ?? section.is_blurred;
-                const isAnon = section.anonymousMode ?? section.anonymous_mode;
+        <div className="flex h-full overflow-x-auto p-4 md:p-6 items-start">
+            {/* Initial Add Button if empty */}
+            {canManageBoard && sections.length === 0 && (
+                <button 
+                    onClick={() => addSectionAt(0)}
+                    className="w-80 h-40 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50"
+                >
+                    <Plus size={20} className="mr-2"/> Add First Group
+                </button>
+            )}
+
+            {sections.map((section: any, idx: number) => {
+                const isHidden = section.isHidden || section.is_hidden;
+                const isLocked = section.isLocked || section.is_locked;
+                const isBlurred = section.isBlurred || section.is_blurred;
+                const isAnon = section.anonymousMode || section.anonymous_mode;
+                const sectionNotes = getNotesForSection(section.id);
 
                 if (isHidden && isStudent) return null;
 
                 return (
-                    <div 
-                        key={section.id} 
-                        className={`flex-shrink-0 w-80 md:w-96 flex flex-col max-h-full rounded-xl transition-all border ${isHidden ? 'bg-slate-50 border-dashed border-slate-300 opacity-70' : 'bg-slate-100/50 border-transparent'}`}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, section.id)}
-                    >
-                        <div className="p-3 flex items-start justify-between group">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                    <React.Fragment key={section.id}>
+                        {/* Insert Button Before Column */}
+                        {canManageBoard && (
+                            <AddColumnDivider onAdd={() => addSectionAt(idx)} />
+                        )}
+
+                        <div 
+                            className={`flex-shrink-0 w-80 md:w-[340px] flex flex-col max-h-full rounded-xl transition-all border shadow-sm mx-2
+                                ${isHidden 
+                                    ? 'bg-slate-50 border-dashed border-slate-300' 
+                                    : 'bg-slate-100/80 border-slate-200/60 dark:bg-white/5'
+                                }`}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, section.id)}
+                        >
+                            {/* --- HEADER --- */}
+                            <div className={`p-3 border-b border-black/5 flex items-start gap-2 ${section.headerColor || ''}`}>
+                                <div className="mt-1.5 cursor-grab active:cursor-grabbing text-slate-400">
+                                    <GripVertical size={14} />
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
                                     <EditableInput
                                         value={section.title}
                                         onSave={(val) => updateSection(section.id, { title: val })}
                                         disabled={!canManageBoard}
-                                        className="font-bold text-slate-800 text-lg bg-transparent border-none focus:bg-white px-1 rounded w-full"
+                                        className="font-bold text-slate-800 text-lg bg-transparent border-none focus:bg-white px-1 -ml-1 rounded w-full truncate"
                                     />
+                                    
+                                    <div className="flex items-center gap-3 mt-1 px-0.5">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide bg-slate-200/50 px-1.5 py-0.5 rounded">
+                                            {sectionNotes.length} Notes
+                                        </span>
+                                        <div className="flex gap-1">
+                                            {isLocked && <Lock size={12} className="text-red-500" />}
+                                            {isAnon && <Ghost size={12} className="text-purple-500" />}
+                                            {isBlurred && <EyeOff size={12} className="text-slate-400" />}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 px-1 mt-1">
-                                    <span className="text-xs font-medium text-slate-500">
-                                        {getNotesForSection(section.id).length} notes
-                                    </span>
-                                    {isLocked && <Lock size={12} className="text-red-500" />}
-                                    {isAnon && <Ghost size={12} className="text-purple-500" />}
-                                    {isBlurred && <EyeOff size={12} className="text-slate-400" />}
-                                </div>
+
+                                {canManageBoard && (
+                                    <SimpleDropdown
+                                        trigger={
+                                            <button className="p-1.5 hover:bg-black/5 rounded-md text-slate-500 transition-colors">
+                                                <MoreVertical size={16} />
+                                            </button>
+                                        }
+                                        items={[
+                                            {
+                                                label: isLocked ? 'Unlock Group' : 'Lock Group',
+                                                icon: isLocked ? <Unlock size={14}/> : <Lock size={14}/>,
+                                                onClick: () => updateSection(section.id, { isLocked: !isLocked }),
+                                                className: isLocked ? 'text-green-600' : ''
+                                            },
+                                            {
+                                                label: isAnon ? 'Show Names' : 'Make Anonymous',
+                                                icon: <Ghost size={14}/>,
+                                                onClick: () => updateSection(section.id, { anonymousMode: !isAnon }),
+                                                className: isAnon ? 'text-purple-600' : ''
+                                            },
+                                            {
+                                                label: isBlurred ? 'Unblur Content' : 'Blur Content',
+                                                icon: isBlurred ? <Eye size={14}/> : <EyeOff size={14}/>,
+                                                onClick: () => updateSection(section.id, { isBlurred: !isBlurred })
+                                            },
+                                            {
+                                                label: isHidden ? 'Show Group' : 'Hide Group',
+                                                icon: isHidden ? <Eye size={14}/> : <EyeOff size={14}/>,
+                                                onClick: () => updateSection(section.id, { isHidden: !isHidden })
+                                            },
+                                            { divider: true },
+                                            {
+                                                label: 'Delete Group',
+                                                icon: <Trash2 size={14}/>,
+                                                onClick: () => {
+                                                    if(confirm('Delete this group?')) deleteSection(section.id);
+                                                },
+                                                className: 'text-red-600'
+                                            }
+                                        ]}
+                                    />
+                                )}
                             </div>
 
-                            {canManageBoard && (
-                                <SimpleDropdown
-                                    trigger={
-                                        <button className="p-1.5 hover:bg-black/5 rounded text-slate-500 transition-colors">
-                                            <MoreVertical size={18} />
-                                        </button>
-                                    }
-                                    items={[
-                                        {
-                                            label: isLocked ? 'Unlock Group' : 'Lock Group',
-                                            icon: isLocked ? <Unlock size={14}/> : <Lock size={14}/>,
-                                            onClick: () => updateSection(section.id, { isLocked: !isLocked }),
-                                            className: isLocked ? 'text-green-600' : 'text-slate-700'
-                                        },
-                                        {
-                                            label: isAnon ? 'Show Names' : 'Make Anonymous',
-                                            icon: <Ghost size={14}/>,
-                                            onClick: () => updateSection(section.id, { anonymousMode: !isAnon }),
-                                            className: isAnon ? 'text-purple-600' : 'text-slate-700'
-                                        },
-                                        {
-                                            label: isBlurred ? 'Unblur Content' : 'Blur Content',
-                                            icon: isBlurred ? <Eye size={14}/> : <EyeOff size={14}/>,
-                                            onClick: () => updateSection(section.id, { isBlurred: !isBlurred })
-                                        },
-                                        {
-                                            label: isHidden ? 'Show Group' : 'Hide Group',
-                                            icon: isHidden ? <Eye size={14}/> : <EyeOff size={14}/>,
-                                            onClick: () => updateSection(section.id, { isHidden: !isHidden })
-                                        },
-                                        { divider: true },
-                                        {
-                                            label: 'Delete Group',
-                                            icon: <Trash2 size={14}/>,
-                                            onClick: () => {
-                                                if(confirm('Delete this group?')) deleteSection(section.id);
-                                            },
-                                            className: 'text-red-600'
-                                        }
-                                    ]}
-                                />
-                            )}
-                        </div>
+                            {/* --- CONTENT --- */}
+                            <div className={`flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar ${isBlurred && isStudent ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                                {!isLocked && (!isStudent || !isHidden) && (
+                                    <button
+                                        onClick={() => openAddNote(section.id)}
+                                        className="w-full py-3 bg-white/50 hover:bg-white border-2 border-transparent hover:border-indigo-200 shadow-sm hover:shadow text-slate-500 hover:text-indigo-600 rounded-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
+                                    >
+                                        <Plus size={16} /> Add Post
+                                    </button>
+                                )}
 
-                        <div className={`flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar ${isBlurred && isStudent ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                            {!isLocked && (!isStudent || !isHidden) && (
-                                <button
-                                    onClick={() => openAddNote(section.id)}
-                                    className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:text-slate-600 hover:border-slate-400 hover:bg-white/50 transition-all flex items-center justify-center gap-2 font-bold text-sm"
-                                >
-                                    <Plus size={16} /> Add Post
-                                </button>
-                            )}
-
-                            {getNotesForSection(section.id).map((note: any) => (
-                                <div 
-                                    key={note.id}
-                                    draggable={!isLocked && !isStudent}
-                                    onDragStart={(e) => handleDragStart(e, note.id)}
-                                    className={draggingId === note.id ? 'opacity-50' : ''}
-                                >
-                                    {/* FIX: Removed anonymousMode prop which does not exist on NoteCard */}
-                                    <NoteCard 
-                                        note={note} 
-                                        isStudent={isStudent} 
-                                    />
-                                </div>
-                            ))}
+                                {sectionNotes.map((note: any) => (
+                                    <div 
+                                        key={note.id}
+                                        draggable={!isLocked && !isStudent}
+                                        onDragStart={(e) => handleDragStart(e, note.id)}
+                                        className={`transition-opacity duration-200 ${draggingId === note.id ? 'opacity-40' : 'opacity-100'}`}
+                                    >
+                                        <NoteCard 
+                                            note={note} 
+                                            isStudent={isStudent} 
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    </React.Fragment>
                 );
             })}
 
-            {canManageBoard && (
-                <button
-                    onClick={() => addSection({ title: 'New Group', orderIndex: sections.length })}
-                    className="flex-shrink-0 w-16 h-full min-h-[200px] bg-white/20 hover:bg-slate-100 border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl transition-all duration-300 flex items-center justify-center text-slate-400 hover:text-slate-600 group"
-                >
-                     <Plus size={24} className="group-hover:scale-110 transition-transform" />
-                </button>
+            {/* Final Add Button at the end */}
+            {canManageBoard && sections.length > 0 && (
+                <AddColumnDivider onAdd={() => addSectionAt(sections.length)} showAlways={true} />
             )}
         </div>
     );

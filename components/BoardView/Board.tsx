@@ -17,21 +17,15 @@ type ExtendedBoardProps = Partial<BoardProps> & {
 
 export const BoardLayout: React.FC<ExtendedBoardProps> = (props) => {
     const parentContext = useBoard();
-    
-    // 1. Detect Presentation Mode from URL
     const [isPresentationPopup, setIsPresentationPopup] = useState(false);
     
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        if (params.get('present') === 'true') {
-            setIsPresentationPopup(true);
-        }
+        if (params.get('present') === 'true') setIsPresentationPopup(true);
     }, []);
 
-    // 2. Determine Modes
     const embeddedMode = props.embeddedMode || isPresentationPopup;
-    
-    // FIX: Use !! to force this into a strict boolean (true/false) so it can never be undefined
+    // Strict boolean coercion
     const effectiveIsStudent = !!(props.isStudent || parentContext.isStudent || isPresentationPopup || props.isPresentationMode);
     
     const board = props.board || parentContext.board;

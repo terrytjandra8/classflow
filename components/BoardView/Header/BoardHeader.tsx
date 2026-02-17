@@ -1,11 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useBoard } from '../BoardContext';
 import { EditableInput } from '../../ui/EditableInput'; 
 import { Tooltip } from '../../Tooltip';
 import { 
     Settings, Share2, ArrowLeft, MonitorPlay, 
-    Users, MoreHorizontal, Copy, ExternalLink, QrCode
+    Users, MoreHorizontal, Circle
 } from 'lucide-react';
+
+const OnlineUsersList = ({ users, onClose }: { users: any[], onClose: () => void }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleClickOutside = (event: any) => {
+            if (ref.current && !ref.current.contains(event.target)) onClose();
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={ref} className="absolute top-12 right-0 w-64 bg-white rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center">
+                <span>Active Users ({users.length})</span>
+                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+                {users.map((user: any) => (
+                    <div key={user.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                        <div className="relative">
+                            <img 
+                                src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.full_name || 'User'}`} 
+                                className="w-8 h-8 rounded-full border border-slate-200"
+                                alt={user.full_name}
+                            />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-800 truncate">{user.full_name || 'Anonymous'}</div>
+                            <div className="text-xs text-slate-400 truncate">{user.email || 'Student'}</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 export const BoardHeader: React.FC = () => {
     const { 
@@ -13,44 +51,30 @@ export const BoardHeader: React.FC = () => {
         canManageBoard, onlineUsers 
     } = useBoard();
     
-    // Helper to format dates safely without external libraries
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return '';
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short', day: 'numeric'
-        });
-    };
+    const [showUsersList, setShowUsersList] = useState(false);
+    
+    // Safety check for onlineUsers
+    const activeUsers = Array.isArray(onlineUsers) ? onlineUsers : [];
 
-    const handleTitleSave = (newTitle: string) => {
-        updateBoard({ title: newTitle });
-    };
+    const handleTitleSave = (newTitle: string) => updateBoard({ title: newTitle });
 
     const openPresentationWindow = () => {
-        const width = 1280;
-        const height = 720;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-
         const url = new URL(window.location.href);
         url.searchParams.set('present', 'true');
-
-        window.open(
-            url.toString(), 
-            'ClassboardPresentation', 
-            `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,location=no,status=no`
-        );
+        window.open(url.toString(), 'ClassboardPresentation', 'width=1280,height=720,toolbar=no,menubar=no');
     };
 
+    // Schema compatibility: snake_case fallback
     const isPublished = (board as any).isPublished ?? (board as any).is_published;
     const createdAt = (board as any).createdAt ?? (board as any).created_at;
 
     return (
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-40 shadow-sm">
+            {/* LEFT: Navigation & Title */}
             <div className="flex items-center gap-3 md:gap-4 flex-1">
                 <button 
                     onClick={goBack} 
                     className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
-                    title="Back to Dashboard"
                 >
                     <ArrowLeft size={20} />
                 </button>
@@ -69,29 +93,40 @@ export const BoardHeader: React.FC = () => {
                             </span>
                         )}
                     </div>
-                    {createdAt && (
-                        <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider hidden md:block">
-                            Created {formatDate(createdAt)}
-                        </div>
-                    )}
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3">
-                <div className="hidden md:flex items-center -space-x-2 mr-2">
-                    {onlineUsers?.slice(0, 4).map((user: any) => (
-                        <Tooltip key={user.id} content={user.full_name}>
+            {/* RIGHT: Actions */}
+            <div className="flex items-center gap-2 md:gap-3 relative">
+                {/* Interactive Online Users */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowUsersList(!showUsersList)}
+                        className="hidden md:flex items-center -space-x-2 mr-2 hover:opacity-80 transition-opacity p-1 rounded-full hover:bg-slate-50"
+                        title="Click to view online users"
+                    >
+                        {activeUsers.slice(0, 4).map((user: any) => (
                             <img 
-                                src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.full_name}`} 
-                                className="w-8 h-8 rounded-full border-2 border-white bg-slate-200"
+                                key={user.id}
+                                src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.full_name || 'U'}`} 
+                                className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 object-cover"
                                 alt={user.full_name}
                             />
-                        </Tooltip>
-                    ))}
-                    {(onlineUsers?.length || 0) > 4 && (
-                         <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
-                            +{(onlineUsers?.length || 0) - 4}
-                        </div>
+                        ))}
+                        {activeUsers.length > 4 && (
+                             <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                                +{activeUsers.length - 4}
+                            </div>
+                        )}
+                        {activeUsers.length === 0 && (
+                             <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
+                                <Users size={14} />
+                            </div>
+                        )}
+                    </button>
+                    
+                    {showUsersList && (
+                        <OnlineUsersList users={activeUsers} onClose={() => setShowUsersList(false)} />
                     )}
                 </div>
 
@@ -99,16 +134,16 @@ export const BoardHeader: React.FC = () => {
                     onClick={openShare}
                     className="hidden md:flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors"
                 >
-                    <Users size={18} />
+                    <Share2 size={18} />
                     <span>Share</span>
                 </button>
 
                 <button 
                     onClick={openPresentationWindow}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95"
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95"
                 >
                     <MonitorPlay size={18} />
-                    <span className="hidden md:inline font-semibold">Start Presenting</span>
+                    <span className="font-semibold">Start Presenting</span>
                 </button>
 
                 {canManageBoard && (
