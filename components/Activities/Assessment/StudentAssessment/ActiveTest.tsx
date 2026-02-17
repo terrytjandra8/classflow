@@ -21,7 +21,7 @@ interface ActiveTestProps {
     onExitPreview?: () => void;
     isReadingMode: boolean;
     isPracticeMode?: boolean;
-    retryQuestions?: string[]; // New prop for revision mode
+    retryQuestions?: string[];
 }
 
 const formatTime = (seconds: number) => {
@@ -31,10 +31,9 @@ const formatTime = (seconds: number) => {
 };
 
 const QuestionItem = memo(({ 
-    q, idx, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly
+    q, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly
 }: {
     q: AssessmentQuestion;
-    idx: number;
     answer: string;
     onAnswerChange: (id: string, val: string) => void;
     isReadingMode: boolean;
@@ -57,6 +56,7 @@ const QuestionItem = memo(({
     const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5);
     const isUnderWordLimit = isEssay && q.minWords && wc < q.minWords && !isDrawing;
     const renderedText = parseMath(q.text);
+    const renderedNotes = q.notes ? parseMath(q.notes) : null;
     const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
@@ -69,9 +69,16 @@ const QuestionItem = memo(({
             </div>
             
             <div 
-                className="text-lg font-medium mb-6 leading-relaxed rich-text-content select-none"
+                className="text-lg font-medium mb-4 leading-relaxed rich-text-content select-none"
                 dangerouslySetInnerHTML={{ __html: renderedText }}
             />
+
+            {renderedNotes && (
+                <div 
+                    className="text-sm text-gray-400 mb-6 leading-relaxed rich-text-content select-none bg-black/20 p-4 rounded-lg border border-white/5"
+                    dangerouslySetInnerHTML={{ __html: renderedNotes }}
+                />
+            )}
 
             {q.type === 'mcq' && (
                 <div className="space-y-3">
@@ -284,7 +291,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                             <QuestionItem 
                                 key={q.id}
                                 q={q}
-                                idx={idx}
                                 answer={answers[q.id]}
                                 onAnswerChange={(id, val) => onAnswerChange(id, val, false)}
                                 isReadingMode={isReadingMode}

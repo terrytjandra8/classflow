@@ -157,6 +157,7 @@ export interface QuizQuestion {
 export interface AssessmentQuestion {
     id: string;
     type: 'mcq' | 'essay' | 'section';
+    notes?: string;
     text: string;
     options?: string[]; // For MCQ
     correctAnswer?: string; // For MCQ (index or text)

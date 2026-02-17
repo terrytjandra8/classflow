@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { AssessmentQuestion, Board } from '../../../types';
-import { Plus, Trash2, CheckCircle, Type, List, Save, X, Layout, GripVertical, AlignLeft, Bold, Italic, List as ListIcon, Calculator, AlertCircle, PenTool, Image } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Type, List, Save, X, Layout, GripVertical, AlignLeft, Bold, Italic, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText } from 'lucide-react';
 import { useSortableList } from '../../../src/logic/dnd/useSortableList';
 import { RichTextEditor } from '../../RichTextEditor';
 import { DebouncedInput } from '../../ui/DebouncedInput';
@@ -12,12 +12,9 @@ interface EditorProps {
     onUpdateBoard: (updates: Partial<Board>) => void;
 }
 
-// --- Helper Components for Performance ---
-
-const DebouncedRichTextEditor = ({ value, onChange, className, placeholder }: any) => {
+const DebouncedRichTextEditor = ({ value, onChange, className, placeholder, small }: any) => {
     const [localValue, setLocalValue] = useState(value);
     
-    // Fix: Sync local state when external value changes (e.g. switching questions)
     useEffect(() => {
         setLocalValue(value);
     }, [value]);
@@ -63,19 +60,16 @@ const DebouncedRichTextEditor = ({ value, onChange, className, placeholder }: an
             <RichTextEditor 
                 value={localValue} 
                 onChange={setLocalValue} 
-                className="w-full min-h-[100px] outline-none text-lg leading-relaxed bg-transparent text-white placeholder-gray-500"
+                className={`w-full outline-none bg-transparent text-white placeholder-gray-500 ${small ? 'min-h-[60px] text-sm' : 'min-h-[100px] text-lg leading-relaxed'}`}
                 placeholder={placeholder}
             />
         </div>
     );
 };
 
-// --- Main Component ---
-
 export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    // Drag and Drop Logic
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
         onReorder: (newItems: any) => {
@@ -83,7 +77,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         }
     });
 
-    // Calculate Totals
     const { totalMarks, sectionScores } = useMemo(() => {
         let total = 0;
         const sScores: Record<string, number> = {};
@@ -110,11 +103,12 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             id: Math.random().toString(36).substr(2, 9),
             type,
             text: type === 'section' ? 'New Section' : (type === 'mcq' ? 'New Multiple Choice Question' : 'New Essay Question'),
+            notes: '',
             options: type === 'mcq' ? ['Option 1', 'Option 2', 'Option 3', 'Option 4'] : undefined,
             correctAnswer: type === 'mcq' ? '0' : undefined,
             points: type === 'section' ? 0 : (type === 'mcq' ? 1 : 5),
             minWords: type === 'essay' ? 0 : undefined,
-            responseType: 'text' // Default
+            responseType: 'text'
         };
         const newQuestions = [...questions, newQ];
         onUpdateBoard({ assessmentQuestions: newQuestions });
@@ -132,16 +126,13 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         if (editingId === id) setEditingId(null);
     };
 
-    // Calculate dynamic question number (skipping sections)
     const getQuestionNumber = (index: number) => {
         return questions.filter((q, i) => i <= index && q.type !== 'section').length;
     };
 
     return (
         <div className="flex h-full bg-[#111] overflow-hidden">
-            {/* Sidebar List */}
             <div className="w-80 bg-[#161616] border-r border-white/10 flex flex-col shrink-0">
-                {/* Header Stats */}
                 <div className="p-4 border-b border-white/10 bg-[#1a1a1a] flex justify-between items-center">
                     <h3 className="font-bold text-gray-300 text-xs uppercase tracking-wider">Structure</h3>
                     <div className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs font-bold border border-blue-500/30 flex items-center gap-1">
@@ -229,7 +220,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                 </div>
             </div>
 
-            {/* Main Editor */}
             <div className="flex-1 bg-[#111] p-6 md:p-10 overflow-y-auto">
                 {editingId ? (() => {
                     const q = questions.find(qu => qu.id === editingId);
@@ -239,7 +229,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                     return (
                         <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             
-                            {/* Editor Header */}
                             <div className="flex justify-between items-center mb-2">
                                 <h2 className={`text-xl font-bold flex items-center gap-3 ${isSection ? 'text-yellow-500' : 'text-white'}`}>
                                     <div className={`p-2 rounded-lg ${isSection ? 'bg-yellow-500/20' : (q.type === 'mcq' ? 'bg-blue-500/20' : 'bg-purple-500/20')}`}>
@@ -253,7 +242,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                             </div>
 
                             <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 shadow-xl space-y-6">
-                                {/* Prompt Input */}
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex justify-between">
                                         {isSection ? 'Section Title' : 'Question Prompt'}
@@ -279,6 +267,22 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                 </div>
 
                                 {!isSection && (
+                                     <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                            <FileText size={12}/> Sub-text / Notes (Optional)
+                                        </label>
+                                        <DebouncedRichTextEditor 
+                                            key={`notes-${q.id}`}
+                                            value={q.notes || ''}
+                                            onChange={(val: string) => updateQuestion(q.id, { notes: val })}
+                                            className="w-full bg-[#111] border border-white/10 rounded-xl p-3 text-white focus-within:border-blue-500 transition-colors"
+                                            placeholder="Add additional instructions, hints, or context here..."
+                                            small
+                                        />
+                                    </div>
+                                )}
+
+                                {!isSection && (
                                     <div className="grid grid-cols-2 gap-6 p-4 bg-[#111] rounded-xl border border-white/5">
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-gray-500 uppercase">Score Value</label>
@@ -294,7 +298,6 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                             </div>
                                         </div>
 
-                                        {/* Essay Specific Options */}
                                         {q.type === 'essay' && (
                                             <div className="space-y-4">
                                                 <div className="space-y-2">
