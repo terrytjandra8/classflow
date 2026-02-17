@@ -41,14 +41,11 @@ export const BoardHeader: React.FC = () => {
         );
     };
 
-    // Fix variable names to match your TypeScript types (camelCase)
-    // We check both camelCase (TS) and snake_case (DB) to be safe
     const isPublished = (board as any).isPublished ?? (board as any).is_published;
     const createdAt = (board as any).createdAt ?? (board as any).created_at;
 
     return (
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-40 shadow-sm">
-            {/* LEFT: Navigation & Title */}
             <div className="flex items-center gap-3 md:gap-4 flex-1">
                 <button 
                     onClick={goBack} 
@@ -80,9 +77,7 @@ export const BoardHeader: React.FC = () => {
                 </div>
             </div>
 
-            {/* RIGHT: Actions */}
             <div className="flex items-center gap-2 md:gap-3">
-                {/* Online Users */}
                 <div className="hidden md:flex items-center -space-x-2 mr-2">
                     {onlineUsers?.slice(0, 4).map((user: any) => (
                         <Tooltip key={user.id} content={user.full_name}>
@@ -93,9 +88,9 @@ export const BoardHeader: React.FC = () => {
                             />
                         </Tooltip>
                     ))}
-                    {onlineUsers?.length > 4 && (
+                    {(onlineUsers?.length || 0) > 4 && (
                          <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
-                            +{onlineUsers.length - 4}
+                            +{(onlineUsers?.length || 0) - 4}
                         </div>
                     )}
                 </div>

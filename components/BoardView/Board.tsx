@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Loader2, Eye } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { BoardProps } from './boardTypes';
 import { BoardHeader } from './Header/BoardHeader';
 import { Tooltip } from '../Tooltip';
 import { GridLayout } from './Layouts/GridLayout';
-import { ColumnsLayout } from './Layouts/ColumnsLayout'; // We will update this next
+import { ColumnsLayout } from './Layouts/ColumnsLayout';
 import { StreamLayout } from './Layouts/StreamLayout';
 import { TimelineLayout } from './Layouts/TimelineLayout';
 import { MapLayout } from './Layouts/MapLayout';
 import { SandboxLayout } from './Sandbox';
 import { useBoard, BoardProvider } from './BoardContext';
 
-export const BoardLayout: React.FC<Partial<BoardProps>> = (props) => {
+// FIX: Explicitly add extra props that might not be in BoardProps
+type ExtendedBoardProps = Partial<BoardProps> & {
+    isPresentationMode?: boolean;
+};
+
+export const BoardLayout: React.FC<ExtendedBoardProps> = (props) => {
     const parentContext = useBoard();
     
-    // 1. Detect Presentation Mode from URL (for the Popup Window)
+    // 1. Detect Presentation Mode from URL
     const [isPresentationPopup, setIsPresentationPopup] = useState(false);
     
     useEffect(() => {
@@ -25,10 +30,10 @@ export const BoardLayout: React.FC<Partial<BoardProps>> = (props) => {
     }, []);
 
     // 2. Determine Modes
-    const embeddedMode = props.embeddedMode || isPresentationPopup; // Hide headers in popup
-    const effectiveIsStudent = props.isStudent || parentContext.isStudent || isPresentationPopup; // Force student view in popup
+    const embeddedMode = props.embeddedMode || isPresentationPopup;
+    // Fix: Allow props.isPresentationMode to override
+    const effectiveIsStudent = props.isStudent || parentContext.isStudent || isPresentationPopup || props.isPresentationMode;
     
-    // Merge Context with Props
     const board = props.board || parentContext.board;
     const sectionIdFilter = props.sectionIdFilter || parentContext.sectionIdFilter;
     const backgroundStyle = props.backgroundStyle || parentContext.backgroundStyle;
@@ -48,17 +53,15 @@ export const BoardLayout: React.FC<Partial<BoardProps>> = (props) => {
         goBack: props.onBack || parentContext.goBack,
         updateBoard: props.onUpdateBoard || parentContext.updateBoard,
         isSimulating: props.isSimulating !== undefined ? props.isSimulating : parentContext.isSimulating,
-        isPresentationMode: isPresentationPopup // Pass this down if layouts need to know
+        isPresentationMode: isPresentationPopup || props.isPresentationMode
     }), [parentContext, board, effectiveIsStudent, sectionIdFilter, embeddedMode, backgroundStyle, fontClass, props, isPresentationPopup]);
 
     const canManageBoard = contextValue.canManageBoard && !isPresentationPopup;
     const isLoadingNotes = contextValue.isLoadingNotes;
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
     
-    // Logic to show/hide the FAB (Floating Action Button)
     const showFab = (canManageBoard || (!isLocked && board.format !== 'columns' && board.format !== 'timeline')) && !embeddedMode;
 
-    // --- RENDER CONTENT SWITCHER ---
     const renderContent = () => {
         switch (board.format) {
             case 'stream': return <StreamLayout />;
@@ -66,7 +69,6 @@ export const BoardLayout: React.FC<Partial<BoardProps>> = (props) => {
             case 'map': return <MapLayout />;
             case 'canvas': return <SandboxLayout />;
             case 'columns':
-                // If filtering by section, just show grid, otherwise full Columns Layout
                 if (sectionIdFilter) return <GridLayout gridClass="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6" isStudent={effectiveIsStudent} />;
                 return <ColumnsLayout isStudent={effectiveIsStudent} />;
             case 'grid': 
@@ -80,10 +82,8 @@ export const BoardLayout: React.FC<Partial<BoardProps>> = (props) => {
                 <div className={`absolute inset-0 z-0 ${embeddedMode ? '' : 'fixed'}`} style={backgroundStyle}></div>
                 
                 <div className="relative z-10 flex flex-col h-full">
-                    {/* Hide Header if in Embedded or Presentation Popup Mode */}
                     {!embeddedMode && <BoardHeader />}
                     
-                    {/* Big Banner for Presentation Mode */}
                     {isPresentationPopup && (
                         <div className="absolute top-4 right-4 z-50 pointer-events-none opacity-50">
                             <span className="bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur">

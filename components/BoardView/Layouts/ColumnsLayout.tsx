@@ -1,12 +1,45 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useBoard } from '../BoardContext';
-import { NoteCard } from '../../NoteCard';
+// FIX: Default import for NoteCard
+import NoteCard from '../../NoteCard'; 
 import { EditableInput } from '../../ui/EditableInput';
 import { 
     Plus, MoreVertical, Eye, EyeOff, Lock, Unlock, 
-    Trash2, Ghost, GripHorizontal 
+    Trash2, Ghost
 } from 'lucide-react';
-import { Dropdown } from '../../ui/Dropdown'; // Ensure you have this or replace with your menu component
+
+// FIX: Inline Simple Dropdown to avoid missing file errors
+const SimpleDropdown = ({ trigger, items }: any) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleClickOutside = (event: any) => {
+            if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative" ref={ref}>
+            <div onClick={() => setOpen(!open)}>{trigger}</div>
+            {open && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-slate-100 py-1">
+                    {items.map((item: any, idx: number) => (
+                        item.divider ? <div key={idx} className="h-[1px] bg-slate-100 my-1"/> :
+                        <button 
+                            key={idx} 
+                            onClick={() => { item.onClick(); setOpen(false); }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2 ${item.className || 'text-slate-700'}`}
+                        >
+                            {item.icon} {item.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 interface ColumnsLayoutProps {
     isStudent?: boolean;
@@ -14,15 +47,31 @@ interface ColumnsLayoutProps {
 
 export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
     const { 
-        board, sections, notes, canManageBoard, 
-        updateSection, deleteSection, addSection, openAddNote,
-        updateNote // Needed for drag and drop
+        board, notes, canManageBoard, updateBoard, openAddNote, updateNote 
     } = useBoard();
 
-    // 1. Get Active Sections (CamelCase safe)
-    const activeSections = sections || [];
+    // FIX: Manual implementation of section helpers since Context might miss them
+    const sections = board.sections || [];
 
-    // 2. Drag and Drop State
+    const updateSection = (id: string, data: any) => {
+        const newSections = sections.map((s: any) => s.id === id ? { ...s, ...data } : s);
+        updateBoard({ sections: newSections });
+    };
+
+    const deleteSection = (id: string) => {
+        const newSections = sections.filter((s: any) => s.id !== id);
+        updateBoard({ sections: newSections });
+    };
+
+    const addSection = (data: any) => {
+        const newSection = { 
+            id: Math.random().toString(36).substr(2, 9), 
+            ...data 
+        };
+        updateBoard({ sections: [...sections, newSection] });
+    };
+
+    // Drag and Drop State
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const dragItemRef = useRef<string | null>(null);
 
@@ -43,32 +92,21 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
 
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
-    // 3. Helper to filter notes
     const getNotesForSection = (sectionId: string) => {
-        // Handle both snake_case and camelCase just in case
         return notes.filter((note: any) => {
             const nSectionId = note.sectionId || note.section_id;
             return nSectionId === sectionId;
         });
     };
 
-    const handleAddColumn = async () => {
-        await addSection({ 
-            title: 'New Group', 
-            orderIndex: activeSections.length // Use camelCase if your DB expects it
-        });
-    };
-
     return (
         <div className="flex h-full gap-4 overflow-x-auto p-4 md:p-6 items-start">
-            {activeSections.map((section: any) => {
-                // Safe Property Access (Camel vs Snake)
+            {sections.map((section: any) => {
                 const isHidden = section.isHidden ?? section.is_hidden;
                 const isLocked = section.isLocked ?? section.is_locked;
                 const isBlurred = section.isBlurred ?? section.is_blurred;
                 const isAnon = section.anonymousMode ?? section.anonymous_mode;
 
-                // Hide from students if hidden
                 if (isHidden && isStudent) return null;
 
                 return (
@@ -78,7 +116,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, section.id)}
                     >
-                        {/* --- HEADER --- */}
                         <div className="p-3 flex items-start justify-between group">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -99,9 +136,8 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                 </div>
                             </div>
 
-                            {/* --- CONTROLS --- */}
                             {canManageBoard && (
-                                <Dropdown
+                                <SimpleDropdown
                                     trigger={
                                         <button className="p-1.5 hover:bg-black/5 rounded text-slate-500 transition-colors">
                                             <MoreVertical size={18} />
@@ -111,7 +147,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                                         {
                                             label: isLocked ? 'Unlock Group' : 'Lock Group',
                                             icon: isLocked ? <Unlock size={14}/> : <Lock size={14}/>,
-                                            onClick: () => updateSection(section.id, { isLocked: !isLocked }), // Use camelCase for update
+                                            onClick: () => updateSection(section.id, { isLocked: !isLocked }),
                                             className: isLocked ? 'text-green-600' : 'text-slate-700'
                                         },
                                         {
@@ -144,10 +180,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                             )}
                         </div>
 
-                        {/* --- CONTENT --- */}
                         <div className={`flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar ${isBlurred && isStudent ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                            
-                            {/* Add Button */}
                             {!isLocked && (!isStudent || !isHidden) && (
                                 <button
                                     onClick={() => openAddNote(section.id)}
@@ -176,10 +209,9 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent }) => {
                 );
             })}
 
-            {/* --- ADD NEW COLUMN BUTTON --- */}
             {canManageBoard && (
                 <button
-                    onClick={handleAddColumn}
+                    onClick={() => addSection({ title: 'New Group', orderIndex: sections.length })}
                     className="flex-shrink-0 w-16 h-full min-h-[200px] bg-white/20 hover:bg-slate-100 border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl transition-all duration-300 flex items-center justify-center text-slate-400 hover:text-slate-600 group"
                 >
                      <Plus size={24} className="group-hover:scale-110 transition-transform" />
