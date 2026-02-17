@@ -448,20 +448,10 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
 
                 {/* DRAWING MODE */}
                 {activeMode === 'drawing' && (
-                    <div className="h-full relative min-h-[300px]">
-                        {drawingUrl && !drawingBlob && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-                                <div className="bg-[#222] p-4 rounded-xl text-center">
-                                    <p className="text-sm text-gray-300 mb-3">Edit existing drawing?</p>
-                                    <div className="flex gap-2 justify-center">
-                                        <button onClick={() => setDrawingUrl(null)} className="bg-red-600 text-white px-3 py-1 rounded text-xs">Clear & Redraw</button>
-                                        <img src={drawingUrl} className="h-10 w-10 border border-white/20 rounded bg-white" />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                     <div className="h-full relative min-h-[300px]">
                         <DrawingCanvas 
-                            onSave={setDrawingBlob}
+                            onDrawEnd={setDrawingBlob}
+                            initialData={drawingUrl || undefined}
                             onClear={() => { setDrawingBlob(null); setDrawingUrl(null); }}
                             width={600}
                             height={300}
