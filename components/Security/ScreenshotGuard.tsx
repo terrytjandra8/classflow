@@ -13,6 +13,10 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
 
+    // Use a ref to get the latest lockType value inside intervals/closures without re-triggering useEffect.
+    const lockTypeRef = useRef(lockType);
+    lockTypeRef.current = lockType;
+
     useEffect(() => {
         if (!isEnabled) {
             if (contentRef.current) contentRef.current.style.filter = 'none';
@@ -21,7 +25,13 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            setLockType(prev => (prev === 'integrity' || prev === 'devtools' ? prev : type));
+            
+            // More severe locks should take precedence.
+            const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
+            setLockType(prev => {
+                if (!prev || severity[type] >= severity[prev]) return type;
+                return prev;
+            });
             
             if (overlayRef.current) {
                 overlayRef.current.style.transition = 'none';
@@ -34,8 +44,11 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             }
         };
 
-        const releaseShield = () => {
-            if (lockType === 'devtools') return; // Do not release if devtools are open
+        const releaseShield = (force = false) => {
+            // Devtools lock is special: it should only be released when forced.
+            if (lockTypeRef.current === 'devtools' && !force) {
+                return;
+            }
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             
             setLockType(null);
@@ -51,87 +64,92 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             }
         };
 
+        // --- Event Listeners (Layered Approach) ---
+
+        // Layer 1: Catch-all for window focus loss (e.g., system-level screenshot tools)
         const handleBlur = () => triggerShield('focus');
         const handleFocus = () => releaseShield();
         
+        // Layer 2: Redundant mouse check
         const handleMouseLeave = () => triggerShield('focus');
         const handleMouseEnter = () => releaseShield();
 
+        // Layer 3: Specific keyboard shortcuts
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
-            const macScreenshot = e.metaKey && e.shiftKey && (key === '3' || key === '4' || key === '5');
-            const windowsScreenshot = e.metaKey && e.shiftKey && key === 's';
-            const chromebookScreenshot = e.ctrlKey && e.shiftKey && e.code === 'Select'; // This might be tricky
-            const chromebookPartial = e.ctrlKey && e.shiftKey && key === 's';
-
-
             // DevTools shortcuts
-            const devToolsShortcuts = (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
-                                    (e.metaKey && e.altKey && (key === 'i' || key === 'j' || key === 'c')) ||
-                                    key === 'f12';
+            const devToolsShortcuts = (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) || key === 'f12';
 
             if (devToolsShortcuts) {
+                e.preventDefault();
                 triggerShield('devtools');
             }
             
+            // Screenshot shortcuts
+            const macScreenshot = e.metaKey && e.shiftKey && ['3', '4', '5'].includes(key);
+            const windowsScreenshot = e.metaKey && e.shiftKey && key === 's';
+            const chromebookScreenshot = e.ctrlKey && e.shiftKey && e.code === 'Select';
+            const chromebookPartial = e.ctrlKey && e.shiftKey && key === 's';
+
             if (e.key === 'PrintScreen' || macScreenshot || windowsScreenshot || chromebookScreenshot || chromebookPartial) {
                 e.preventDefault();
                 triggerShield('integrity');
-                
-                if (navigator.clipboard && navigator.clipboard.writeText) {
+                if (navigator.clipboard?.writeText) {
                     navigator.clipboard.writeText('Screenshots are disabled.');
                 }
-
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 timeoutRef.current = setTimeout(releaseShield, 2000); 
             }
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'PrintScreen') triggerShield('integrity');
+            if (e.key === 'PrintScreen') {
+                triggerShield('integrity');
+            }
         };
+        
+        // Layer 4: DevTools detection via interval check
+        const devToolsDetector = () => {
+            const threshold = 160;
+            const devToolsOpen = (window.outerWidth - window.innerWidth > threshold) || (window.outerHeight - window.innerHeight > threshold);
+            if (devToolsOpen) {
+                if (lockTypeRef.current !== 'devtools') {
+                    triggerShield('devtools');
+                }
+            } else {
+                if (lockTypeRef.current === 'devtools') {
+                    releaseShield(true); // Force release the shield
+                }
+            }
+        };
+        const intervalId = setInterval(devToolsDetector, 500);
 
+        // Layer 5: Disable other actions
         const preventDefault = (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
             return false;
         };
 
-        // DevTools detection
-        const devToolsDetector = () => {
-            const threshold = 160;
-            if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
-                triggerShield('devtools');
-            } else {
-                if (lockType === 'devtools') {
-                    releaseShield();
-                }
-            }
+        const mediaQueryList = window.matchMedia('print');
+        const handlePrintChange = (mql: MediaQueryListEvent) => {
+            if (mql.matches) triggerShield('integrity');
         };
 
-        const intervalId = setInterval(devToolsDetector, 1000);
-
-
+        // Add all listeners
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
         document.addEventListener('mouseleave', handleMouseLeave);
         document.addEventListener('mouseenter', handleMouseEnter);
         window.addEventListener('keydown', handleKeyDown, true);
         window.addEventListener('keyup', handleKeyUp, true);
-        
         document.addEventListener('contextmenu', preventDefault);
         document.addEventListener('copy', preventDefault);
         document.addEventListener('cut', preventDefault);
         document.addEventListener('dragstart', preventDefault);
-        
-        const mediaQueryList = window.matchMedia('print');
-        const handlePrintChange = (mql: MediaQueryListEvent) => {
-            if (mql.matches) {
-                triggerShield('integrity');
-            }
-        };
         mediaQueryList.addEventListener('change', handlePrintChange);
 
+        // Cleanup
         return () => {
             clearInterval(intervalId);
             window.removeEventListener('blur', handleBlur);
@@ -140,17 +158,14 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             document.removeEventListener('mouseenter', handleMouseEnter);
             window.removeEventListener('keydown', handleKeyDown, true);
             window.removeEventListener('keyup', handleKeyUp, true);
-            
             document.removeEventListener('contextmenu', preventDefault);
             document.removeEventListener('copy', preventDefault);
             document.removeEventListener('cut', preventDefault);
             document.removeEventListener('dragstart', preventDefault);
-            
             mediaQueryList.removeEventListener('change', handlePrintChange);
-            
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [isEnabled, lockType]);
+    }, [isEnabled]);
 
     if (!isEnabled) return <>{children}</>;
 
@@ -168,7 +183,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                     user-select: none;
                 }
             `}</style>
-            <div ref={contentRef} className="h-full w-full will-change-filter">
+            <div ref={contentRef} className="h-full w-full will-change-filter" style={{ transition: 'filter 0.1s ease-out' }}>
                 {children}
             </div>
             <div 
@@ -176,7 +191,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 className="absolute inset-0 z-[10000] bg-white dark:bg-black flex flex-col items-center justify-center text-center p-8"
                 style={{ 
                     opacity: lockType ? 1 : 0, 
-                    pointerEvents: lockType ? 'auto' : 'none' 
+                    pointerEvents: lockType ? 'auto' : 'none',
+                    transition: 'opacity 0.1s ease-out'
                 }}
             >
                 {lockType === 'integrity' ? (
@@ -197,12 +213,12 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                             Please close the developer console to continue. Accessing the inspector is not permitted.
                         </p>
                     </>
-                ) : (
+                ) : ( // 'focus'
                     <>
                         <div className="text-6xl mb-6 animate-pulse">🎯</div>
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Get Back to It!</h2>
                         <p className="text-gray-500 dark:text-gray-400 text-lg font-medium max-w-lg leading-relaxed">
-                            Please bring your cursor back to the window to continue working.
+                            This activity requires your full attention. Please return to this window to continue.
                         </p>
                     </>
                 )}
