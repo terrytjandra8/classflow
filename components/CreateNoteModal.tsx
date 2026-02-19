@@ -271,24 +271,28 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
     }
   };
 
-  const onPaste = (e: React.ClipboardEvent) => {
-      // Image paste handling first (not covered by usePasteProtection)
+  const onPaste = (e: React.ClipboardEvent, sourceInput?: 'link-url') => {
+      // Universal image paste handling
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {
           if (items[i].type.indexOf('image') !== -1) {
               const file = items[i].getAsFile();
               if (file) {
+                  e.preventDefault();
                   processImageFile(file);
                   setActiveMode('image');
-                  e.preventDefault();
                   return;
               }
           }
       }
 
-      if (activeMode === 'link') return; // Allow paste in link mode
+      // In link mode, ONLY the URL input should bypass paste protection.
+      // The caption field and all other fields will fall through and be protected.
+      if (activeMode === 'link' && sourceInput === 'link-url') {
+          return; // Allow pasting for the URL field
+      }
 
-      // Use text protection hook
+      // Default to using the text paste protection hook
       handlePasteProtection(e);
   };
 
@@ -394,7 +398,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                     placeholder="Add a title..."
                     className="w-full bg-transparent text-2xl font-bold text-white placeholder-white/20 outline-none mb-4"
                     autoFocus={activeMode === 'text' && !isEditing}
-                    onPaste={onPaste}
+                    onPaste={(e) => onPaste(e)}
                 />
 
                 {/* TEXT MODE */}
@@ -405,7 +409,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                             onChange={(val) => { setContent(val); handleTyping(); }}
                             placeholder="Type something amazing..."
                             className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed"
-                            onPaste={onPaste}
+                            onPaste={(e) => onPaste(e)}
                         />
                     </div>
                 )}
@@ -472,8 +476,8 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                                 type="url" 
                                 value={attachmentUrl} 
                                 onChange={(e) => setAttachmentUrl(e.target.value)}
-                                // Explicitly allow default paste behavior here by NOT preventing default in handlePaste for this mode
-                                onPaste={onPaste} 
+                                // This specific input is allowed to have content pasted.
+                                onPaste={(e) => onPaste(e, 'link-url')} 
                                 placeholder="Paste URL here (e.g. youtube.com/...)" 
                                 className="w-full bg-transparent text-white outline-none placeholder-white/30 text-lg"
                                 autoFocus={!isEditing}
@@ -482,7 +486,8 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                         <textarea 
                             value={content}
                             onChange={(e) => { setContent(e.target.value); handleTyping(); }}
-                            onPaste={onPaste}
+                            // This input respects the board's paste protection settings.
+                            onPaste={(e) => onPaste(e)}
                             placeholder="Add a caption (optional)..."
                             className="w-full bg-transparent text-white/70 outline-none resize-none p-2"
                             rows={3}
