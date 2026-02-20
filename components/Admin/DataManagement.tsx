@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Download, Upload, AlertTriangle, CheckCircle, RefreshCw, FileJson } from 'lucide-react';
 import { adminService } from '../../services/adminService';
+import { ImageManager } from './ImageManager'; // Import the new component
 
 interface DataManagementProps {
     theme: 'light' | 'dark';
@@ -17,14 +18,9 @@ export const DataManagement: React.FC<DataManagementProps> = ({ theme, onRefresh
     const handleBackup = async () => {
         setIsExporting(true);
         try {
-            // Get all data - Isolated Heavy Fetch
             const data = await adminService.getFullBackup();
-            
-            // Create Blob
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
-            // Download Trigger
             const a = document.createElement('a');
             a.href = url;
             a.download = `classboard-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -66,7 +62,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ theme, onRefresh
             setImportStatus('error');
         } finally {
             setIsImporting(false);
-            if (e.target) e.target.value = ''; // Reset input
+            if (e.target) e.target.value = ''; 
         }
     };
 
@@ -79,7 +75,6 @@ export const DataManagement: React.FC<DataManagementProps> = ({ theme, onRefresh
 
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                 
-                {/* Export Section */}
                 <div className={`p-6 rounded-2xl border border-dashed flex flex-col items-center text-center gap-4 ${theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-900/10 border-blue-500/20'}`}>
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-2">
                         <Download size={32} />
@@ -100,13 +95,12 @@ export const DataManagement: React.FC<DataManagementProps> = ({ theme, onRefresh
                     </button>
                 </div>
 
-                {/* Import Section */}
                 <div className={`p-6 rounded-2xl border border-dashed flex flex-col items-center text-center gap-4 ${theme === 'light' ? 'bg-orange-50 border-orange-200' : 'bg-orange-900/10 border-orange-500/20'}`}>
                     <div className="w-16 h-16 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center mb-2">
                         <Upload size={32} />
                     </div>
                     <div>
-                        <h4 className="font-bold text-lg text-orange-700 dark:text-orange-300">Restore Data</h4>
+                        <h4 className="font-bold text-lg text-orange-700 dark:text-orange-,300">Restore Data</h4>
                         <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mt-1 max-w-xs">
                             Upload a backup JSON file to restore missing data. Existing items will be updated.
                         </p>
@@ -154,6 +148,9 @@ export const DataManagement: React.FC<DataManagementProps> = ({ theme, onRefresh
                     </div>
                 </div>
             </div>
+
+            {/* Injected Image Manager */}
+            <ImageManager />
         </div>
     );
 };

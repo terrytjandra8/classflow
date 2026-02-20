@@ -5,8 +5,8 @@ import { CheckCircle, FileText, Key, RefreshCw } from 'lucide-react';
 interface HeaderSectionProps {
     activeStudentsCount: number;
     submittedCount: number;
-    onPrintMaster: (withKey: boolean) => void;
-    onForceRefresh?: () => void; // New prop
+    onPrintMaster: (isKey: boolean) => void;
+    onForceRefresh?: () => void;
 }
 
 export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCount, submittedCount, onPrintMaster, onForceRefresh }) => {
@@ -15,8 +15,11 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCoun
     const handleRefresh = async () => {
         if (onForceRefresh) {
             setIsRefreshing(true);
-            await onForceRefresh();
-            setTimeout(() => setIsRefreshing(false), 1000);
+            try {
+                await onForceRefresh();
+            } finally {
+                setTimeout(() => setIsRefreshing(false), 1000);
+            }
         }
     };
 
@@ -48,7 +51,6 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCoun
                     </div>
                 </div>
                 
-                {/* Master Copy Print Controls */}
                 <div className="flex items-center gap-2 mt-2">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Master Copy:</span>
                     <button 

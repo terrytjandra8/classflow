@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckSquare, Square, Printer, RotateCcw } from 'lucide-react';
 
 interface BulkActionsSectionProps {
@@ -12,6 +12,7 @@ interface BulkActionsSectionProps {
 }
 
 export const BulkActionsSection: React.FC<BulkActionsSectionProps> = ({ hasStudents, selectedCount, totalCount, onSelectAll, onPrintSelected, onAllowRevisionSelected }) => {
+
     if (!hasStudents) return null;
 
     return (
@@ -40,7 +41,7 @@ export const BulkActionsSection: React.FC<BulkActionsSectionProps> = ({ hasStude
                         onClick={onPrintSelected}
                         className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg"
                     >
-                        <Printer size={14} /> Print
+                        <Printer size={14} /> Print Selected
                     </button>
                 </div>
             )}

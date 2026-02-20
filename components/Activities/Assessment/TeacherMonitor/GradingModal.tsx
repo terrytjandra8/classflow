@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, RefreshCw, Lock, Unlock, ShieldCheck, ImagePlus, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4, AlignLeft, List, ListOrdered } from 'lucide-react';
+import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, RefreshCw, Lock, Unlock, ShieldCheck, ImagePlus, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4, AlignLeft, List, ListOrdered, History, ChevronDown } from 'lucide-react';
 import { AssessmentQuestion } from '../../../../types';
-import { RichTextEditor, FormatState, getActiveFormat } from '../../../RichTextEditor';
+import { RichTextEditor, FormatState } from '../../../RichTextEditor';
 import { DebouncedInput } from '../../../ui/DebouncedInput';
 import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
 import { supabase } from '../../../../services/supabaseClient';
+import { PrintMode } from '../AssessmentPrintView';
 
 interface GradingModalProps {
     isOpen: boolean;
@@ -16,22 +17,23 @@ interface GradingModalProps {
     currentGrades: Record<string, { score: number, feedback: string }>;
     setCurrentGrades: React.Dispatch<React.SetStateAction<Record<string, { score: number, feedback: string }>>>;
     onSave: (release: boolean) => void;
-    onAutoSave: (grades: Record<string, { score: number, feedback: string }>, updatedAnswers?: Record<string, string>, retryQuestions?: string[], teacherOverrides?: Record<string, boolean>) => Promise<void>;
-    onPrint: (includeFeedback: boolean, currentGradesSnapshot: Record<string, { score: number, feedback: string }>) => void;
+    onAutoSave: (grades: Record<string, { score: number, feedback: string }>, updatedAnswers?: Record<string, string>, retryQuestions?: string[], teacherOverrides?: Record<string, any>) => Promise<void>;
+    onPrint: (mode: PrintMode, currentGradesSnapshot: Record<string, { score: number, feedback: string }>) => void;
 }
 
 export const GradingModal: React.FC<GradingModalProps> = ({ 
     isOpen, participant, onClose, questions, currentGrades, setCurrentGrades, onSave, onAutoSave, onPrint 
 }) => {
-    const [includeFeedback, setIncludeFeedback] = useState(true);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [activeFeedbackId, setActiveFeedbackId] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState<string | null>(null);
     const [isFeedbackUploading, setIsFeedbackUploading] = useState<string | null>(null);
+    const [showPrintDropdown, setShowPrintDropdown] = useState(false);
     
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [retryQuestions, setRetryQuestions] = useState<string[]>([]);
-    const [teacherOverrides, setTeacherOverrides] = useState<Record<string, boolean>>({});
+    const [teacherOverrides, setTeacherOverrides] = useState<Record<string, any>>({});
+    const [viewingHistory, setViewingHistory] = useState<{qId: string, history: any[]} | null>(null);
     
     const [activeFormats, setActiveFormats] = useState<FormatState>({
         bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
@@ -45,6 +47,8 @@ export const GradingModal: React.FC<GradingModalProps> = ({
     const overridesRef = useRef(teacherOverrides);
     const timeoutRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const replaceImageInputRef = useRef<HTMLInputElement>(null);
+    const printDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (participant?.data) {
@@ -63,12 +67,19 @@ export const GradingModal: React.FC<GradingModalProps> = ({
     }, [currentGrades]);
 
     useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (printDropdownRef.current && !printDropdownRef.current.contains(event.target as Node)) {
+                setShowPrintDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
         return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, []);
 
-    const triggerSave = useCallback((overrideAnswers?: Record<string, string>, overrideRetries?: string[], overrideTeacherFlags?: Record<string, boolean>, immediate = false) => {
+    const triggerSave = useCallback((overrideAnswers?: Record<string, string>, overrideRetries?: string[], overrideTeacherFlags?: Record<string, any>, immediate = false) => {
         setSaveStatus('saving');
         
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -103,6 +114,25 @@ export const GradingModal: React.FC<GradingModalProps> = ({
         });
         triggerSave();
     };
+    
+    const getAnswerParts = (answer: string) => {
+        let drawing: string | undefined;
+        let text: string | undefined;
+        if (!answer) return { drawing, text };
+
+        try {
+            const parsed = JSON.parse(answer);
+            drawing = parsed.drawing;
+            text = parsed.text;
+        } catch (e) {
+            if (answer.startsWith('http') || answer.startsWith('data:image')) {
+                drawing = answer;
+            } else {
+                text = answer;
+            }
+        }
+        return { drawing, text };
+    };
 
     const handleFileUpload = async (qId: string, file: File) => {
         setIsUploading(qId);
@@ -114,16 +144,48 @@ export const GradingModal: React.FC<GradingModalProps> = ({
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
+            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
 
-            const newAnswers = { ...answers, [qId]: publicUrl };
+            const question = questions.find(q => q.id === qId);
+            const responseType = question?.responseType || (question?.allowDrawing ? 'both' : 'text');
+            
+            const currentAnswer = answersRef.current[qId];
+            const { drawing: oldDrawingUrl } = getAnswerParts(currentAnswer);
+
+            let newAnswerValue = finalUrl;
+            if (responseType === 'both') {
+                let existingText = '';
+                if(currentAnswer) {
+                    try {
+                        const parsed = JSON.parse(currentAnswer);
+                        existingText = parsed.text || '';
+                    } catch (e) { /* Not JSON */ }
+                }
+                newAnswerValue = JSON.stringify({ drawing: finalUrl, text: existingText });
+            }
+
+            const newAnswers = { ...answersRef.current, [qId]: newAnswerValue };
+            
+            const existingOverride = overridesRef.current[qId] || {};
+            const updatedHistory = oldDrawingUrl 
+                ? [...(existingOverride.history || []), { url: oldDrawingUrl, timestamp: new Date().toISOString() }] 
+                : (existingOverride.history || []);
+
+            const newOverrides = { 
+                ...overridesRef.current, 
+                [qId]: { 
+                    ...existingOverride,
+                    history: updatedHistory
+                } 
+            };
+
             setAnswers(newAnswers);
             answersRef.current = newAnswers;
-            
-            const newOverrides = { ...teacherOverrides, [qId]: true };
             setTeacherOverrides(newOverrides);
             overridesRef.current = newOverrides;
             
             triggerSave(newAnswers, undefined, newOverrides, true);
+
         } catch (e) {
             console.error("Upload failed", e);
             alert("Upload failed. Please try again.");
@@ -177,14 +239,15 @@ export const GradingModal: React.FC<GradingModalProps> = ({
             }
         }
     };
+    
+    const handlePrintRequest = (mode: PrintMode) => {
+        onPrint(mode, gradesRef.current);
+        setShowPrintDropdown(false);
+    }
 
     if (!isOpen || !participant) return null;
 
     const isReleased = participant?.data?.released === true;
-    
-    const isImageAnswer = (text: string) => {
-        return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
-    };
 
     const getBtnClass = (isActive: boolean) => 
         `p-1.5 rounded transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`;
@@ -217,14 +280,21 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                             {saveStatus === 'error' && <span className="text-[10px] text-red-500 flex items-center gap-1 font-bold ml-2">Error Saving</span>}
                         </div>
                     </div>
-                    <div className="flex items-center gap-4 shrink-0 pt-1">
-                        <label className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white cursor-pointer select-none transition-colors">
-                            <input type="checkbox" checked={includeFeedback} onChange={(e) => setIncludeFeedback(e.target.checked)} className="w-4 h-4 rounded border-gray-600 bg-white/5 text-blue-500 focus:ring-0 focus:ring-offset-0" />
-                            <span className="hidden sm:inline">Include Feedback</span>
-                            <span className="sm:hidden">Feedback</span>
-                        </label>
+                    <div className="flex items-center gap-2 shrink-0 pt-1" ref={printDropdownRef}>
+                         <div className="relative">
+                            <button onClick={() => setShowPrintDropdown(s => !s)} className="p-2 hover:bg-white/10 rounded-full text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2" title="Print / Export PDF">
+                                <Printer size={20} />
+                                <ChevronDown size={14} className={`transition-transform ${showPrintDropdown ? 'rotate-180': ''}`} />
+                            </button>
+                            {showPrintDropdown && (
+                                <div className="absolute top-full right-0 mt-2 w-56 bg-[#282828] border border-white/10 rounded-lg shadow-2xl z-10 text-left overflow-hidden animate-in fade-in zoom-in-95">
+                                    <button onClick={() => handlePrintRequest('BLANK')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper Only</button>
+                                    <button onClick={() => handlePrintRequest('WITH_ANSWERS')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper + Student Answer</button>
+                                    <button onClick={() => handlePrintRequest('WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper + Answer + Feedback</button>
+                                </div>
+                            )}
+                        </div>
                         <div className="h-6 w-px bg-white/10"></div>
-                        <button onClick={() => onPrint(includeFeedback, gradesRef.current)} className="p-2 hover:bg-white/10 rounded-full text-blue-400 hover:text-blue-300 transition-colors" title="Print / Export PDF"><Printer size={20} /></button>
                         <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20}/></button>
                     </div>
                 </div>
@@ -235,22 +305,27 @@ export const GradingModal: React.FC<GradingModalProps> = ({
 
                         const questionNumber = questions.slice(0, i + 1).filter(item => item.type !== 'section').length;
                         const studentAns = answers[q.id];
+                        const { drawing: drawingUrl, text: textContent } = getAnswerParts(studentAns);
+                        
                         const grade = currentGrades[q.id] || { score: 0, feedback: '' };
                         const isRetrying = retryQuestions.includes(q.id);
-                        const isTeacherOverride = teacherOverrides[q.id];
+                        
+                        const overrideHistory = teacherOverrides[q.id]?.history;
+                        const isTeacherOverride = overrideHistory && overrideHistory.length > 0;
+
                         const isEssay = q.type === 'essay';
-                        const wordCount = isEssay && typeof studentAns === 'string' ? countQualityWords(studentAns) : 0;
+                        const wordCount = isEssay && typeof textContent === 'string' ? countQualityWords(textContent) : 0;
                         const isUnderLimit = isEssay && (q.minWords || 0) > 0 && wordCount < (q.minWords || 0);
                         const isFocused = activeFeedbackId === q.id;
-                        const canUpload = (q.responseType === 'drawing' || q.responseType === 'both' || q.allowDrawing) && (!studentAns || studentAns === '');
+                        const canUpload = (q.responseType === 'drawing' || q.responseType === 'both' || q.allowDrawing);
 
                         return (
                             <div key={q.id} className={`bg-[#111] border rounded-xl p-4 transition-colors ${isUnderLimit ? 'border-amber-500/30' : 'border-white/10'}`}>
                                 <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-sm font-bold text-gray-300">Question {questionNumber} ({q.points} pts)</span>
                                         {isUnderLimit && <span className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-wide"><FileWarning size={10} /> Word Count</span>}
-                                        {isTeacherOverride && <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 uppercase tracking-wide"><ShieldCheck size={10} /> Teacher Upload</span>}
+                                        {isTeacherOverride && <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 uppercase tracking-wide"><ShieldCheck size={10} /> Teacher Edit</span>}
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={() => toggleRetry(q.id)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase border transition-colors ${isRetrying ? 'bg-orange-500/10 text-orange-500 border-orange-500/30' : 'bg-white/5 text-gray-500 border-transparent hover:text-white'}`} title={isRetrying ? "Student is redoing this question" : "Unlock for student to redo"}>
@@ -266,35 +341,49 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                 <div className="bg-[#222] p-3 rounded-lg border border-white/5 mb-4 relative group/answer">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-[10px] font-bold text-gray-500 uppercase block">Student Answer</span>
-                                        {canUpload && (
-                                            <div className="relative">
-                                                <input type="file" id={`upload-${q.id}`} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(q.id, e.target.files[0])} />
-                                                <label htmlFor={`upload-${q.id}`} className={`flex items-center gap-1.5 cursor-pointer text-[10px] font-bold px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all ${isUploading === q.id ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                    {isUploading === q.id ? <Loader2 size={10} className="animate-spin" /> : <UploadCloud size={10} />}
-                                                    Upload Answer
-                                                </label>
-                                            </div>
-                                        )}
-                                        {isEssay && q.minWords && q.minWords > 0 && <span className={`text-[10px] font-bold ${isUnderLimit ? 'text-amber-500' : 'text-green-500'}`}>{wordCount} / {q.minWords} valid words</span>}
+                                        <div className="flex items-center gap-2">
+                                            {isTeacherOverride && (
+                                                 <button onClick={() => setViewingHistory({qId: q.id, history: overrideHistory})} className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all">
+                                                    <History size={10} />
+                                                    View History ({overrideHistory.length})
+                                                </button>
+                                            )}
+                                            {canUpload && (
+                                                <div className="relative">
+                                                    <input type="file" id={`upload-${q.id}`} ref={replaceImageInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(q.id, e.target.files[0])} />
+                                                    <label htmlFor={`upload-${q.id}`} className={`flex items-center gap-1.5 cursor-pointer text-[10px] font-bold px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all ${isUploading === q.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                        {isUploading === q.id ? <Loader2 size={10} className="animate-spin" /> : <UploadCloud size={10} />}
+                                                        {drawingUrl ? 'Replace Image' : 'Upload Answer'}
+                                                    </label>
+                                                </div>
+                                            )}
+                                            {isEssay && q.minWords && q.minWords > 0 && <span className={`text-[10px] font-bold ${isUnderLimit ? 'text-amber-500' : 'text-green-500'}`}>{wordCount} / {q.minWords} valid words</span>}
+                                        </div>
                                     </div>
                                     {q.type === 'mcq' ? (
                                         <p className="text-sm text-gray-300">
                                             <span dangerouslySetInnerHTML={{ __html: studentAns != null ? parseMath(q.options?.[parseInt(studentAns)] || '') : '<span class="italic opacity-50">No Answer</span>' }} />
                                             {q.correctAnswer && studentAns != null &&
-                                                <span className="ml-2 text-[10px] text-green-500 uppercase font-bold">
-                                                    {studentAns === q.correctAnswer ? '(Correct)' : `(Expected: ${q.options?.[parseInt(q.correctAnswer)] || ''})`}
+                                                <span className={`ml-2 text-[10px] uppercase font-bold ${studentAns === q.correctAnswer ? 'text-green-500' : 'text-red-500'}`}>
+                                                    {studentAns === q.correctAnswer ? '(Correct)' : `(Answer: ${q.options?.[parseInt(q.correctAnswer)] || ''})`}
                                                 </span>
                                             }
                                         </p>
                                     ) : (
-                                        isImageAnswer(studentAns) ? (
-                                            <div className="relative group">
-                                                <img src={studentAns} alt="Student Drawing" className="max-w-full h-auto rounded border border-white/10 bg-white" />
-                                                <a href={studentAns} target="_blank" rel="noopener noreferrer" className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View Full</a>
-                                            </div>
-                                        ) : (
-                                            <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed rich-text-content" dangerouslySetInnerHTML={{ __html: studentAns ? parseMath(studentAns) : '<span class="italic opacity-50">No Answer</span>' }} />
-                                        )
+                                       <>
+                                            {drawingUrl && (
+                                                 <div className="relative group mb-2">
+                                                    <img src={drawingUrl} alt="Student Drawing" className="max-w-full h-auto rounded border border-white/10 bg-white" />
+                                                    <a href={drawingUrl} target="_blank" rel="noopener noreferrer" className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View Full</a>
+                                                 </div>
+                                            )}
+                                            {textContent && (
+                                                 <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed rich-text-content" dangerouslySetInnerHTML={{ __html: textContent ? parseMath(textContent) : '' }} />
+                                            )}
+                                            {!drawingUrl && !textContent && (
+                                                 <span className="italic opacity-50 text-sm">No Answer</span>
+                                            )}
+                                       </>
                                     )}
                                 </div>
                                 <div className={`bg-black/20 rounded-lg border transition-colors ${isFocused ? 'border-blue-500/50' : 'border-white/5'}`} onFocus={() => setActiveFeedbackId(q.id)}>
@@ -305,13 +394,9 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                             <div className="w-px h-4 bg-white/10 mx-1"></div>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
-                                            <div className="w-px h-4 bg-white/10 mx-1"></div>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline"><Underline size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('strikeThrough'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Strikethrough"><Strikethrough size={14}/></button>
                                             <div className="w-px h-4 bg-white/10 mx-1"></div>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
                                             <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
@@ -354,6 +439,27 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                     </div>
                 </div>
             </div>
+
+            {viewingHistory && (
+                 <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setViewingHistory(null)}>
+                     <div className="bg-[#1c1c1c] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-white/10 flex justify-between items-center">
+                            <h4 className="text-lg font-bold text-white flex items-center gap-2"><History size={18}/> Submission History</h4>
+                            <button onClick={() => setViewingHistory(null)} className="text-gray-400 hover:text-white"><X size={20}/></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {[...viewingHistory.history].reverse().map((entry, index) => (
+                                <div key={index} className="bg-black/20 p-3 rounded-lg border border-white/10">
+                                    <p className="text-xs text-gray-400 mb-2">
+                                        Version {viewingHistory.history.length - index} (Replaced on {new Date(entry.timestamp).toLocaleString()})
+                                    </p>
+                                    <img src={entry.url} alt={`History version ${index + 1}`} className="max-w-full h-auto rounded bg-white" />
+                                </div>
+                            ))}
+                        </div>
+                     </div>
+                 </div>
+            )}
         </div>
     );
 };

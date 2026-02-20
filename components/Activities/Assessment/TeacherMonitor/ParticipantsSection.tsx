@@ -21,7 +21,6 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
     return (
         <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 space-y-8">
             
-            {/* TEACHERS SECTION */}
             {teachers.length > 0 && (
                 <div className="animate-in fade-in slide-in-from-left-4">
                     <h3 className="text-pink-500 font-bold uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
@@ -45,7 +44,6 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
                 </div>
             )}
 
-            {/* STUDENTS SECTION */}
             <div className="animate-in fade-in slide-in-from-bottom-4">
                 <h3 className="text-blue-500 font-bold uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
                     <Users size={14} /> Students ({students.length})

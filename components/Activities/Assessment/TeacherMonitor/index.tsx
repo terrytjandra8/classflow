@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { AssessmentQuestion, Note, AssessmentConfig, NoteColor } from '../../../../types';
 import { supabase } from '../../../../services/supabaseClient';
-import { AssessmentPrintView } from '../AssessmentPrintView';
+import { AssessmentPrintView, PrintMode } from '../AssessmentPrintView';
 import { mapNote } from '../../../../utils/mappers';
 
 // Sub-components
@@ -28,15 +28,12 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     boardId, questions, submissions: initialSubmissions, activeStudents, config, onUpdateConfig, className 
 }) => {
     
-    // Local state for submissions to allow manual refresh and optimistic updates
     const [submissions, setSubmissions] = useState<Note[]>(initialSubmissions);
     
-    // Sync with props when they change (realtime updates)
     useMemo(() => {
         setSubmissions(initialSubmissions);
     }, [initialSubmissions]);
 
-    // Manual Refresh Handler
     const handleForceRefresh = async () => {
         if (boardId) {
             const { data } = await supabase
@@ -56,11 +53,10 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const [retryModal, setRetryModal] = useState<{isOpen: boolean, participant: any}>({isOpen: false, participant: null});
     const [gradingModal, setGradingModal] = useState<{isOpen: boolean, participant: any}>({isOpen: false, participant: null});
     
-    // Printing & Selection State
-    const [printTargets, setPrintTargets] = useState<any[]>([]); 
+    // Printing State
+    const [printInfo, setPrintInfo] = useState<{targets: any[], mode: PrintMode} | null>(null);
+    
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
-    const [printKeyMode, setPrintKeyMode] = useState(false); 
-    const [printWithFeedback, setPrintWithFeedback] = useState(true);
 
     // Assets
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
@@ -80,24 +76,19 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             });
         };
 
-        // 1. Map raw notes to participant objects
         const rawParticipants = submissions.map(sub => {
             let data = sub.connections as any; 
-            if (Array.isArray(data)) {
-                data = {}; 
-            }
+            if (Array.isArray(data)) data = {};
 
             const isDQ = data?.disqualified === true;
             const score = isDQ ? 0 : (data?.score || 0);
             const hasLowWordCount = checkWordCounts(data?.answers || {});
             
-            // Prioritize status: DQ > Graded > Submitted > In Progress
             let status = 'In Progress';
             if (isDQ) status = 'Disqualified';
             else if (data?.graded || data?.released) status = 'Graded';
             else if (data?.submitted) status = 'Submitted';
 
-            // Calculate progress: count non-empty answers
             const answers = data?.answers || {};
             const answeredCount = Object.values(answers).filter((val: any) => val && typeof val === 'string' && val.trim().length > 0).length;
             const totalQuestions = questions.filter(q => q.type !== 'section').length || 1;
@@ -118,42 +109,27 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             };
         });
 
-        // 2. Deduplicate: Ensure unique student ID, prioritizing the most recent/relevant submission
         const uniqueParticipantsMap = new Map();
         rawParticipants.forEach(p => {
             const existing = uniqueParticipantsMap.get(p.id);
-            if (!existing) {
+            if (!existing || p.submittedAt > existing.submittedAt) {
                 uniqueParticipantsMap.set(p.id, p);
-            } else {
-                // Conflict resolution: prefer newer submission
-                if (p.submittedAt > existing.submittedAt) {
-                    uniqueParticipantsMap.set(p.id, p);
-                }
             }
         });
         
         const mappedSubmissions = Array.from(uniqueParticipantsMap.values());
 
-        // 3. Merge with Active Students (Pending)
         const submissionIds = new Set(mappedSubmissions.map((s: any) => s.id));
         const pendingStudents = activeStudents
-            .filter(u => {
-                const uid = u.id; 
-                return uid && !submissionIds.has(uid);
-            })
+            .filter(u => u.id && !submissionIds.has(u.id))
             .map(u => ({
                 id: u.id,
                 noteId: null,
                 name: u.user || 'Unknown',
                 role: u.role || 'student',
-                violations: 0,
-                score: 0,
                 status: 'Ready',
                 progress: 0,
-                disqualified: false,
-                hasLowWordCount: false,
                 data: {},
-                submittedAt: Date.now()
             }));
 
         const all = [...mappedSubmissions, ...pendingStudents];
@@ -163,8 +139,6 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             students: all.filter((p: any) => p.role !== 'teacher').sort((a: any, b: any) => a.name.localeCompare(b.name))
         };
     }, [submissions, questions, activeStudents]); 
-
-    // --- Handlers ---
 
     const toggleSelectStudent = (id: string) => {
         const newSet = new Set(selectedStudentIds);
@@ -186,178 +160,55 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setRetryModal({ isOpen: true, participant });
     };
 
-    // 1. UNLOCK / CONTINUE (Non-destructive) - For DQ
     const handleContinue = async (participant: any) => {
         if (!participant.noteId) return;
-
-        // Just remove the flags, keep answers
-        const updatedData = {
-            ...participant.data,
-            submitted: false,
-            disqualified: false,
-            graded: false,
-            released: false
-        };
-
-        // Optimistic Update
-        setSubmissions(prev => prev.map(sub => {
-            if (sub.id === participant.noteId) {
-                return {
-                    ...sub,
-                    connections: updatedData,
-                    content: 'In Progress',
-                    color: NoteColor.WHITE
-                };
-            }
-            return sub;
-        }));
-
-        await supabase
-            .from('notes')
-            .update({ 
-                connections: updatedData,
-                content: 'In Progress',
-                color: 'bg-white'
-            })
-            .eq('id', participant.noteId);
-
-        // Ensure refresh after async (to confirm)
+        const updatedData = { ...participant.data, submitted: false, disqualified: false, graded: false, released: false };
+        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: 'In Progress', color: NoteColor.WHITE } : sub));
+        await supabase.from('notes').update({ connections: updatedData, content: 'In Progress', color: 'bg-white' }).eq('id', participant.noteId);
         setTimeout(handleForceRefresh, 500);
     };
 
-    // 2. ALLOW REVISION (Unlock for editing, keep answers)
     const handleAllowRevision = async (participant: any) => {
         if (!participant.noteId) return;
-
-        // Keep answers, but mark as not submitted so they can edit
-        const updatedData = {
-            ...participant.data,
-            submitted: false,
-            graded: false,
-            released: false,
-            retryQuestions: [] 
-        };
-
-        // Optimistic Update
-        setSubmissions(prev => prev.map(sub => {
-            if (sub.id === participant.noteId) {
-                return {
-                    ...sub,
-                    connections: updatedData,
-                    content: 'Revising',
-                    color: NoteColor.WHITE
-                };
-            }
-            return sub;
-        }));
-
-        await supabase
-            .from('notes')
-            .update({ 
-                connections: updatedData,
-                content: 'Revising',
-                color: 'bg-white'
-            })
-            .eq('id', participant.noteId);
-
+        const updatedData = { ...participant.data, submitted: false, graded: false, released: false, retryQuestions: [] };
+        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: 'Revising', color: NoteColor.WHITE } : sub));
+        await supabase.from('notes').update({ connections: updatedData, content: 'Revising', color: 'bg-white' }).eq('id', participant.noteId);
         setTimeout(handleForceRefresh, 500);
     };
     
-    // 2.5 BULK ALLOW REVISION
     const handleBulkAllowRevision = async () => {
-        if (selectedStudentIds.size === 0) return;
-        if (!confirm(`Allow revision for ${selectedStudentIds.size} selected students?`)) return;
+        if (selectedStudentIds.size === 0 || !confirm(`Allow revision for ${selectedStudentIds.size} selected students?`)) return;
 
         const targets = students.filter(s => selectedStudentIds.has(s.id));
-        
-        // Optimistic Update
+        const noteIdsToUpdate = targets.map(p => p.noteId).filter(Boolean);
+
         setSubmissions(prev => prev.map(sub => {
-            const pId = sub.author_id || sub.author;
-            if (selectedStudentIds.has(pId)) {
-                 const oldData = sub.connections as any || {};
-                 const updatedData = {
-                    ...oldData,
-                    submitted: false,
-                    graded: false,
-                    released: false,
-                    retryQuestions: [] 
-                };
-                return {
-                    ...sub,
-                    connections: updatedData,
-                    content: 'Revising',
-                    color: NoteColor.WHITE
-                };
+            if (noteIdsToUpdate.includes(sub.id)) {
+                 const updatedData = { ...(sub.connections as any || {}), submitted: false, graded: false, released: false, retryQuestions: [] };
+                 return { ...sub, connections: updatedData, content: 'Revising', color: NoteColor.WHITE };
             }
             return sub;
         }));
 
-        // DB Updates (Parallel)
-        const updates = targets.map(p => {
-             if(!p.noteId) return Promise.resolve();
-             const updatedData = {
-                ...p.data,
-                submitted: false,
-                graded: false,
-                released: false,
-                retryQuestions: [] 
-            };
-            return supabase.from('notes').update({
-                connections: updatedData,
-                content: 'Revising',
-                color: 'bg-white'
-            }).eq('id', p.noteId);
+        const updates = noteIdsToUpdate.map(noteId => {
+             const p = targets.find(t => t.noteId === noteId);
+             const updatedData = { ...(p?.data || {}), submitted: false, graded: false, released: false, retryQuestions: [] };
+             return supabase.from('notes').update({ connections: updatedData, content: 'Revising', color: 'bg-white' }).eq('id', noteId);
         });
 
         await Promise.all(updates);
-        
         setTimeout(handleForceRefresh, 500);
         setSelectedStudentIds(new Set());
     };
 
-    // 3. HARD RESET (Destructive - Wipes answers)
     const confirmReset = async () => {
         const { participant } = retryModal;
         if (!participant || !participant.noteId) return;
 
-        // Wipe data completely to start fresh
-        const updatedData = {
-            ...participant.data,
-            answers: {},
-            violations: 0,
-            score: 0,
-            submitted: false,
-            disqualified: false,
-            graded: false,
-            released: false,
-            retryQuestions: []
-        };
-
-        // Optimistic Update
-        setSubmissions(prev => prev.map(sub => {
-            if (sub.id === participant.noteId) {
-                return {
-                    ...sub,
-                    connections: updatedData,
-                    content: 'Restarted',
-                    color: NoteColor.WHITE
-                };
-            }
-            return sub;
-        }));
-
-        const { error } = await supabase
-            .from('notes')
-            .update({ 
-                connections: updatedData,
-                content: 'Restarted',
-                color: 'bg-white'
-            })
-            .eq('id', participant.noteId);
-
-        if (error) alert("Failed to reset status.");
+        const updatedData = { ...participant.data, answers: {}, violations: 0, score: 0, submitted: false, disqualified: false, graded: false, released: false, retryQuestions: [] };
+        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: 'Restarted', color: NoteColor.WHITE } : sub));
+        await supabase.from('notes').update({ connections: updatedData, content: 'Restarted', color: 'bg-white' }).eq('id', participant.noteId);
         
-        // Ensure refresh after async
         setTimeout(handleForceRefresh, 500);
         setRetryModal({ isOpen: false, participant: null });
     };
@@ -369,20 +220,16 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         }
         
         const data = participant.data || {};
-        const existingGrades = data.grading || {};
         const answers = data.answers || {};
-        
         const initGrades: Record<string, {score: number, feedback: string}> = {};
         
         questions.forEach(q => {
             if (q.type === 'section') return;
-            if (existingGrades[q.id]) {
-                initGrades[q.id] = existingGrades[q.id];
+            const existingGrade = data.grading?.[q.id];
+            if (existingGrade) {
+                initGrades[q.id] = existingGrade;
             } else {
-                let score = 0;
-                if (q.type === 'mcq' && answers[q.id] === q.correctAnswer) {
-                    score = q.points;
-                }
+                let score = (q.type === 'mcq' && answers[q.id] === q.correctAnswer) ? q.points : 0;
                 initGrades[q.id] = { score, feedback: '' };
             }
         });
@@ -391,145 +238,65 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setGradingModal({ isOpen: true, participant: { ...participant, data } });
     };
 
-    // Auto-save logic (Background update)
-    const handleAutoSave = useCallback(async (
-        grades: Record<string, { score: number, feedback: string }>, 
-        updatedAnswers?: Record<string, string>, 
-        retryQuestions?: string[],
-        teacherOverrides?: Record<string, boolean> // New parameter
-    ) => {
+    const handleAutoSave = useCallback(async (grades, updatedAnswers, retryQuestions, teacherOverrides) => {
         const { participant } = gradingModal;
         if (!participant || !participant.noteId) return;
 
-        const totalScore = Object.values(grades).reduce((acc: number, curr: {score: number}) => acc + (curr.score || 0), 0);
-        
-        // Preserve existing status logic, just update grading content
+        const totalScore = Object.values(grades).reduce((acc, curr) => acc + (curr.score || 0), 0);
         const updatedData = {
             ...participant.data,
             grading: grades,
             score: totalScore,
-            // We set graded to true to indicate teacher has touched it, but keep 'released' as is
             graded: true, 
             submitted: true,
-            // Apply answer overrides if any (e.g. from manual upload)
-            ...(updatedAnswers ? { answers: updatedAnswers } : {}),
-            // Apply retry config
-            ...(retryQuestions ? { retryQuestions } : {}),
-            // Apply teacher override flags
-            ...(teacherOverrides ? { teacherOverrides } : {})
+            ...(updatedAnswers && { answers: updatedAnswers }),
+            ...(retryQuestions && { retryQuestions }),
+            ...(teacherOverrides && { teacherOverrides })
         };
 
-        // Persist to Notes
-        const { error } = await supabase.from('notes').update({ 
-            connections: updatedData
-        }).eq('id', participant.noteId);
-
-        if (error) {
-            console.error("Auto-save failed", error);
-            throw error; // Re-throw to let Modal know it failed
-        }
+        const { error } = await supabase.from('notes').update({ connections: updatedData }).eq('id', participant.noteId);
+        if (error) throw error;
         
-        // Update local submissions state silently to keep sync
-        setSubmissions(prev => prev.map(sub => {
-             if (sub.id === participant.noteId) {
-                 return { ...sub, connections: updatedData };
-             }
-             return sub;
-        }));
+        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData } : sub));
     }, [gradingModal]);
 
     const saveGrades = async (release: boolean) => {
         const { participant } = gradingModal;
         if (!participant || !participant.noteId) return;
 
-        const totalScore = Object.values(currentGrades).reduce((acc: number, curr: {score: number}) => acc + (curr.score || 0), 0);
+        const totalScore = Object.values(currentGrades).reduce((acc, curr) => acc + (curr.score || 0), 0);
+        const updatedData = { ...participant.data, grading: currentGrades, score: totalScore, graded: true, released: release, submitted: true };
 
-        const updatedData = {
-            ...participant.data,
-            grading: currentGrades,
-            score: totalScore,
-            graded: true,
-            released: release,
-            submitted: true 
-        };
-
-        // --- OPTIMISTIC UPDATE: Update local state immediately ---
-        setSubmissions(prev => prev.map(sub => {
-            if (sub.id === participant.noteId) {
-                return {
-                    ...sub,
-                    connections: updatedData,
-                    content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)',
-                    color: release ? NoteColor.GREEN : NoteColor.WHITE
-                };
-            }
-            return sub;
-        }));
-
+        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)', color: release ? NoteColor.GREEN : NoteColor.WHITE } : sub));
         setGradingModal({ isOpen: false, participant: null });
 
-        // Persist to Notes
-        await supabase.from('notes').update({ 
-            connections: updatedData,
-            content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)',
-            color: release ? 'bg-green-200' : 'bg-white'
-        }).eq('id', participant.noteId);
+        await supabase.from('notes').update({ connections: updatedData, content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)', color: release ? 'bg-green-200' : 'bg-white' }).eq('id', participant.noteId);
 
-        // --- NEW: Persist to Grades Table for RLS ---
         if (boardId && participant.id) {
-             await supabase.from('grades').upsert({
-                student_id: participant.id,
-                board_id: boardId,
-                score: totalScore,
-                feedback: release ? 'See assessment details' : null
-            }, { onConflict: 'student_id, board_id' });
+             await supabase.from('grades').upsert({ student_id: participant.id, board_id: boardId, score: totalScore, feedback: release ? 'See assessment details' : null }, { onConflict: 'student_id, board_id' });
         }
 
-        // Fetch authoritative state after delay to ensure sync
         setTimeout(handleForceRefresh, 500);
     };
 
-    const handleSinglePrint = (participant: any, withFeedback: boolean = true) => {
-        setPrintKeyMode(false); 
-        setPrintWithFeedback(withFeedback);
-        setPrintTargets([participant]);
-    };
-
-    const handleBulkPrint = () => {
-        const targets = students.filter(s => selectedStudentIds.has(s.id));
-        if (targets.length === 0) return;
-        setPrintKeyMode(false);
-        setPrintWithFeedback(true); // Default to true for bulk unless option added there
-        setPrintTargets(targets);
-    };
-
-    const handlePrintMaster = (withKey: boolean) => {
-        setPrintKeyMode(withKey);
-        setPrintWithFeedback(false); // No feedback on master key
-        setPrintTargets([{ id: 'master-copy', name: "", data: { answers: {} } }]);
+    const handlePrint = (targets: any[], mode: PrintMode) => {
+        setPrintInfo({ targets, mode });
     };
 
     return (
         <div className="h-full bg-[#111] text-white p-6 overflow-hidden flex flex-col relative">
             
-            {/* PRINT PORTAL */}
-            {printTargets.length > 0 && (
+            {printInfo && (
                 <AssessmentPrintView 
-                    participants={printTargets}
+                    participants={printInfo.targets}
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
                     className={className}
-                    onAfterPrint={() => {
-                        setPrintTargets([]);
-                        setPrintKeyMode(false);
-                    }}
-                    showAnswerKey={printKeyMode}
-                    includeFeedback={printWithFeedback}
+                    printMode={printInfo.mode}
+                    onAfterPrint={() => setPrintInfo(null)}
                 />
             )}
-
-            {/* SECTIONS */}
             
             {config?.status === 'setup' && onUpdateConfig && (
                 <SetupSection config={config} onUpdateConfig={onUpdateConfig} />
@@ -538,7 +305,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             <HeaderSection 
                 activeStudentsCount={activeStudents.length} 
                 submittedCount={students.filter(s => s.status === 'Submitted' || s.status === 'Graded').length}
-                onPrintMaster={handlePrintMaster}
+                onPrintMaster={() => handlePrint([{ id: 'master-copy', name: "Answer Key", data: { answers: {} } }], 'ANSWER_KEY')}
                 onForceRefresh={handleForceRefresh}
             />
 
@@ -547,7 +314,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 selectedCount={selectedStudentIds.size}
                 totalCount={students.length}
                 onSelectAll={selectAll}
-                onPrintSelected={handleBulkPrint}
+                onPrintSelected={() => handlePrint(students.filter(s => selectedStudentIds.has(s.id)), 'WITH_ANSWERS_AND_FEEDBACK')}
                 onAllowRevisionSelected={handleBulkAllowRevision}
             />
 
@@ -559,11 +326,9 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 onReset={initiateReset}
                 onContinue={handleContinue}
                 onAllowRevision={handleAllowRevision}
-                onPrint={handleSinglePrint}
+                onPrint={(participant) => handlePrint([participant], 'WITH_ANSWERS_AND_FEEDBACK')}
                 onGrade={openGrading}
             />
-
-            {/* MODALS */}
             
             <RetryModal 
                 isOpen={retryModal.isOpen} 
@@ -581,8 +346,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 setCurrentGrades={setCurrentGrades}
                 onSave={saveGrades}
                 onAutoSave={handleAutoSave}
-                onPrint={(withFeedback, gradesSnapshot) => {
-                    const currentTotal = Object.values(gradesSnapshot).reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
+                onPrint={(mode, gradesSnapshot) => {
+                    const currentTotal = Object.values(gradesSnapshot).reduce((acc, curr) => acc + (curr.score || 0), 0);
                     const updatedParticipant = {
                         ...gradingModal.participant,
                         score: currentTotal, 
@@ -593,7 +358,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                         }
                     };
                     setGradingModal({isOpen: false, participant: null});
-                    handleSinglePrint(updatedParticipant, withFeedback);
+                    handlePrint([updatedParticipant], mode);
                 }}
             />
         </div>

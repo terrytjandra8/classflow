@@ -7,6 +7,8 @@ import { PrintHeader } from './PrintView/Header';
 import { PrintQuestion } from './PrintView/Question';
 import { SectionHeader } from './PrintView/SectionHeader';
 
+export type PrintMode = 'paper_only' | 'with_answers' | 'with_feedback' | 'answer_key';
+
 interface AssessmentPrintViewProps {
     participants: any[]; 
     questions: AssessmentQuestion[];
@@ -14,8 +16,7 @@ interface AssessmentPrintViewProps {
     ibLogoUrl: string;
     className?: string; 
     onAfterPrint: () => void;
-    showAnswerKey?: boolean; 
-    includeFeedback?: boolean;
+    printMode: PrintMode;
 }
 
 export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({ 
@@ -25,15 +26,11 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
     ibLogoUrl, 
     className, 
     onAfterPrint, 
-    showAnswerKey = false,
-    includeFeedback = true
+    printMode
 }) => {
     const totalPoints = questions.reduce((a, q) => a + q.points, 0);
 
     useEffect(() => {
-        // Reduced delay to 300ms. 
-        // This is just enough time for the React Portal to mount into the DOM 
-        // and for the browser to apply the styles before the print dialog freezes execution.
         const timer = setTimeout(() => {
             window.print();
         }, 300);
@@ -50,21 +47,25 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
         };
     }, [onAfterPrint]);
 
+    // Based on the printMode, we can determine what to show.
+    const showAnswerKey = printMode === 'answer_key';
+    const includeStudentAnswers = printMode === 'with_answers' || printMode === 'with_feedback';
+    const includeFeedback = printMode === 'with_feedback';
+    const isBlankCopy = printMode === 'paper_only';
+
     return createPortal(
         <div id="assessment-print-view">
             <PrintStyles />
             
             {participants.map((participant, pIndex) => {
                 const isRealStudent = !!participant.id && participant.id !== 'master-copy';
-                const isMasterKey = !isRealStudent && showAnswerKey;
-                const isBlankCopy = !isRealStudent && !showAnswerKey;
 
                 return (
                     <div key={participant.id || pIndex} className="print-student-container">
                         <PrintHeader 
                             ipekaLogoUrl={ipekaLogoUrl}
                             ibLogoUrl={ibLogoUrl}
-                            isMasterKey={isMasterKey}
+                            isMasterKey={showAnswerKey}
                             isRealStudent={isRealStudent}
                             participantName={participant.name}
                             className={className}
@@ -87,9 +88,9 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
                                         key={q.id}
                                         q={q}
                                         qNum={qNum}
-                                        answer={answer}
+                                        answer={includeStudentAnswers ? answer : undefined}
                                         gradeInfo={gradeInfo}
-                                        isMasterKey={isMasterKey}
+                                        isMasterKey={showAnswerKey}
                                         isRealStudent={isRealStudent}
                                         isBlankCopy={isBlankCopy}
                                         includeFeedback={includeFeedback}
