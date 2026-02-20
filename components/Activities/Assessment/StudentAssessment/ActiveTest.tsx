@@ -24,6 +24,7 @@ interface ActiveTestProps {
     isReadingMode: boolean;
     isPracticeMode?: boolean;
     retryQuestions?: string[];
+    onViolation: () => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -204,7 +205,7 @@ const QuestionItem = memo(({
 });
 
 export const ActiveTest: React.FC<ActiveTestProps> = ({ 
-    boardTitle, questions, config, timeLeft, answers, onAnswerChange, onSubmit, onManualSync, meetsRequirements, isPreviewMode, onExitPreview, isReadingMode, isPracticeMode, retryQuestions
+    boardTitle, questions, config, timeLeft, answers, onAnswerChange, onSubmit, onManualSync, meetsRequirements, isPreviewMode, onExitPreview, isReadingMode, isPracticeMode, retryQuestions, onViolation
 }) => {
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
