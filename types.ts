@@ -179,6 +179,7 @@ export interface AssessmentConfig {
     autoLockTime?: number | null; // New: Timestamp for auto-locking
     autoLiveTime?: number | null; // New: Timestamp for auto-start
     allowStudentImages?: boolean;
+    allowLineInBox?: boolean; // New: Allow horizontal lines inside a bordered box
 }
 
 export interface LessonStep {
@@ -224,7 +225,7 @@ export interface Board {
   autoLockTime?: number | null; // New: Auto-Lock absolute timestamp for regular boards
   autoLiveTime?: number | null; // New: Auto-Live absolute timestamp
   commentsEnabled: boolean;
-  repliesEnabled?: boolean;
+  repliesEnabled: boolean;
   reactionsEnabled: boolean;
   studentsCanDrag?: boolean;       // For Notes
   studentsCanDragColumns?: boolean; // For Columns

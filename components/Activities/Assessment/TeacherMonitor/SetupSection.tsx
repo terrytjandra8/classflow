@@ -109,6 +109,21 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                         The assessment will automatically close at this time.
                     </p>
                 </div>
+
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                    <label className="text-sm font-bold text-white flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={config.allowLineInBox}
+                            onChange={(e) => onUpdateConfig({ allowLineInBox: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-500 bg-black/50 border-white/20 focus:ring-blue-500"
+                        />
+                        Allow Lines Inside Boxes
+                    </label>
+                    <p className="text-[10px] text-gray-500">
+                        When enabled, students can insert horizontal lines within a bordered answer box.
+                    </p>
+                </div>
             </div>
         </div>
     );
