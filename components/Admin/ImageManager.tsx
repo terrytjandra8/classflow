@@ -3,14 +3,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { Eye, Download, Trash2, User, Clock, Hash, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 
+// Adjusted interface to match the actual structure from Supabase storage
 interface ImageFile {
     id: string;
     name: string;
     created_at: string;
-    metadata: {
-        size: number;
-        mimetype: string;
-        cacheControl: string;
+    metadata: { // This is now a generic Record
+        [key: string]: any;
     };
     board_id?: string;
     author_id?: string;
@@ -32,7 +31,6 @@ export const ImageManager: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            // 1. Get current user and their role
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("User not found.");
 
@@ -45,7 +43,6 @@ export const ImageManager: React.FC = () => {
             if (profileError) throw profileError;
             setUserRole(profile.role);
 
-            // 2. Fetch all files from the 'uploads' bucket
             const { data: files, error: filesError } = await supabase.storage.from('uploads').list('', {
                 limit: 1000, 
                 sortBy: { column: 'created_at', order: 'desc' },
@@ -54,13 +51,11 @@ export const ImageManager: React.FC = () => {
 
             const imageFiles = files.filter(f => f.metadata.mimetype.startsWith('image/'));
 
-            // 3. Fetch all notes to find associations
             const { data: notes, error: notesError } = await supabase.from('notes').select('id, board_id, author_id, author, connections, content, type');
             if (notesError) throw notesError;
 
-            // 4. Create a map of images with associated metadata from notes
-            let enrichedImages: ImageFile[] = imageFiles.map(file => {
-                const publicURL = `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/uploads/${file.name}`;
+            // Correctly type the mapping process
+            let enrichedImages: ImageFile[] = imageFiles.map((file): ImageFile => {
                 let board_id, author_id, author_name;
 
                 const associatedNote = notes.find(note => {
@@ -89,10 +84,17 @@ export const ImageManager: React.FC = () => {
                     author_id = associatedNote.author_id;
                     author_name = associatedNote.author;
                 }
-                return { ...file, board_id, author_id, author_name, board_title: '' } as ImageFile;
-            }).filter(img => img.board_id); // Only include images we can link to a board
+                
+                // The type assertion is now safe because the interface matches
+                return { 
+                    ...file, 
+                    board_id, 
+                    author_id, 
+                    author_name, 
+                    board_title: '' 
+                };
+            }).filter(img => img.board_id); 
 
-            // 5. Filter images based on user role
             if (profile.role === 'teacher') {
                 const { data: teacherBoards, error: boardsError } = await supabase
                     .from('boards')
@@ -103,7 +105,6 @@ export const ImageManager: React.FC = () => {
                 enrichedImages = enrichedImages.filter(img => img.board_id && teacherBoardIds.has(img.board_id));
             }
 
-            // 6. Fetch board titles for the filtered images
             const boardIds = [...new Set(enrichedImages.map(img => img.board_id).filter(Boolean))];
             if (boardIds.length > 0) {
                 const { data: boards, error: boardsError } = await supabase.from('boards').select('id, title').in('id', boardIds as string[]);
@@ -200,7 +201,8 @@ export const ImageManager: React.FC = () => {
                             <p className="text-xs text-gray-500 break-all mb-4">{selectedImage.name}</p>
 
                             <div className="space-y-3 text-sm flex-1">
-                                <div className="flex items-center gap-3"><Hash size={14} className="text-gray-500" /><span className="font-bold">Size:</span> <span>{(selectedImage.metadata.size / 1024).toFixed(2)} KB</span></div>
+                                {/* Safely access metadata properties */}
+                                <div className="flex items-center gap-3"><Hash size={14} className="text-gray-500" /><span className="font-bold">Size:</span> <span>{selectedImage.metadata.size ? (selectedImage.metadata.size / 1024).toFixed(2) : 'N/A'} KB</span></div>
                                 <div className="flex items-center gap-3"><Clock size={14} className="text-gray-500" /><span className="font-bold">Created:</span> <span>{new Date(selectedImage.created_at).toLocaleString()}</span></div>
                                 <hr className="border-white/10"/>
                                 {selectedImage.author_name ? 

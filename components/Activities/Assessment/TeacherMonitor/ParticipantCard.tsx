@@ -81,9 +81,9 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
                         </button>
                         {isPrintMenuOpen && (
                             <div className="absolute bottom-full left-0 mb-1 w-40 bg-[#222] border border-white/10 rounded-lg shadow-xl z-10 animate-in fade-in slide-in-from-bottom-2" onMouseLeave={() => setPrintMenuOpen(false)}>
-                                <button onClick={(e) => handlePrintClick(e, 'with_feedback')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">With Feedback</button>
-                                <button onClick={(e) => handlePrintClick(e, 'with_answers')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Answers Only</button>
-                                <button onClick={(e) => handlePrintClick(e, 'paper_only')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Blank Paper</button>
+                                <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">With Feedback</button>
+                                <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Answers Only</button>
+                                <button onClick={(e) => handlePrintClick(e, 'BLANK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Blank Paper</button>
                             </div>
                         )}
                     </div>
