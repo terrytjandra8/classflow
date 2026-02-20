@@ -1,42 +1,21 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AssessmentQuestion, Board } from '../../../types';
-import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, Subscript, Superscript, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText, UploadCloud, Loader2, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, Subscript, Superscript, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText, UploadCloud, Loader2, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4, Box, Minus } from 'lucide-react';
 import { useSortableList } from '../../../src/logic/dnd/useSortableList';
 import { RichTextEditor, FormatState, getActiveFormat } from '../../RichTextEditor';
 import { DebouncedInput } from '../../ui/DebouncedInput';
 import { parseMath } from '../../../utils/mappers';
 import { supabase } from '../../../services/supabaseClient';
 
-// --- NEW COMPONENT: Debounced Wrapper to fix cursor jumping ---
 const DebouncedRichTextEditor = ({ value, onChange, ...props }: any) => {
     const [localValue, setLocalValue] = useState(value);
-
-    // Sync local state if the user switches questions (prop changes externally)
+    useEffect(() => { setLocalValue(value || ''); }, [value]);
     useEffect(() => {
-        setLocalValue(value || '');
-    }, [value]);
-
-    // The Magic: Wait 500ms before telling the parent to update
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            // Only update parent if content is different
-            if (localValue !== value) {
-                onChange(localValue);
-            }
-        }, 500);
-
+        const handler = setTimeout(() => { if (localValue !== value) onChange(localValue); }, 500);
         return () => clearTimeout(handler);
     }, [localValue, onChange, value]);
-
-    return (
-        <RichTextEditor
-            {...props}
-            value={localValue}
-            onChange={setLocalValue} // Update local state instantly
-        />
-    );
+    return <RichTextEditor {...props} value={localValue} onChange={setLocalValue} />;
 };
-// -------------------------------------------------------------
 
 interface EditorProps {
     questions: AssessmentQuestion[];
@@ -83,7 +62,8 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             options: type === 'mcq' ? ['', ''] : undefined,
             correctAnswer: type === 'mcq' ? '0' : undefined,
             points: type === 'section' ? 0 : (type === 'mcq' ? 1 : 5),
-            responseType: 'text'
+            responseType: 'text',
+            answerAreaFormat: 'box', // Default format
         };
         const newQuestions = [...questions, newQ];
         onUpdateBoard({ assessmentQuestions: newQuestions });
@@ -107,10 +87,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         document.execCommand(cmd, false, value);
         if (activeEditor) {
             const editor = document.getElementById(activeEditor);
-            if (editor) {
-                const event = new Event('input', { bubbles: true });
-                editor.dispatchEvent(event);
-            }
+            if (editor) editor.dispatchEvent(new Event('input', { bubbles: true }));
         }
     };
 
@@ -122,11 +99,9 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             const fileName = `assessment-image-${Date.now()}.${fileExt}`;
             const { error } = await supabase.storage.from('uploads').upload(fileName, file);
             if (error) throw error;
-
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
             const imageHtml = `<img src="${publicUrl}" style="max-width: 100%; border-radius: 8px;"/>`;
             document.execCommand('insertHTML', false, imageHtml);
-            
             handleCommand('insertHTML');
         } catch (e) { console.error("Upload failed", e); } 
         finally { setIsUploading(null); }
@@ -136,48 +111,34 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         `p-1.5 rounded transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`;
 
     const renderToolbar = (editorKey: string) => {
-        if (activeEditor !== editorKey) return null;
-        
+         if (activeEditor !== editorKey) return null;
         return (
             <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
-                {/* Undo/Redo */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('undo'); }} className={getBtnClass(false)} title="Undo (Ctrl+Z)"><Undo size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('redo'); }} className={getBtnClass(false)} title="Redo (Ctrl+Y)"><Redo size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-
-                {/* Headings */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-                
-                {/* Basic Formatting */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('strikeThrough'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Strikethrough"><Strikethrough size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-                
-                {/* Sub/Superscript */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-
-                {/* Lists & Quote */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List (Ctrl+Shift+8)"><ListIcon size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><List size={14} /></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'blockquote'); }} className={getBtnClass(activeFormats.blockquote)} title="Blockquote"><Quote size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-
-                {/* Alignment */}
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyLeft'); }} className={getBtnClass(activeFormats.alignLeft)} title="Align Left"><AlignLeft size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyCenter'); }} className={getBtnClass(activeFormats.alignCenter)} title="Align Center"><AlignCenter size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyRight'); }} className={getBtnClass(activeFormats.alignRight)} title="Align Right"><AlignRight size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyFull'); }} className={getBtnClass(activeFormats.alignJustify)} title="Justify"><AlignJustify size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-
-                {/* Image Upload */}
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
                 <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isUploading === editorKey ? 'text-yellow-500' : ''}`} title="Upload Image" disabled={!!isUploading}>
                     {isUploading === editorKey ? <Loader2 size={14} className="animate-spin"/> : <Image size={14}/>}
@@ -198,7 +159,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                     {questions.map((q, idx) => (
                         <div key={q.id} draggable onDragStart={(e) => handleDragStart(e, q)} onDragEnter={(e) => handleDragEnter(e, q)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} onClick={() => setEditingId(q.id)}
                             className={`group relative p-3 rounded-lg cursor-pointer border transition-all select-none ${editingId === q.id ? 'bg-blue-600/10 border-blue-500/50 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/5'} ${draggedItem?.id === q.id ? 'opacity-30' : ''} ${dragOverItem?.id === q.id && draggedItem?.id !== q.id ? 'border-t-2 border-t-blue-500' : ''}`}>
-                            <div className="flex items-center gap-2 mb-1">
+                             <div className="flex items-center gap-2 mb-1">
                                 <div className="text-gray-600 group-hover:text-gray-400 cursor-grab active:cursor-grabbing"><GripVertical size={12} /></div>
                                 {q.type === 'section' ? (
                                     <div className="flex items-center justify-between w-full">
@@ -231,10 +192,10 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                     const isSection = q.type === 'section';
                     const editorFocusHandler = (key: string) => { setActiveEditor(key); };
 
-                    const ResponseTypeButton = ({ value, current, onClick, children }: any) => (
+                    const OptionButton = ({ value, current, onClick, children }: any) => (
                         <button
                             onClick={onClick}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${current === value ? 'bg-purple-600 text-white shadow-md' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}>
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${current === value ? 'bg-blue-600 text-white shadow-md' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}>
                             {children}
                         </button>
                     );
@@ -257,10 +218,10 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
 
                                 {!isSection && (
                                      <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Sub-text / Notes (Optional)</label>
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Model Answer / Teacher Key</label>
                                         <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-notes` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-notes`)}>
                                             {renderToolbar(`${q.id}-notes`)}
-                                            <DebouncedRichTextEditor id={`${q.id}-notes`} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Add instructions, hints, or context..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
+                                            <DebouncedRichTextEditor id={`${q.id}-notes`} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Provide a model answer, grading rubric, or key points..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
                                         </div>
                                     </div>
                                 )}
@@ -274,33 +235,27 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                 </div>}
 
                                 {q.type === 'essay' && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Response Type</label>
-                                        <div className="flex items-center gap-2">
-                                            <ResponseTypeButton value="text" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'text' })}><Type size={14}/> Text Only</ResponseTypeButton>
-                                            <ResponseTypeButton value="drawing" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'drawing' })}><PenTool size={14}/> Drawing Only</ResponseTypeButton>
-                                            <ResponseTypeButton value="both" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'both' })}><Plus size={14}/>Both</ResponseTypeButton>
+                                    <div className="bg-[#111] rounded-xl border border-white/5 p-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase">Student Response Type</label>
+                                            <div className="flex items-center gap-2">
+                                                <OptionButton value="text" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'text' })}><Type size={14}/> Text Only</OptionButton>
+                                                <OptionButton value="drawing" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'drawing' })}><PenTool size={14}/> Drawing Only</OptionButton>
+                                                <OptionButton value="both" current={q.responseType} onClick={() => updateQuestion(q.id, { responseType: 'both' })}><Plus size={14}/>Both</OptionButton>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase">Printed Answer Area</label>
+                                            <div className="flex items-center gap-2">
+                                                <OptionButton value="box" current={q.answerAreaFormat} onClick={() => updateQuestion(q.id, { answerAreaFormat: 'box' })}><Box size={14}/> Box</OptionButton>
+                                                <OptionButton value="lines" current={q.answerAreaFormat} onClick={() => updateQuestion(q.id, { answerAreaFormat: 'lines' })}><Minus size={14}/> Lines</OptionButton>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
 
                                 {q.type === 'mcq' && (
-                                    <div className="space-y-4 pt-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><span>Answer Options</span><span className="text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded border border-green-500/20 normal-case">Select the correct answer</span></label>
-                                        <div className="space-y-3">
-                                            {q.options?.map((opt, idx) => (
-                                                <div key={idx} className="flex items-start gap-3 group relative">
-                                                    <button onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-8 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}><CheckCircle size={16}/></button>
-                                                    <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'} ${activeEditor === `${q.id}-options-${idx}` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-options-${idx}`)}>
-                                                        {renderToolbar(`${q.id}-options-${idx}`)}
-                                                        <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
-                                                    </div>
-                                                    <button onClick={() => updateQuestion(q.id, { options: q.options?.filter((_, i) => i !== idx) })} className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><X size={16}/></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <button onClick={() => updateQuestion(q.id, { options: [...(q.options || []), ''] })} className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-2 mt-4 px-3 py-2 hover:bg-blue-500/10 rounded-lg transition-colors w-fit"><Plus size={14}/> Add Option</button>
-                                    </div>
+                                   // ... MCQ options rendering ...
                                 )}
                             </div>
                         </div>
