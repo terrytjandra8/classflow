@@ -59,7 +59,7 @@ export const ImageManager: React.FC = () => {
             if (notesError) throw notesError;
 
             // 4. Create a map of images with associated metadata from notes
-            let enrichedImages = imageFiles.map(file => {
+            let enrichedImages: ImageFile[] = imageFiles.map(file => {
                 const publicURL = `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/uploads/${file.name}`;
                 let board_id, author_id, author_name;
 
@@ -89,7 +89,7 @@ export const ImageManager: React.FC = () => {
                     author_id = associatedNote.author_id;
                     author_name = associatedNote.author;
                 }
-                return { ...file, board_id, author_id, author_name, board_title: '' };
+                return { ...file, board_id, author_id, author_name, board_title: '' } as ImageFile;
             }).filter(img => img.board_id); // Only include images we can link to a board
 
             // 5. Filter images based on user role
@@ -106,7 +106,7 @@ export const ImageManager: React.FC = () => {
             // 6. Fetch board titles for the filtered images
             const boardIds = [...new Set(enrichedImages.map(img => img.board_id).filter(Boolean))];
             if (boardIds.length > 0) {
-                const { data: boards, error: boardsError } = await supabase.from('boards').select('id, title').in('id', boardIds);
+                const { data: boards, error: boardsError } = await supabase.from('boards').select('id, title').in('id', boardIds as string[]);
                 if (boardsError) throw boardsError;
                 const boardTitleMap = new Map(boards.map(b => [b.id, b.title]));
                 enrichedImages.forEach(img => {

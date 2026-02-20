@@ -296,6 +296,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                     ibLogoUrl={ibLogoUrl}
                     className={selectedItem.className}
                     onAfterPrint={() => setIsPrinting(false)}
+                    printMode={"WITH_ANSWERS_AND_FEEDBACK"}
                 />
             )}
 

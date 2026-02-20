@@ -7,7 +7,7 @@ import { PrintHeader } from './PrintView/Header';
 import { PrintQuestion } from './PrintView/Question';
 import { SectionHeader } from './PrintView/SectionHeader';
 
-export type PrintMode = 'paper_only' | 'with_answers' | 'with_feedback' | 'answer_key';
+export type PrintMode = 'BLANK' | 'WITH_ANSWERS' | 'WITH_ANSWERS_AND_FEEDBACK' | 'ANSWER_KEY';
 
 interface AssessmentPrintViewProps {
     participants: any[]; 
@@ -48,10 +48,10 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
     }, [onAfterPrint]);
 
     // Based on the printMode, we can determine what to show.
-    const showAnswerKey = printMode === 'answer_key';
-    const includeStudentAnswers = printMode === 'with_answers' || printMode === 'with_feedback';
-    const includeFeedback = printMode === 'with_feedback';
-    const isBlankCopy = printMode === 'paper_only';
+    const showAnswerKey = printMode === 'ANSWER_KEY';
+    const includeStudentAnswers = printMode === 'WITH_ANSWERS' || printMode === 'WITH_ANSWERS_AND_FEEDBACK';
+    const includeFeedback = printMode === 'WITH_ANSWERS_AND_FEEDBACK';
+    const isBlankCopy = printMode === 'BLANK';
 
     return createPortal(
         <div id="assessment-print-view">

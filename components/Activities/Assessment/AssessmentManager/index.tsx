@@ -185,6 +185,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                     ibLogoUrl={ibLogoUrl}
                     className={board.targetGrade}
                     onAfterPrint={() => setIsPrinting(false)}
+                    printMode={"BLANK"}
                 />
             )}
 

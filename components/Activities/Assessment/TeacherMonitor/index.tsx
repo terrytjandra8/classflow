@@ -238,11 +238,11 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setGradingModal({ isOpen: true, participant: { ...participant, data } });
     };
 
-    const handleAutoSave = useCallback(async (grades, updatedAnswers, retryQuestions, teacherOverrides) => {
+    const handleAutoSave = useCallback(async (grades: Record<string, { score: number, feedback: string }>, updatedAnswers?: Record<string, string>, retryQuestions?: string[], teacherOverrides?: Record<string, any>) => {
         const { participant } = gradingModal;
         if (!participant || !participant.noteId) return;
 
-        const totalScore = Object.values(grades).reduce((acc, curr) => acc + (curr.score || 0), 0);
+        const totalScore = Object.values(grades).reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
         const updatedData = {
             ...participant.data,
             grading: grades,
@@ -264,7 +264,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         const { participant } = gradingModal;
         if (!participant || !participant.noteId) return;
 
-        const totalScore = Object.values(currentGrades).reduce((acc, curr) => acc + (curr.score || 0), 0);
+        const totalScore = Object.values(currentGrades).reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
         const updatedData = { ...participant.data, grading: currentGrades, score: totalScore, graded: true, released: release, submitted: true };
 
         setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: release ? `Graded: ${totalScore}` : 'Submitted (Grading)', color: release ? NoteColor.GREEN : NoteColor.WHITE } : sub));
@@ -347,7 +347,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 onSave={saveGrades}
                 onAutoSave={handleAutoSave}
                 onPrint={(mode, gradesSnapshot) => {
-                    const currentTotal = Object.values(gradesSnapshot).reduce((acc, curr) => acc + (curr.score || 0), 0);
+                    const currentTotal = Object.values(gradesSnapshot).reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
                     const updatedParticipant = {
                         ...gradingModal.participant,
                         score: currentTotal, 
