@@ -61,7 +61,7 @@ const QuestionItem = memo(({
     }
 
     const isEssay = q.type === 'essay';
-    const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
+    const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text';
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
     
@@ -81,15 +81,13 @@ const QuestionItem = memo(({
 
     const handleCommand = (cmd: string) => {
         if (cmd === 'formatBlock' && getActiveFormat('', ['SPAN.box'])) {
-            // If the box is active, remove it before applying a new block format
             document.execCommand('removeFormat'); 
         }
 
         if (cmd === 'insertHorizontalRule' && getActiveFormat('', ['SPAN.box'])) {
-            return; // Don't add a line if a box is already applied
+            return;
         }
         if (cmd === 'formatBlock' && getActiveFormat('insertHorizontalRule')) {
-             // Don't add a box if a line is already applied
             return; 
         }
 
@@ -239,9 +237,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
     const [drawingSaveStatus, setDrawingSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-    
-    // Holds the drawing data (blob) *while* the canvas is open. This state is isolated to prevent
-    // the main test page from re-rendering on every drawing change, ensuring a fluid experience.
     const [liveDrawingBlob, setLiveDrawingBlob] = useState<Blob | null>(null);
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
@@ -274,7 +269,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             if (error) throw error;
 
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`; // Cache-busting parameter
+            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
             
             setDrawingSaveStatus('saved');
             return finalUrl;
@@ -347,8 +342,12 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             )}
             
             {isRevision && (
-                <div className="bg-orange-600 text-white px-4 py-2 flex justify-center items-center z-50 sticky top-0 shadow-md shrink-0 text-xs font-bold uppercase tracking-wider gap-2">
-                    <Unlock size={14} /> Revision Mode: Only unlocked questions can be edited
+                <div className="bg-orange-600/20 border-b border-orange-500/30 p-3 text-center text-orange-200 text-sm font-medium leading-relaxed">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                        <Unlock size={16} /> 
+                        <h3 className="font-bold">You are in revision mode.</h3>
+                    </div>
+                    <p className="text-xs text-orange-300">Only questions marked for revision by your teacher can be edited. Once you are finished, you can re-submit your assessment.</p>
                 </div>
             )}
 
@@ -433,7 +432,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 <><Check size={20} /> Finish Practice</>
                             ) : (
                                 meetsRequirements ? (
-                                    <><Send size={20} /> {isRevision ? 'Submit Revision' : 'Submit Assessment'}</>
+                                    <><Send size={20} /> {isRevision ? 'Resubmit Assessment' : 'Submit Assessment'}</>
                                 ) : (
                                     <><AlertTriangle size={20} /> Submit with Warnings</>
                                 )
@@ -471,7 +470,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                                 onClick={handleConfirmSubmit}
                                 className={`flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-colors shadow-lg ${meetsRequirements ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}
                             >
-                                {isPracticeMode ? 'Finish' : 'Confirm Submit'}
+                                {isPracticeMode ? 'Finish' : (isRevision ? 'Resubmit Assessment' : 'Confirm Submit')}
                             </button>
                         </div>
                     </div>
