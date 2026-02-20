@@ -59,16 +59,58 @@ const QuestionItem = memo(({
     }
 
     const isEssay = q.type === 'essay';
-    const isDrawing = isEssay && (answer?.startsWith('http') || answer?.startsWith('blob'));
-    const wc = isEssay && !isDrawing ? countQualityWords(answer || '') : 0;
-    const rawWc = isEssay && !isDrawing ? (answer || '').trim().split(/\s+/).filter(w => w.length > 0).length : 0;
-    const isSpamming = isEssay && !isDrawing && (rawWc - wc > 5);
-    const isUnderWordLimit = isEssay && q.minWords && wc < q.minWords && !isDrawing;
-    const renderedText = parseMath(q.text);
-    const renderedNotes = q.notes ? parseMath(q.notes) : null;
     const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
+
+    let drawingData: string | undefined;
+    let textData: string | undefined;
+
+    // Parse the 'answer' string based on its likely format
+    if (answer) {
+        try {
+            // Assumes 'both' mode data is a JSON string
+            const parsed = JSON.parse(answer);
+            drawingData = parsed.drawing;
+            textData = parsed.text;
+        } catch (e) {
+            // Handles legacy data which could be a URL or plain text
+            if (answer.startsWith('http') || answer.startsWith('blob:')) {
+                drawingData = answer;
+            } else {
+                textData = answer;
+            }
+        }
+    }
+
+    // Clean up data based on the current question configuration
+    // This prevents showing a drawing for a text-only question, or vice-versa.
+    if (!allowDrawing) {
+        drawingData = undefined;
+    }
+    if (!allowText) {
+        textData = undefined;
+    }
+
+
+    const handleTextChange = (newText: string) => {
+        if (responseType === 'both') {
+            const newAnswer = JSON.stringify({ drawing: drawingData, text: newText });
+            onAnswerChange(q.id, newAnswer);
+        } else {
+            onAnswerChange(q.id, newText);
+        }
+    };
+    
+    const isDrawingVisible = isEssay && allowDrawing && drawingData;
+    const isTextVisible = isEssay && allowText;
+
+    const wc = isEssay && isTextVisible ? countQualityWords(textData || '') : 0;
+    const rawWc = isEssay && isTextVisible ? (textData || '').trim().split(/\s+/).filter(w => w.length > 0).length : 0;
+    const isSpamming = isEssay && isTextVisible && (rawWc - wc > 5);
+    const isUnderWordLimit = isEssay && q.minWords && wc < q.minWords;
+    const renderedText = parseMath(q.text);
+    const renderedNotes = q.notes ? parseMath(q.notes) : null;
 
     const handleCommand = (cmd: string) => {
         document.execCommand(cmd, false);
@@ -124,13 +166,13 @@ const QuestionItem = memo(({
                 </div>
             )}
 
-            {q.type === 'essay' && (
+            {isEssay && (
                 <>
                     {allowDrawing && (
                         <div className="mb-4">
-                            {isDrawing ? (
+                            {isDrawingVisible ? (
                                 <div className="relative group border border-white/10 rounded-xl overflow-hidden">
-                                    <img src={answer} alt="Drawing Answer" className="w-full h-auto max-h-[400px] object-contain bg-white" />
+                                    <img src={drawingData} alt="Drawing Answer" className="w-full h-auto max-h-[400px] object-contain bg-white" />
                                     {!isReadingMode && !isReadOnly && (
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                             <button 
@@ -156,7 +198,7 @@ const QuestionItem = memo(({
                         </div>
                     )}
 
-                    {allowText && !isDrawing && (
+                    {isTextVisible && (
                         <div className={`relative bg-[#111] border rounded-xl focus-within:border-blue-500 transition-colors ${isReadingMode || isReadOnly ? 'border-transparent' : 'border-white/10'}`}>
                              <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl">
                                 <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
@@ -170,8 +212,8 @@ const QuestionItem = memo(({
                                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
                             </div>
                             <RichTextEditor 
-                                value={answer || ''}
-                                onChange={(val) => onAnswerChange(q.id, val)}
+                                value={textData || ''}
+                                onChange={handleTextChange}
                                 onFormatChange={setActiveFormats}
                                 imageUploadDisabled={!config.allowStudentImages}
                                 className={`w-full bg-transparent p-4 text-white outline-none min-h-[150px] leading-relaxed transition-colors ${isReadingMode || isReadOnly ? 'cursor-not-allowed opacity-50' : ''}`}
@@ -185,7 +227,7 @@ const QuestionItem = memo(({
                         </div>
                     )}
                     
-                    {q.minWords && q.minWords > 0 && !isDrawing && allowText && (
+                    {q.minWords && q.minWords > 0 && isTextVisible && (
                         <div className={`flex justify-end mt-2 text-xs font-bold ${isUnderWordLimit ? 'text-amber-500' : 'text-green-500'}`}>
                             {wc} / {q.minWords} valid words {isUnderWordLimit && '(Under Limit)'}
                         </div>
@@ -204,12 +246,17 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
     const [drawingSaveStatus, setDrawingSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     
-    // State to hold the drawing blob while the modal is open. It does not trigger main component re-renders.
     const [liveDrawingBlob, setLiveDrawingBlob] = useState<Blob | null>(null);
-    // State to hold the URL from the last successful background save.
     const [lastSavedUrl, setLastSavedUrl] = useState<string | null>(null);
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
+
+    // Reset drawing state when the active question changes to prevent data leakage
+    useEffect(() => {
+        setLastSavedUrl(null);
+        setLiveDrawingBlob(null);
+        setDrawingSaveStatus('idle');
+    }, [activeDrawingQId]);
 
     const handleConfirmSubmit = () => {
         setShowSubmitModal(false);
@@ -222,18 +269,28 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         setTimeout(() => setIsSyncing(false), 800);
     };
 
-    // This function saves the blob to Supabase and updates the lastSavedUrl state.
-    // It does NOT call onAnswerChange, thus preventing any re-renders of the main page.
     const backgroundSaveDrawing = useCallback(async (blob: Blob, qId: string) => {
         setDrawingSaveStatus('saving');
         try {
             const currentAnswer = answers[qId];
             let fileName;
-            if (lastSavedUrl) { // If we have a URL from a previous save in this session, re-use the filename
-                const urlParts = lastSavedUrl.split('/');
-                fileName = urlParts[urlParts.length - 1].split('?')[0];
-            } else if (currentAnswer && currentAnswer.startsWith('http') && !currentAnswer.startsWith('blob:')) {
-                const urlParts = currentAnswer.split('/');
+
+            let existingDrawingUrl: string | undefined;
+            if (qId) {
+                const question = questions.find(q => q.id === qId);
+                const responseType = question?.responseType || (question?.allowDrawing ? 'both' : 'text');
+                if (responseType === 'both') {
+                    try {
+                        const parsed = JSON.parse(answers[qId] || '{}');
+                        existingDrawingUrl = parsed.drawing;
+                    } catch (e) { /* no-op */ }
+                }
+            }
+            
+            const urlToReuse = existingDrawingUrl || lastSavedUrl || (currentAnswer?.startsWith('http') && !currentAnswer.startsWith('blob:') ? currentAnswer : null);
+
+            if (urlToReuse) {
+                const urlParts = urlToReuse.split('/');
                 fileName = urlParts[urlParts.length - 1].split('?')[0];
             } else {
                 fileName = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
@@ -247,61 +304,114 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
 
             setLastSavedUrl(finalUrl);
             setDrawingSaveStatus('saved');
+            return finalUrl; // Return the URL
         } catch (e) {
             console.error("Background drawing upload failed", e);
             setDrawingSaveStatus('error');
+            return null;
         }
-    }, [answers, lastSavedUrl]);
+    }, [answers, lastSavedUrl, questions]);
 
-    // Create a debounced version of the background save function.
     const debouncedBackgroundSave = useMemo(() => 
-        debounce((blob: Blob, qId: string) => {
-            backgroundSaveDrawing(blob, qId);
-        }, 2000) // 2-second debounce interval
-    , [backgroundSaveDrawing]);
+        debounce(async (blob: Blob, qId: string) => {
+            const url = await backgroundSaveDrawing(blob, qId);
+            if (url) {
+                const question = questions.find(q => q.id === qId);
+                const responseType = question?.responseType || (question?.allowDrawing ? 'both' : 'text');
+                if (responseType === 'both') {
+                    let textData = '';
+                    try {
+                        const parsed = JSON.parse(answers[qId] || '{}');
+                        textData = parsed.text || '';
+                    } catch(e) { 
+                        if (answers[qId] && !answers[qId].startsWith('http')) {
+                           textData = answers[qId];
+                        }
+                    }
+                    const newAnswer = JSON.stringify({ drawing: url, text: textData });
+                    onAnswerChange(qId, newAnswer, true); // Immediate update for background save
+                }
+            }
+        }, 2000)
+    , [backgroundSaveDrawing, questions, answers, onAnswerChange]);
 
-    // This effect triggers the debounced save whenever the user has drawn something new.
     useEffect(() => {
         if (liveDrawingBlob && activeDrawingQId) {
             debouncedBackgroundSave(liveDrawingBlob, activeDrawingQId);
         }
-        // Cleanup function to cancel any pending saves when the component unmounts or dependencies change
         return () => {
             debouncedBackgroundSave.cancel();
         };
     }, [liveDrawingBlob, activeDrawingQId, debouncedBackgroundSave]);
 
-    // Called when the user closes the drawing modal.
-    const handleCloseDrawingModal = useCallback(() => {
-        debouncedBackgroundSave.cancel(); // Cancel any pending background saves
-
-        // The final drawing to be saved is in liveDrawingBlob.
-        // If a background save has already completed, its URL is in lastSavedUrl.
-        const finalUrlToCommit = lastSavedUrl;
-        const finalBlobToCommit = liveDrawingBlob;
+    const handleCloseDrawingModal = useCallback(async () => {
+        debouncedBackgroundSave.cancel();
+        
         const qId = activeDrawingQId;
+        if (!qId) return;
 
-        if (qId) {
-            if (finalUrlToCommit) {
-                // If a background save completed, we can use its URL.
-                // We also check if the live blob is newer than the saved one, but for simplicity, we'll just save the latest blob.
-                onAnswerChange(qId, finalUrlToCommit, true);
-            } else if (finalBlobToCommit) {
-                // If user closes before any background save, do one final save.
-                const tempUrl = URL.createObjectURL(finalBlobToCommit);
-                onAnswerChange(qId, tempUrl, false); // Optimistic update
-                backgroundSaveDrawing(finalBlobToCommit, qId).then(() => URL.revokeObjectURL(tempUrl));
-            }
+        const question = questions.find(q => q.id === qId);
+        if (!question) return;
+
+        const responseType = question.responseType || (question.allowDrawing ? 'both' : 'text');
+        let finalUrl = lastSavedUrl;
+
+        // If there's a live blob that hasn't been saved yet, save it now.
+        if (liveDrawingBlob && drawingSaveStatus !== 'saved') {
+            finalUrl = await backgroundSaveDrawing(liveDrawingBlob, qId);
         }
 
-        // Reset all modal-related states
+        if (finalUrl) {
+            if (responseType === 'both') {
+                let textData = '';
+                try {
+                    const parsed = JSON.parse(answers[qId] || '{}');
+                    textData = parsed.text || '';
+                } catch(e) {
+                    if (answers[qId] && !answers[qId].startsWith('http')) {
+                        textData = answers[qId];
+                    }
+                }
+                const newAnswer = JSON.stringify({ drawing: finalUrl, text: textData });
+                onAnswerChange(qId, newAnswer, true);
+            } else { // 'drawing' only
+                onAnswerChange(qId, finalUrl, true);
+            }
+        } else if (liveDrawingBlob && !finalUrl) { // Fallback for optimistic update if final save failed
+            const tempUrl = URL.createObjectURL(liveDrawingBlob);
+            if (responseType === 'both') {
+                 let textData = '';
+                 try {
+                    const parsed = JSON.parse(answers[qId] || '{}');
+                    textData = parsed.text || '';
+                } catch(e) { /* no-op */ }
+                const newAnswer = JSON.stringify({ drawing: tempUrl, text: textData });
+                onAnswerChange(qId, newAnswer, false);
+            } else {
+                 onAnswerChange(qId, tempUrl, false);
+            }
+        }
+        
         setActiveDrawingQId(null);
-        setLiveDrawingBlob(null);
-        setLastSavedUrl(null);
-        setDrawingSaveStatus('idle');
-    }, [activeDrawingQId, liveDrawingBlob, lastSavedUrl, onAnswerChange, backgroundSaveDrawing, debouncedBackgroundSave]);
+    }, [activeDrawingQId, liveDrawingBlob, lastSavedUrl, onAnswerChange, backgroundSaveDrawing, debouncedBackgroundSave, questions, answers, drawingSaveStatus]);
 
-    const activeDrawingInitialData = activeDrawingQId ? answers[activeDrawingQId] : undefined;
+    const activeDrawingInitialData = useMemo(() => {
+        if (!activeDrawingQId) return undefined;
+        const answer = answers[activeDrawingQId];
+        const question = questions.find(q => q.id === activeDrawingQId);
+        const responseType = question?.responseType || (question?.allowDrawing ? 'both' : 'text');
+
+        if (responseType === 'both') {
+            try {
+                const parsed = JSON.parse(answer || '{}');
+                return parsed.drawing;
+            } catch (e) {
+                return (answer && answer.startsWith('http')) ? answer : undefined;
+            }
+        }
+        return answer;
+    }, [activeDrawingQId, answers, questions]);
+
 
     return (
         <div 
@@ -473,7 +583,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                          </div>
                          <div className="flex-1 bg-white relative p-1">
                             <DrawingCanvas 
-                                key={activeDrawingQId} // Using key to ensure canvas re-mounts for a new question
+                                key={activeDrawingQId}
                                 onDrawEnd={setLiveDrawingBlob} 
                                 initialData={activeDrawingInitialData}
                             />
