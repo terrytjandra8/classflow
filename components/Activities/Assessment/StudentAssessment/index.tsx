@@ -405,6 +405,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     isReadingMode={isReadingMode}
                     isPracticeMode={isPracticeMode}
                     retryQuestions={retryQuestions}
+                    onViolation={handleViolation}
                 />
             </div>
         </ScreenshotGuard>
