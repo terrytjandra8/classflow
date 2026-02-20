@@ -249,6 +249,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                             <div className="flex items-center gap-2">
                                                 <OptionButton value="box" current={q.answerAreaFormat} onClick={() => updateQuestion(q.id, { answerAreaFormat: 'box' })}><Box size={14}/> Box</OptionButton>
                                                 <OptionButton value="lines" current={q.answerAreaFormat} onClick={() => updateQuestion(q.id, { answerAreaFormat: 'lines' })}><Minus size={14}/> Lines</OptionButton>
+                                                <OptionButton value="both" current={q.answerAreaFormat} onClick={() => updateQuestion(q.id, { answerAreaFormat: 'both' })}><Plus size={14}/> Both</OptionButton>
                                             </div>
                                         </div>
                                     </div>

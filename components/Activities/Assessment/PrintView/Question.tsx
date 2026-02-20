@@ -29,15 +29,28 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
     }
 
     if (isBlank) {
-        if (format === 'lines') {
-            return (
-                <div style={{ minHeight: `${minHeight}px`, border: '1px solid black', padding: '10px' }}>
-                    {Array.from({ length: Math.floor(minHeight / 24) }).map((_, i) => (
-                        <div key={i} style={{ borderBottom: '1px solid #ccc', height: '24px' }}></div>
-                    ))}
-                </div>
-            );
+        const lineContainerStyle: React.CSSProperties = {
+            minHeight: `${minHeight}px`,
+            padding: '10px',
+            position: 'relative',
+        };
+
+        if (format === 'box' || format === 'both') {
+            lineContainerStyle.border = '1px solid black';
         }
+
+        const lines = Array.from({ length: Math.floor(minHeight / 24) }).map((_, i) => (
+            <div key={i} style={{ borderBottom: '1px solid #ccc', height: '24px' }}></div>
+        ));
+
+        if (format === 'lines') {
+            return <div style={{ minHeight: `${minHeight}px` }}>{lines}</div>;
+        }
+
+        if (format === 'both') {
+            return <div style={lineContainerStyle}>{lines}</div>;
+        }
+
         return <div style={{ border: '1px solid #000', minHeight: `${minHeight}px`, backgroundColor: '#fff' }}></div>;
     }
 
