@@ -27,17 +27,17 @@ export const PrintHeader: React.FC<PrintHeaderProps> = ({
         <table className="header-info-table">
             <tbody>
                 <tr>
-                    <td className="label-cell">Name</td>
+                    <td className="label-cell" style={{ width: '70px' }}>Name</td>
                     <td className="value-cell">
                         {isMasterKey ? "TEACHER KEY" : (isRealStudent ? participantName : "")}
                     </td>
-                    <td className="label-cell">Class</td>
+                    <td className="label-cell" style={{ width: '70px' }}>Class</td>
                     <td className="value-cell">{className || ''}</td>
                 </tr>
                 <tr>
-                    <td className="label-cell">Date</td>
+                    <td className="label-cell" style={{ width: '70px' }}>Date</td>
                     <td className="value-cell">{isRealStudent ? new Date().toLocaleDateString() : ""}</td>
-                    <td className="label-cell">Score</td>
+                    <td className="label-cell" style={{ width: '70px' }}>Score</td>
                     <td className="value-cell">
                         {isRealStudent ? (
                             <><strong>{score}</strong> / {totalPoints} Marks</>
