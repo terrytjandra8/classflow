@@ -1,465 +1,256 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Printer, X, Save, Check, FileWarning, Loader2, Cloud, Eye, EyeOff, Bold, Italic, Subscript, Superscript, UploadCloud, RefreshCw, Lock, Unlock, ShieldCheck, ImagePlus, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4, AlignLeft, List, ListOrdered, History, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AssessmentQuestion } from '../../../../types';
-import { RichTextEditor, FormatState } from '../../../RichTextEditor';
-import { DebouncedInput } from '../../../ui/DebouncedInput';
-import { parseMath } from '../../../../utils/mappers';
-import { countQualityWords } from '../../../../utils/validation';
-import { supabase } from '../../../../services/supabaseClient';
+import { X, Printer, FileText, File, FileX, Code, Trash2, AlertTriangle, User, ChevronDown, Check, Save } from 'lucide-react';
+import { RichTextEditor, FormatState, getActiveFormat } from '../../../RichTextEditor';
 import { PrintMode } from '../AssessmentPrintView';
+import { parseMath } from '../../../../utils/mappers';
+
+const getInitialAnswers = (participant: any) => participant?.data?.answers || {};
+const getInitialGrades = (participant: any, questions: AssessmentQuestion[]) => {
+    const initialGrades: Record<string, { score: number, feedback: string }> = {};
+    const answers = participant?.data?.answers || {};
+    questions.forEach(q => {
+        if (q.type === 'section') return;
+        const existingGrade = participant?.data?.grading?.[q.id];
+        if (existingGrade) {
+            initialGrades[q.id] = existingGrade;
+        } else {
+            const isCorrect = q.type === 'mcq' && answers[q.id] === q.correctAnswer;
+            initialGrades[q.id] = { score: isCorrect ? q.points : 0, feedback: '' };
+        }
+    });
+    return initialGrades;
+};
 
 interface GradingModalProps {
     isOpen: boolean;
     participant: any;
     onClose: () => void;
     questions: AssessmentQuestion[];
-    currentGrades: Record<string, { score: number, feedback: string }>;
-    setCurrentGrades: React.Dispatch<React.SetStateAction<Record<string, { score: number, feedback: string }>>>;
     onSave: (release: boolean) => void;
-    onAutoSave: (grades: Record<string, { score: number, feedback: string }>, updatedAnswers?: Record<string, string>, retryQuestions?: string[], teacherOverrides?: Record<string, any>) => Promise<void>;
-    onPrint: (mode: PrintMode, currentGradesSnapshot: Record<string, { score: number, feedback: string }>) => void;
+    onPrint: (mode: PrintMode, gradesSnapshot: Record<string, { score: number, feedback: string }>) => void;
+    currentGrades: Record<string, { score: number, feedback: string }>;
+    setCurrentGrades: (grades: Record<string, { score: number, feedback: string }>) => void;
+    onAutoSave: (
+        grades: Record<string, { score: number, feedback: string }>, 
+        updatedAnswers?: Record<string, string>,
+        retryQuestions?: string[],
+        teacherOverrides?: Record<string, any>
+    ) => Promise<void>;
 }
 
 export const GradingModal: React.FC<GradingModalProps> = ({ 
-    isOpen, participant, onClose, questions, currentGrades, setCurrentGrades, onSave, onAutoSave, onPrint 
+    isOpen, participant, onClose, questions, onSave, onPrint, currentGrades, setCurrentGrades, onAutoSave 
 }) => {
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-    const [activeFeedbackId, setActiveFeedbackId] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState<string | null>(null);
-    const [isFeedbackUploading, setIsFeedbackUploading] = useState<string | null>(null);
-    const [showPrintDropdown, setShowPrintDropdown] = useState(false);
-    
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [retryQuestions, setRetryQuestions] = useState<string[]>([]);
-    const [teacherOverrides, setTeacherOverrides] = useState<Record<string, any>>({});
-    const [viewingHistory, setViewingHistory] = useState<{qId: string, history: any[]} | null>(null);
-    
-    const [activeFormats, setActiveFormats] = useState<FormatState>({
-        bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
-        subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
-        alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
-    });
-    
-    const gradesRef = useRef(currentGrades);
-    const answersRef = useRef(answers);
-    const retryRef = useRef(retryQuestions);
-    const overridesRef = useRef(teacherOverrides);
-    const timeoutRef = useRef<any>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const replaceImageInputRef = useRef<HTMLInputElement>(null);
-    const printDropdownRef = useRef<HTMLDivElement>(null);
+    const [currentAnswers, setCurrentAnswers] = useState<Record<string, string>>({});
+    const [isDirty, setIsDirty] = useState(false);
+    const [printMenuOpen, setPrintMenuOpen] = useState(false);
+    const [rawView, setRawView] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        if (participant?.data) {
-            setAnswers(participant.data.answers || {});
-            setRetryQuestions(participant.data.retryQuestions || []);
-            setTeacherOverrides(participant.data.teacherOverrides || {});
-            
-            answersRef.current = participant.data.answers || {};
-            retryRef.current = participant.data.retryQuestions || [];
-            overridesRef.current = participant.data.teacherOverrides || {};
+        if (isOpen && participant) {
+            setCurrentAnswers(getInitialAnswers(participant));
+            setCurrentGrades(getInitialGrades(participant, questions));
+            setIsDirty(false);
+            setRawView({});
         }
-    }, [participant]);
+    }, [isOpen, participant, questions, setCurrentGrades]);
 
-    useEffect(() => {
-        gradesRef.current = currentGrades;
-    }, [currentGrades]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (printDropdownRef.current && !printDropdownRef.current.contains(event.target as Node)) {
-                setShowPrintDropdown(false);
-            }
+    const debouncedAutoSave = useMemo(() => {
+        let timeoutId: NodeJS.Timeout;
+        return (grades: Record<string, { score: number, feedback: string }>, answers: Record<string, string>) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                onAutoSave(grades, answers).then(() => setIsDirty(false));
+            }, 1500);
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        };
-    }, []);
-
-    const triggerSave = useCallback((overrideAnswers?: Record<string, string>, overrideRetries?: string[], overrideTeacherFlags?: Record<string, any>, immediate = false) => {
-        setSaveStatus('saving');
-        
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        
-        const finalAnswers = overrideAnswers || answersRef.current;
-        const finalRetries = overrideRetries || retryRef.current;
-        const finalOverrides = overrideTeacherFlags || overridesRef.current;
-
-        const performSave = async () => {
-            try {
-                await onAutoSave(gradesRef.current, finalAnswers, finalRetries, finalOverrides);
-                setSaveStatus('saved');
-                setTimeout(() => {
-                   setSaveStatus(prev => prev === 'saved' ? 'idle' : prev);
-                }, 3000);
-            } catch (e) {
-                setSaveStatus('error');
-            }
-        };
-
-        if (immediate) {
-            performSave();
-        } else {
-            timeoutRef.current = setTimeout(performSave, 1500);
-        }
     }, [onAutoSave]);
 
-    const handleUpdate = (qId: string, updates: Partial<{ score: number, feedback: string }>) => {
-        setCurrentGrades(prev => {
-            const newItem = { ...(prev[qId] || { score: 0, feedback: '' }), ...updates };
-            return { ...prev, [qId]: newItem };
-        });
-        triggerSave();
+    const handleAnswerChange = (qId: string, value: string) => {
+        const newAnswers = { ...currentAnswers, [qId]: value };
+        setCurrentAnswers(newAnswers);
+        setIsDirty(true);
+        debouncedAutoSave(currentGrades, newAnswers);
+    };
+
+    const handleGradeChange = (qId: string, score: number, feedback: string) => {
+        const newGrades = { ...currentGrades, [qId]: { score, feedback } };
+        setCurrentGrades(newGrades);
+        setIsDirty(true);
+        debouncedAutoSave(newGrades, currentAnswers);
     };
     
-    const getAnswerParts = (answer: string) => {
-        let drawing: string | undefined;
-        let text: string | undefined;
-        if (!answer) return { drawing, text };
+    const handleClearAnswer = (qId: string) => {
+        if (window.confirm('Are you sure you want to permanently erase this student\'s answer? This cannot be undone.')) {
+            const newAnswers = { ...currentAnswers, [qId]: '' };
+            setCurrentAnswers(newAnswers);
 
-        try {
-            const parsed = JSON.parse(answer);
-            drawing = parsed.drawing;
-            text = parsed.text;
-        } catch (e) {
-            if (answer.startsWith('http') || answer.startsWith('data:image')) {
-                drawing = answer;
-            } else {
-                text = answer;
+            const newGrades = { ...currentGrades };
+            if(newGrades[qId]) {
+                newGrades[qId].score = 0;
             }
-        }
-        return { drawing, text };
-    };
-
-    const handleFileUpload = async (qId: string, file: File) => {
-        setIsUploading(qId);
-        try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-            const { error: uploadError } = await supabase.storage.from('uploads').upload(fileName, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
-
-            const question = questions.find(q => q.id === qId);
-            const responseType = question?.responseType || (question?.allowDrawing ? 'both' : 'text');
+            setCurrentGrades(newGrades);
             
-            const currentAnswer = answersRef.current[qId];
-            const { drawing: oldDrawingUrl } = getAnswerParts(currentAnswer);
-
-            let newAnswerValue = finalUrl;
-            if (responseType === 'both') {
-                let existingText = '';
-                if(currentAnswer) {
-                    try {
-                        const parsed = JSON.parse(currentAnswer);
-                        existingText = parsed.text || '';
-                    } catch (e) { /* Not JSON */ }
-                }
-                newAnswerValue = JSON.stringify({ drawing: finalUrl, text: existingText });
-            }
-
-            const newAnswers = { ...answersRef.current, [qId]: newAnswerValue };
-            
-            const existingOverride = overridesRef.current[qId] || {};
-            const updatedHistory = oldDrawingUrl 
-                ? [...(existingOverride.history || []), { url: oldDrawingUrl, timestamp: new Date().toISOString() }] 
-                : (existingOverride.history || []);
-
-            const newOverrides = { 
-                ...overridesRef.current, 
-                [qId]: { 
-                    ...existingOverride,
-                    history: updatedHistory
-                } 
-            };
-
-            setAnswers(newAnswers);
-            answersRef.current = newAnswers;
-            setTeacherOverrides(newOverrides);
-            overridesRef.current = newOverrides;
-            
-            triggerSave(newAnswers, undefined, newOverrides, true);
-
-        } catch (e) {
-            console.error("Upload failed", e);
-            alert("Upload failed. Please try again.");
-        } finally {
-            setIsUploading(null);
-        }
-    };
-    
-    const handleFeedbackUpload = async (qId: string, file: File) => {
-        setIsFeedbackUploading(qId);
-        try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `feedback-image-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-            const { error: uploadError } = await supabase.storage.from('uploads').upload(fileName, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-
-            const imageHtml = `<img src="${publicUrl}" alt="Feedback Image" style="max-width: 100%; border-radius: 8px;"/>`;
-            document.execCommand('insertHTML', false, imageHtml);
-            handleCommand('insertHTML');
-
-        } catch (e) {
-            console.error("Feedback upload failed", e);
-            alert("Image upload failed. Please try again.");
-        } finally {
-            setIsFeedbackUploading(null);
+            setIsDirty(true);
+            onAutoSave(newGrades, newAnswers);
         }
     };
 
-    const toggleRetry = (qId: string) => {
-        const current = new Set(retryQuestions);
-        if (current.has(qId)) current.delete(qId);
-        else current.add(qId);
-        
-        const newRetries = Array.from(current);
-        setRetryQuestions(newRetries);
-        retryRef.current = newRetries;
-        
-        triggerSave(undefined, newRetries);
-    };
-
-    const handleCommand = (cmd: string, value?: string) => {
-        document.execCommand(cmd, false, value);
-        if (activeFeedbackId) {
-            const editor = document.getElementById(`feedback-editor-${activeFeedbackId}`)?.querySelector('.rich-text-content');
-            if (editor) {
-                const event = new Event('input', { bubbles: true });
-                editor.dispatchEvent(event);
-            }
-        }
-    };
-    
-    const handlePrintRequest = (mode: PrintMode) => {
-        onPrint(mode, gradesRef.current);
-        setShowPrintDropdown(false);
-    }
+    const totalScore = useMemo(() => {
+        return Object.values(currentGrades).reduce((acc, curr) => acc + (curr?.score || 0), 0);
+    }, [currentGrades]);
 
     if (!isOpen || !participant) return null;
 
-    const isReleased = participant?.data?.released === true;
-
-    const getBtnClass = (isActive: boolean) => 
-        `p-1.5 rounded transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`;
-
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
-            <div className="bg-[#161616] border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl">
                 {/* Header */}
-                <div className="p-6 border-b border-white/10 flex justify-between items-start bg-[#1a1a1a] rounded-t-2xl gap-4">
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-bold text-white mb-2 truncate" title={participant?.name}>
-                            Grading: {participant?.name}
+                <div className="flex justify-between items-center p-4 border-b border-white/10 shrink-0">
+                    <div>
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <User size={18}/> Grading: {participant.name}
                         </h3>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            {isReleased ? (
-                                <span className="flex items-center gap-1 bg-green-500/10 text-green-500 px-2 py-0.5 rounded text-[10px] font-bold border border-green-500/20 uppercase tracking-wide shrink-0">
-                                    <Eye size={10} /> Released
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded text-[10px] font-bold border border-yellow-500/20 uppercase tracking-wide shrink-0">
-                                    <EyeOff size={10} /> Draft (Hidden)
-                                </span>
-                            )}
-                            <span className="text-white/20 text-xs hidden sm:inline">•</span>
-                            <p className="text-xs text-gray-400 truncate hidden sm:block">
-                                {isReleased ? "Visible to student" : "Hidden from student"}
-                            </p>
-                            {saveStatus === 'saving' && <span className="text-[10px] text-yellow-500 flex items-center gap-1 font-bold animate-pulse ml-2"><Loader2 size={10} className="animate-spin" /> Saving...</span>}
-                            {saveStatus === 'saved' && <span className="text-[10px] text-green-500 flex items-center gap-1 font-bold ml-2 animate-in fade-in"><Cloud size={10} /> Saved</span>}
-                            {saveStatus === 'error' && <span className="text-[10px] text-red-500 flex items-center gap-1 font-bold ml-2">Error Saving</span>}
-                        </div>
+                        <p className="text-xs text-gray-400">Student ID: {participant.id}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 pt-1" ref={printDropdownRef}>
-                         <div className="relative">
-                            <button onClick={() => setShowPrintDropdown(s => !s)} className="p-2 hover:bg-white/10 rounded-full text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2" title="Print / Export PDF">
-                                <Printer size={20} />
-                                <ChevronDown size={14} className={`transition-transform ${showPrintDropdown ? 'rotate-180': ''}`} />
+                    <div className="flex items-center gap-3">
+                        <div className="text-right">
+                             <span className="text-xs font-bold text-gray-500 uppercase">Total Score</span>
+                            <p className="font-bold text-green-500 text-2xl leading-none">{totalScore}</p>
+                        </div>
+                        <button onClick={() => onSave(false)} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 flex items-center gap-2">
+                           <Save size={16}/> Save Grades
+                        </button>
+                        <button onClick={() => onSave(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 flex items-center gap-2">
+                           <Check size={16}/> Save & Release
+                        </button>
+                        <div className="relative">
+                            <button onClick={() => setPrintMenuOpen(p => !p)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-300 border border-white/10">
+                                <Printer size={16} />
                             </button>
-                            {showPrintDropdown && (
-                                <div className="absolute top-full right-0 mt-2 w-56 bg-[#282828] border border-white/10 rounded-lg shadow-2xl z-10 text-left overflow-hidden animate-in fade-in zoom-in-95">
-                                    <button onClick={() => handlePrintRequest('BLANK')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper Only</button>
-                                    <button onClick={() => handlePrintRequest('WITH_ANSWERS')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper + Student Answer</button>
-                                    <button onClick={() => handlePrintRequest('WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper + Answer + Feedback</button>
+                            {printMenuOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-56 rounded-lg shadow-xl border overflow-hidden z-50 bg-[#2a2a2a] border-white/10" onMouseLeave={() => setPrintMenuOpen(false)}>
+                                    <button onClick={() => { onPrint('WITH_ANSWERS_AND_FEEDBACK', currentGrades); setPrintMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/5 flex items-center gap-2"><FileText size={14} /> Print Graded Paper</button>
+                                    <button onClick={() => { onPrint('WITH_ANSWERS', currentGrades); setPrintMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/5 flex items-center gap-2"><File size={14} /> Print Student Submission</button>
+                                    <button onClick={() => { onPrint('BLANK', currentGrades); setPrintMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/5 flex items-center gap-2"><FileX size={14} /> Print Blank Paper</button>
                                 </div>
                             )}
                         </div>
-                        <div className="h-6 w-px bg-white/10"></div>
-                        <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20}/></button>
+                        <button onClick={onClose} className="p-2.5 bg-white/5 hover:bg-red-600/20 rounded-lg text-gray-300 hover:text-red-500 border border-white/10 hover:border-red-600/30">
+                            <X size={16} />
+                        </button>
                     </div>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    {questions.map((q, i) => {
-                        if (q.type === 'section') return <h4 key={q.id} className="text-yellow-500 font-bold uppercase tracking-wide border-b border-white/10 pb-2 mt-4">{q.text}</h4>;
 
-                        const questionNumber = questions.slice(0, i + 1).filter(item => item.type !== 'section').length;
-                        const studentAns = answers[q.id];
-                        const { drawing: drawingUrl, text: textContent } = getAnswerParts(studentAns);
-                        
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                    {questions.map((q, index) => {
+                        if (q.type === 'section') {
+                            return <h3 key={q.id} className="text-xl font-bold text-white uppercase tracking-tight border-b border-white/10 pb-2 mt-8">{q.text}</h3>;
+                        }
+
+                        const qNum = questions.filter((item, i) => i <= index && item.type !== 'section').length;
+                        const answer = currentAnswers[q.id];
                         const grade = currentGrades[q.id] || { score: 0, feedback: '' };
-                        const isRetrying = retryQuestions.includes(q.id);
-                        
-                        const overrideHistory = teacherOverrides[q.id]?.history;
-                        const isTeacherOverride = overrideHistory && overrideHistory.length > 0;
-
-                        const isEssay = q.type === 'essay';
-                        const wordCount = isEssay && typeof textContent === 'string' ? countQualityWords(textContent) : 0;
-                        const isUnderLimit = isEssay && (q.minWords || 0) > 0 && wordCount < (q.minWords || 0);
-                        const isFocused = activeFeedbackId === q.id;
-                        const canUpload = (q.responseType === 'drawing' || q.responseType === 'both' || q.allowDrawing);
+                        const isCorrect = q.type === 'mcq' && answer === q.correctAnswer;
+                        const isRetry = participant.data?.retryQuestions?.includes(q.id);
 
                         return (
-                            <div key={q.id} className={`bg-[#111] border rounded-xl p-4 transition-colors ${isUnderLimit ? 'border-amber-500/30' : 'border-white/10'}`}>
+                            <div key={q.id} className={`p-4 rounded-xl bg-[#111] border ${isRetry ? 'border-orange-500/50' : 'border-white/10'}`}>
                                 <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm font-bold text-gray-300">Question {questionNumber} ({q.points} pts)</span>
-                                        {isUnderLimit && <span className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-wide"><FileWarning size={10} /> Word Count</span>}
-                                        {isTeacherOverride && <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 uppercase tracking-wide"><ShieldCheck size={10} /> Teacher Edit</span>}
-                                    </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => toggleRetry(q.id)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase border transition-colors ${isRetrying ? 'bg-orange-500/10 text-orange-500 border-orange-500/30' : 'bg-white/5 text-gray-500 border-transparent hover:text-white'}`} title={isRetrying ? "Student is redoing this question" : "Unlock for student to redo"}>
-                                            {isRetrying ? <Unlock size={10} /> : <Lock size={10} />}
-                                            {isRetrying ? 'Revising' : 'Locked'}
-                                        </button>
-                                        <div className="h-4 w-px bg-white/10"></div>
-                                        <span className="text-xs text-gray-500 uppercase font-bold">Score:</span>
-                                        <DebouncedInput type="number" min="0" max={q.points} value={grade.score} onChange={(val) => handleUpdate(q.id, { score: parseInt(val) || 0 })} onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()} className="w-16 bg-[#222] border border-white/20 rounded px-2 py-1 text-center font-bold text-white focus:border-blue-500 outline-none" />
+                                        <span className="text-sm font-bold text-blue-400">Question {qNum}</span>
+                                        {isRetry && <span className="text-xs font-bold text-orange-400 bg-orange-900/50 px-2 py-0.5 rounded-full border border-orange-500/50">Revision</span>}
                                     </div>
+                                    <span className="text-xs font-bold text-gray-500">{q.points} pts</span>
                                 </div>
-                                <div className="text-base font-medium text-white mb-4 rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
-                                <div className="bg-[#222] p-3 rounded-lg border border-white/5 mb-4 relative group/answer">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase block">Student Answer</span>
-                                        <div className="flex items-center gap-2">
-                                            {isTeacherOverride && (
-                                                 <button onClick={() => setViewingHistory({qId: q.id, history: overrideHistory})} className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all">
-                                                    <History size={10} />
-                                                    View History ({overrideHistory.length})
-                                                </button>
-                                            )}
-                                            {canUpload && (
-                                                <div className="relative">
-                                                    <input type="file" id={`upload-${q.id}`} ref={replaceImageInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileUpload(q.id, e.target.files[0])} />
-                                                    <label htmlFor={`upload-${q.id}`} className={`flex items-center gap-1.5 cursor-pointer text-[10px] font-bold px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all ${isUploading === q.id ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                        {isUploading === q.id ? <Loader2 size={10} className="animate-spin" /> : <UploadCloud size={10} />}
-                                                        {drawingUrl ? 'Replace Image' : 'Upload Answer'}
-                                                    </label>
+                                <div className="text-gray-300 mb-4 rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
+                                
+                                <div className="grid grid-cols-2 gap-6">
+                                    {/* Left Side: Student Answer */}
+                                    <div>
+                                        {q.type === 'mcq' ? (
+                                            <div className="space-y-2">
+                                                {q.options?.map((opt, optIdx) => {
+                                                    const isSelected = answer === optIdx.toString();
+                                                    const isCorrectOpt = q.correctAnswer === optIdx.toString();
+                                                    let className = 'border-white/10 bg-black/20';
+                                                    if (isSelected && isCorrectOpt) className = 'border-green-500 bg-green-900/30';
+                                                    else if (isSelected && !isCorrectOpt) className = 'border-red-500 bg-red-900/30';
+                                                    else if (isCorrectOpt) className = 'border-green-500/50';
+                                                    
+                                                    return (
+                                                        <div key={optIdx} className={`p-3 rounded-lg border flex items-start gap-3 ${className}`}>
+                                                            <div className="mt-1 w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: isSelected ? '#3b82f6' : 'transparent', border: '2px solid ' + (isSelected ? '#3b82f6' : '#6b7280')}}>
+                                                                {isSelected && <Check size={10} className="text-white"/>}
+                                                            </div>
+                                                            <div className="text-sm" dangerouslySetInnerHTML={{ __html: parseMath(opt) }} />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h4 className="text-sm font-bold text-gray-400">Student's Answer</h4>
+                                                    <button onClick={() => setRawView(p => ({...p, [q.id]: !p[q.id]}))} className="text-xs flex items-center gap-1 text-gray-500 hover:text-white">
+                                                        <Code size={12}/> {rawView[q.id] ? 'Rich View' : 'Raw HTML'}
+                                                    </button>
+                                                    <button onClick={() => handleClearAnswer(q.id)} className="text-xs flex items-center gap-1 text-red-600 hover:text-white">
+                                                        <Trash2 size={12}/> Clear
+                                                    </button>
                                                 </div>
-                                            )}
-                                            {isEssay && q.minWords && q.minWords > 0 && <span className={`text-[10px] font-bold ${isUnderLimit ? 'text-amber-500' : 'text-green-500'}`}>{wordCount} / {q.minWords} valid words</span>}
-                                        </div>
+                                                {rawView[q.id] ? (
+                                                    <pre className="bg-black/50 p-3 rounded-lg text-xs whitespace-pre-wrap break-all border border-white/10"><code>{answer || ''}</code></pre>
+                                                ) : (
+                                                    (answer && answer.startsWith('http')) ? (
+                                                        <img src={answer} className="max-w-full rounded-lg bg-white" alt="Student Drawing"/>
+                                                    ) : (
+                                                        <div 
+                                                            className="bg-black/30 p-3 rounded-lg text-sm whitespace-pre-wrap min-h-[100px] border border-white/10 rich-text-content"
+                                                            dangerouslySetInnerHTML={{__html: parseMath(answer || '<p class="text-gray-500">No answer submitted.</p>')}}
+                                                        ></div>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                    {q.type === 'mcq' ? (
-                                        <p className="text-sm text-gray-300">
-                                            <span dangerouslySetInnerHTML={{ __html: studentAns != null ? parseMath(q.options?.[parseInt(studentAns)] || '') : '<span class="italic opacity-50">No Answer</span>' }} />
-                                            {q.correctAnswer && studentAns != null &&
-                                                <span className={`ml-2 text-[10px] uppercase font-bold ${studentAns === q.correctAnswer ? 'text-green-500' : 'text-red-500'}`}>
-                                                    {studentAns === q.correctAnswer ? '(Correct)' : `(Answer: ${q.options?.[parseInt(q.correctAnswer)] || ''})`}
-                                                </span>
-                                            }
-                                        </p>
-                                    ) : (
-                                       <>
-                                            {drawingUrl && (
-                                                 <div className="relative group mb-2">
-                                                    <img src={drawingUrl} alt="Student Drawing" className="max-w-full h-auto rounded border border-white/10 bg-white" />
-                                                    <a href={drawingUrl} target="_blank" rel="noopener noreferrer" className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View Full</a>
-                                                 </div>
-                                            )}
-                                            {textContent && (
-                                                 <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed rich-text-content" dangerouslySetInnerHTML={{ __html: textContent ? parseMath(textContent) : '' }} />
-                                            )}
-                                            {!drawingUrl && !textContent && (
-                                                 <span className="italic opacity-50 text-sm">No Answer</span>
-                                            )}
-                                       </>
-                                    )}
-                                </div>
-                                <div className={`bg-black/20 rounded-lg border transition-colors ${isFocused ? 'border-blue-500/50' : 'border-white/5'}`} onFocus={() => setActiveFeedbackId(q.id)}>
-                                    {isFocused && (
-                                        <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/5 bg-[#161616] rounded-t-lg animate-in fade-in slide-in-from-top-1">
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('undo'); }} className={getBtnClass(false)} title="Undo"><Undo size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('redo'); }} className={getBtnClass(false)} title="Redo"><Redo size={14}/></button>
-                                            <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline"><Underline size={14}/></button>
-                                            <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
-                                            <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
-                                            <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) { handleFeedbackUpload(q.id, e.target.files[0]) } }} />
-                                            <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isFeedbackUploading === q.id ? 'text-yellow-500' : ''}`} title="Upload Image" disabled={isFeedbackUploading === q.id}>
-                                                {isFeedbackUploading === q.id ? <Loader2 size={14} className="animate-spin"/> : <ImagePlus size={14}/>}
-                                            </button>
+                                    
+                                    {/* Right Side: Grading */}
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-400 mb-1">Grade & Feedback</h4>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <input 
+                                                type="number"
+                                                value={grade.score}
+                                                onChange={e => handleGradeChange(q.id, parseInt(e.target.value) || 0, grade.feedback)}
+                                                className="w-24 bg-black/50 border border-white/10 rounded-md px-2 py-1 text-lg font-bold"
+                                                max={q.points}
+                                                min={0}
+                                            />
+                                            <button onClick={() => handleGradeChange(q.id, 0, grade.feedback)} className="text-xs font-bold text-gray-400 hover:text-white">0</button>
+                                            <button onClick={() => handleGradeChange(q.id, q.points, grade.feedback)} className="text-xs font-bold text-green-400 hover:text-white">{q.points} pts</button>
                                         </div>
-                                    )}
-                                    {!isFocused && <span className="text-[10px] font-bold text-blue-400 uppercase block p-3 pb-0">Feedback</span>}
-                                    <div className="p-3" id={`feedback-editor-${q.id}`}>
-                                        <RichTextEditor 
+                                        <textarea
                                             value={grade.feedback}
-                                            onChange={(html) => handleUpdate(q.id, { feedback: html })}
-                                            onFormatChange={setActiveFormats}
-                                            placeholder="Enter teacher feedback here..."
-                                            className="w-full text-xs text-blue-100 placeholder-white/20 min-h-[40px] focus:outline-none bg-transparent"
+                                            onChange={e => handleGradeChange(q.id, grade.score, e.target.value)}
+                                            placeholder="Provide feedback..."
+                                            className="w-full bg-black/50 border border-white/10 rounded-md px-2 py-1 text-sm min-h-[100px]"
                                         />
+                                        {q.correctAnswer && (
+                                             <div className="mt-2 text-xs">
+                                                <h5 className="font-bold text-gray-500 mb-1">Correct Answer</h5>
+                                                <div className="p-2 rounded bg-green-900/30 border border-green-500/30 text-green-200" dangerouslySetInnerHTML={{ __html: q.type === 'mcq' ? parseMath(q.options?.[Number(q.correctAnswer)] ?? 'N/A') : parseMath(q.correctAnswer) }} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         );
                     })}
                 </div>
-                <div className="p-4 border-t border-white/10 bg-[#1a1a1a] flex justify-between items-center rounded-b-2xl">
-                    <div className="text-sm text-gray-400">Total: <span className="text-white font-bold text-lg">{Object.values(currentGrades).reduce((a: number, b: any) => a + (b.score || 0), 0)}</span> pts</div>
-                    <div className="flex gap-3">
-                        {isReleased ? (
-                            <>
-                                <button onClick={() => onSave(false)} className="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold transition-colors flex items-center gap-2"><EyeOff size={14}/> Unpublish (Hide)</button>
-                                <button onClick={() => onSave(true)} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-lg flex items-center gap-2"><Check size={14}/> Update Released Results</button>
-                            </>
-                        ) : (
-                            <>
-                                <button onClick={() => onSave(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"><Save size={14}/> Save Draft</button>
-                                <button onClick={() => onSave(true)} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-lg flex items-center gap-2"><Check size={14}/> Release Results</button>
-                            </>
-                        )}
-                    </div>
-                </div>
             </div>
-
-            {viewingHistory && (
-                 <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setViewingHistory(null)}>
-                     <div className="bg-[#1c1c1c] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b border-white/10 flex justify-between items-center">
-                            <h4 className="text-lg font-bold text-white flex items-center gap-2"><History size={18}/> Submission History</h4>
-                            <button onClick={() => setViewingHistory(null)} className="text-gray-400 hover:text-white"><X size={20}/></button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {[...viewingHistory.history].reverse().map((entry, index) => (
-                                <div key={index} className="bg-black/20 p-3 rounded-lg border border-white/10">
-                                    <p className="text-xs text-gray-400 mb-2">
-                                        Version {viewingHistory.history.length - index} (Replaced on {new Date(entry.timestamp).toLocaleString()})
-                                    </p>
-                                    <img src={entry.url} alt={`History version ${index + 1}`} className="max-w-full h-auto rounded bg-white" />
-                                </div>
-                            ))}
-                        </div>
-                     </div>
-                 </div>
-            )}
         </div>
     );
 };

@@ -332,7 +332,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 onReset={initiateReset}
                 onContinue={handleContinue}
                 onAllowRevision={handleAllowRevision}
-                onPrint={(participant) => handlePrint([participant], 'WITH_ANSWERS_AND_FEEDBACK')}
+                onPrint={(participant, mode) => handlePrint([participant], mode)}
                 onGrade={openGrading}
             />
             

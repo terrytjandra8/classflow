@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { File, CheckCircle, AlertTriangle, RefreshCw, Printer, User, UserCheck, XCircle, FileText, FileX } from 'lucide-react';
+import { File, CheckCircle, AlertTriangle, RefreshCw, Printer, User, UserCheck, XCircle, FileText, FileX, Eye } from 'lucide-react';
 import { PrintMode } from '../AssessmentPrintView';
 
 interface Participant {
@@ -64,6 +64,8 @@ const StudentCard = ({ student, selected, onToggleSelect, onReset, onContinue, o
 
     const currentStatus = statusConfig[student.status] || statusConfig['Ready'];
     const [printMenuOpen, setPrintMenuOpen] = useState(false);
+
+    const canGradeOrView = ['In Progress', 'Submitted', 'Graded', 'Revising'].includes(student.status);
 
     return (
         <div className={`bg-[#1a1a1a] p-4 rounded-lg border transition-colors ${selected ? 'border-blue-500' : 'border-white/10'}`}>
@@ -130,10 +132,10 @@ const StudentCard = ({ student, selected, onToggleSelect, onReset, onContinue, o
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    {(student.status === 'Submitted' || student.status === 'Graded' || student.status === 'Revising') ? (
+                    {canGradeOrView ? (
                         <>
                             <button onClick={() => onGrade(student)} className="flex-1 text-center font-bold text-sm bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors">
-                                {student.status === 'Graded' ? 'View Grade' : 'Grade'}
+                                {student.status === 'Graded' ? 'View Grade' : (student.status === 'In Progress' ? 'View' : 'Grade')}
                             </button>
                             <div className="relative">
                                 <button 
@@ -161,10 +163,8 @@ const StudentCard = ({ student, selected, onToggleSelect, onReset, onContinue, o
                             </div>
                         </>
                     ) : (
-                        student.status === 'In Progress' && (
-                            <button onClick={() => onContinue(student)} className="text-xs font-bold text-gray-300">
-                                Continue
-                            </button>
+                        student.status === 'Ready' && (
+                             <span className="text-xs text-gray-500 font-bold">Waiting to start...</span>
                         )
                     )}
                 </div>
@@ -195,7 +195,7 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
                     <User size={14} /> Students ({students.length})
                 </h3>
                 {students.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                         {students.map(s => (
                             <StudentCard 
                                 key={s.id} 
