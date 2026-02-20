@@ -1,10 +1,9 @@
 
 import React from 'react';
 import { FiMaximize2, FiTrash2, FiUploadCloud, FiFileText } from 'react-icons/fi';
-import { IconButton } from '../../../../../../components/IconButton';
+import { IconButton } from '../../../../../../components/common/IconButton';
 import { AssessmentQuestion } from '../../../../../../types';
-import { parseAnswer } from '../../../../../../utils/mappers';
-import { isContentImage } from '../../../../../../utils/helpers';
+import { isContentImage, parseAnswer } from '../../../../../../utils/helpers';
 
 interface StudentAnswerProps {
     qId: string;
