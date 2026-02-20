@@ -18,7 +18,7 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
     const format = question.answerAreaFormat || 'box';
     const minWords = question.minWords || 50;
     const estimatedLines = Math.ceil(minWords / 10);
-    const minHeight = isBlank ? Math.max(100, estimatedLines * 24) : 60;
+    const minHeight = Math.max(100, estimatedLines * 24);
 
     const isImageAnswer = (text: string) => {
         return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
@@ -55,7 +55,7 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
     }
 
     return (
-        <div style={{ border: '1px solid #000', padding: '10px', minHeight: '60px', fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}>
+        <div style={{ border: '1px solid #000', padding: '10px', minHeight: `${minHeight}px`, fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}>
             {studentAnswer || ""}
         </div>
     );
@@ -66,6 +66,10 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
 }) => {
     const isMCQ = q.type === 'mcq';
     const obtained = gradeInfo?.score !== undefined ? gradeInfo.score : (isMCQ && answer === q.correctAnswer ? q.points : 0);
+
+    const minWords = q.minWords || 50;
+    const estimatedLines = Math.ceil(minWords / 10);
+    const blankMinHeight = Math.max(100, estimatedLines * 24);
 
     return (
         <div className="question-block">
@@ -110,7 +114,7 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
                 ) : (
                     <div style={{ marginTop: '10px' }}>
                         {isMasterKey && !isBlankCopy ? (
-                            <div style={{ border: '1px solid black', padding: '10px', fontSize: '11pt', backgroundColor: '#f0f0f0', minHeight: '60px' }}>
+                            <div style={{ border: '1px solid black', padding: '10px', fontSize: '11pt', backgroundColor: '#f0f0f0', minHeight: `${blankMinHeight}px` }}>
                                 <strong style={{ color: 'black', display: 'block', fontSize: '9pt', marginBottom: '4px' }}>TEACHER KEY:</strong>
                                 <div dangerouslySetInnerHTML={{ __html: q.notes || '<em>No model answer provided.</em>' }} />
                             </div>
