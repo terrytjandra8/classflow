@@ -61,7 +61,7 @@ const QuestionItem = memo(({
     }
 
     const isEssay = q.type === 'essay';
-    const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text';
+    const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
     
