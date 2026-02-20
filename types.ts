@@ -165,7 +165,7 @@ export interface AssessmentQuestion {
     minWords?: number; // New: For Essays
     allowDrawing?: boolean; // Deprecated: Use responseType
     responseType?: 'text' | 'drawing' | 'both'; // NEW: Granular control
-    answerAreaFormat?: 'box' | 'lines'; // NEW: For Essay print format
+    answerAreaFormat?: 'box' | 'lines' | 'both'; // NEW: For Essay print format
 }
 
 export type QuizState = 'setup' | 'lobby' | 'question' | 'reveal' | 'leaderboard' | 'finished';
