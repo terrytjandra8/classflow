@@ -283,6 +283,12 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setPrintInfo({ targets, mode });
     };
 
+    const handlePrintMaster = (isKey: boolean) => {
+        const mode = isKey ? 'ANSWER_KEY' : 'BLANK_COPY';
+        const name = isKey ? 'Answer Key' : 'Question Paper';
+        handlePrint([{ id: 'master-copy', name, data: { answers: {} } }], mode);
+    };
+
     return (
         <div className="h-full bg-[#111] text-white p-6 overflow-hidden flex flex-col relative">
             
@@ -305,7 +311,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             <HeaderSection 
                 activeStudentsCount={activeStudents.length} 
                 submittedCount={students.filter(s => s.status === 'Submitted' || s.status === 'Graded').length}
-                onPrintMaster={() => handlePrint([{ id: 'master-copy', name: "Answer Key", data: { answers: {} } }], 'ANSWER_KEY')}
+                onPrintMaster={handlePrintMaster}
                 onForceRefresh={handleForceRefresh}
             />
 
