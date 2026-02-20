@@ -27,12 +27,10 @@ export const PrintStyles = () => (
             }
 
             /* HIDE APP UI */
-            /* This effectively removes the React App from the print layout */
             #root, .app-layout, nav, header, aside {
                 display: none !important;
             }
 
-            /* Hide all direct children of body except the print portal */
             body > *:not(#assessment-print-view) {
                 display: none !important;
             }
@@ -56,7 +54,6 @@ export const PrintStyles = () => (
                 z-index: 2147483647 !important; /* Max integer z-index */
             }
 
-            /* Ensure all children of the print view are visible */
             #assessment-print-view * {
                 visibility: visible !important;
             }
@@ -66,9 +63,6 @@ export const PrintStyles = () => (
                 width: 100%;
                 page-break-after: always;
                 break-after: page;
-                position: relative;
-                display: flex;
-                flex-direction: column;
             }
             
             .print-student-container:last-child {
@@ -90,12 +84,13 @@ export const PrintStyles = () => (
                 display: flex;
                 align-items: center;
                 gap: 20px;
+                 flex-shrink: 0; /* Prevent logos from shrinking */
             }
 
             /* Info Table */
             .header-info-table {
                 border-collapse: collapse;
-                width: 400px;
+                width: 50%; /* Make table take up 50% of header width */
                 font-size: 10pt !important;
                 color: black !important;
             }
@@ -104,23 +99,24 @@ export const PrintStyles = () => (
                 border: 1px solid #ccc !important;
                 padding: 4px 8px;
                 vertical-align: middle;
+                 height: 25px; /* Ensure a minimum height for all cells */
             }
 
             .label-cell {
                 font-weight: bold;
-                width: 80px;
+                width: 70px; /* Fixed width for labels */
                 background-color: #f0f0f0 !important;
             }
 
-            /* Content Typography */
-            h1, h2, h3, h4, h5, h6 {
-                color: black !important;
-                margin-top: 0;
+            .value-cell {
+                width: auto; /* Allow value cells to fill remaining space */
             }
 
-            p {
-                margin-bottom: 0.5em;
-                color: black !important;
+            /* Content Typography */
+            h3 {
+                font-size: 14pt !important;
+                text-transform: uppercase;
+                margin: 0;
             }
 
             .section-header {
@@ -129,18 +125,10 @@ export const PrintStyles = () => (
                 border-bottom: 1px solid black;
                 padding-bottom: 5px;
                 page-break-after: avoid; 
-                break-after: avoid;
-            }
-
-            .section-header h3 {
-                font-size: 14pt !important;
-                text-transform: uppercase;
-                margin: 0;
             }
 
             .question-block {
                 page-break-inside: avoid;
-                break-inside: avoid;
                 margin-bottom: 20px;
             }
             
@@ -149,22 +137,9 @@ export const PrintStyles = () => (
             }
             
             /* Answers */
-            .correct-option {
-                font-weight: bold;
-                text-decoration: underline;
-            }
-            
-            .wrong-option {
-                text-decoration: line-through;
-                opacity: 0.6;
-            }
-
-            .print-answer-image {
-                max-width: 100%;
-                height: auto;
-                max-height: 300px;
-                border: 1px solid #ccc;
-            }
+            .correct-option { font-weight: bold; text-decoration: underline; }
+            .wrong-option { text-decoration: line-through; opacity: 0.6; }
+            .print-answer-image { max-width: 100%; height: auto; max-height: 300px; border: 1px solid #ccc; }
         }
         
         @media screen {
