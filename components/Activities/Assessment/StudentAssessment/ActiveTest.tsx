@@ -1,12 +1,12 @@
 
 import React, { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
-import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript } from 'lucide-react';
+import { Eye, BookOpen, AlertCircle, Send, AlertTriangle, RefreshCcw, Clock, Rocket, Check, PenTool, X, ShieldAlert, Unlock, Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Minus, Square } from 'lucide-react';
 import { DrawingCanvas } from '../../../ui/DrawingCanvas';
 import { supabase } from '../../../../services/supabaseClient';
 import { parseMath } from '../../../../utils/mappers';
 import { countQualityWords } from '../../../../utils/validation';
-import { RichTextEditor, FormatState } from '../../../RichTextEditor';
+import { RichTextEditor, FormatState, getActiveFormat } from '../../../RichTextEditor';
 import { debounce } from 'lodash';
 
 interface ActiveTestProps {
@@ -45,10 +45,11 @@ const QuestionItem = memo(({
     isReadOnly: boolean;
     config: AssessmentConfig
 }) => {
-    const [activeFormats, setActiveFormats] = useState<FormatState>({
+    const [activeFormats, setActiveFormats] = useState<FormatState & { box: boolean }>({
         bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
         subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
         alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
+        box: false, // New format for the box
     });
     
     if (q.type === 'section') {
@@ -79,7 +80,28 @@ const QuestionItem = memo(({
     const renderedNotes = q.notes ? parseMath(q.notes) : null;
 
     const handleCommand = (cmd: string) => {
-        document.execCommand(cmd, false);
+        if (cmd === 'formatBlock' && getActiveFormat('', ['SPAN.box'])) {
+            // If the box is active, remove it before applying a new block format
+            document.execCommand('removeFormat'); 
+        }
+
+        if (cmd === 'insertHorizontalRule' && getActiveFormat('', ['SPAN.box'])) {
+            return; // Don't add a line if a box is already applied
+        }
+        if (cmd === 'formatBlock' && getActiveFormat('insertHorizontalRule')) {
+             // Don't add a box if a line is already applied
+            return; 
+        }
+
+        if (cmd === 'formatBlock') {
+            const isBox = getActiveFormat('', ['SPAN.box']);
+            document.execCommand('removeFormat');
+            if(!isBox) {
+                document.execCommand('insertHTML', false, `<span class="box">${window.getSelection()?.toString()}</span>`);
+            }
+        } else {
+            document.execCommand(cmd, false);
+        }
     }
 
     const getBtnClass = (isActive: boolean) => 
@@ -176,11 +198,14 @@ const QuestionItem = memo(({
                                 <div className="w-px h-4 bg-white/10 mx-1"></div>
                                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
                                 <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
+                                <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertHorizontalRule'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Line"><Minus size={14}/></button>
+                                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock'); }} className={getBtnClass(activeFormats.box)} title="Box"><Square size={14}/></button>
                             </div>
                             <RichTextEditor 
                                 value={answer || ''}
                                 onChange={(val) => onAnswerChange(q.id, val)}
-                                onFormatChange={setActiveFormats}
+                                onFormatChange={(formats) => setActiveFormats({ ...formats, box: getActiveFormat('', ['SPAN.box']) })}
                                 imageUploadDisabled={!config.allowStudentImages}
                                 className={`w-full bg-transparent p-4 text-white outline-none min-h-[150px] leading-relaxed transition-colors ${isReadingMode || isReadOnly ? 'cursor-not-allowed opacity-50' : ''}`}
                                 placeholder={isReadingMode ? "Reading time active..." : (isReadOnly ? "Question is locked." : "Type your answer here...")}
@@ -229,18 +254,12 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         setTimeout(() => setIsSyncing(false), 800);
     };
     
-    /**
-     * Handles the background upload of a drawing blob to Supabase storage.
-     * This function is designed to be silent and not trigger any page-level state changes,
-     * only updating the ephemeral `drawingSaveStatus` for the modal.
-     */
     const saveDrawing = useCallback(async (blob: Blob, qId: string): Promise<string | null> => {
         setDrawingSaveStatus('saving');
         try {
             const currentAnswer = answers[qId];
             let fileName;
 
-            // Reuse the existing file name if we're updating a drawing to prevent orphaned files.
             if (currentAnswer && currentAnswer.startsWith('http') && !currentAnswer.startsWith('blob:')) {
                 const urlParts = currentAnswer.split('/');
                 fileName = urlParts[urlParts.length - 1].split('?')[0];
@@ -263,54 +282,39 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         }
     }, [answers]);
 
-    /**
-     * A debounced version of the `saveDrawing` function. This is triggered while the student is drawing.
-     * It waits for a pause in drawing (2.5 seconds) before silently saving the work in the background.
-     */
     const debouncedSave = useMemo(() =>
         debounce((blob: Blob, qId: string) => {
             saveDrawing(blob, qId);
         }, 2500),
     [saveDrawing]);
 
-    // Effect to trigger the silent, debounced save whenever the `liveDrawingBlob` changes.
     useEffect(() => {
         if (liveDrawingBlob && activeDrawingQId) {
-            setDrawingSaveStatus('saving'); // Provide immediate feedback that a save is pending.
+            setDrawingSaveStatus('saving'); 
             debouncedSave(liveDrawingBlob, activeDrawingQId);
         }
         return () => {
-            debouncedSave.cancel(); // Cancel any pending saves when the component unmounts or dependencies change.
+            debouncedSave.cancel();
         };
     }, [liveDrawingBlob, activeDrawingQId, debouncedSave]);
 
-    /**
-     * Handles the closing of the drawing modal. This is a critical step for the fluid experience.
-     */
     const handleCloseDrawingModal = useCallback(() => {
-        debouncedSave.cancel(); // Ensure any pending background save is cancelled.
+        debouncedSave.cancel();
         const qId = activeDrawingQId;
 
         if (qId && liveDrawingBlob) {
-            // 1. OPTIMISTIC UI UPDATE: Immediately create a local blob URL for the drawing.
-            //    This makes the UI feel instant, as we don't wait for the upload to finish.
-            //    The `onAnswerChange` call with `immediate: false` updates the main `answers` state.
             const tempUrl = URL.createObjectURL(liveDrawingBlob);
-            onAnswerChange(qId, tempUrl, false); // `false` prevents an immediate full save, we do that next.
+            onAnswerChange(qId, tempUrl, false);
             
-            // 2. FINAL BACKGROUND SAVE: Trigger a final, non-debounced save of the latest blob.
             saveDrawing(liveDrawingBlob, qId).then(finalUrl => {
                 if (finalUrl) {
-                    // 3. SEAMLESS SWAP: To prevent a blink, preload the final uploaded image.
                     const img = new Image();
                     img.src = finalUrl;
                     img.onload = () => {
-                        // Once the final image is cached by the browser, update the answer state to point to the permanent URL.
-                        onAnswerChange(qId, finalUrl, true); // `true` triggers a final, definite persist to DB.
-                        URL.revokeObjectURL(tempUrl); // Clean up the temporary blob URL from memory.
+                        onAnswerChange(qId, finalUrl, true);
+                        URL.revokeObjectURL(tempUrl);
                     };
                     img.onerror = () => {
-                        // If preloading fails, update anyway to ensure the answer is saved.
                         console.error("Failed to preload final image, swapping directly.");
                         onAnswerChange(qId, finalUrl, true);
                         URL.revokeObjectURL(tempUrl);
@@ -319,7 +323,6 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             });
         }
         
-        // Reset all modal-related state for a clean next opening.
         setActiveDrawingQId(null);
         setLiveDrawingBlob(null);
         setDrawingSaveStatus('idle');
