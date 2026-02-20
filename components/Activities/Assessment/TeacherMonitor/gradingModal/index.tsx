@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AssessmentQuestion } from '../../../../types';
+import { AssessmentQuestion } from '../../../../../types';
 import { useGradingState } from './useGradingState';
 import { Lightbox } from './components/Lightbox';
 import { GradingModalHeader } from './components/GradingModalHeader';
@@ -91,7 +91,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                     answer={answer}
                                     grade={grade}
                                     rawView={rawView[q.id] || false}
-                                    setRawView={setRawView as any} // Cast needed due to complex state type
+                                    setRawView={setRawView}
                                     setLightboxImageUrl={setLightboxImageUrl}
                                     handleClearAnswer={handleClearAnswer}
                                     handleStudentAnswerImageUpload={handleStudentAnswerImageUpload}

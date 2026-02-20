@@ -18,7 +18,7 @@ interface QuestionCardProps {
     answer: string;
     grade: { score: number, feedback: string };
     rawView: boolean;
-    setRawView: (qId: string, value: boolean) => void;
+    setRawView: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
     setLightboxImageUrl: (url: string) => void;
     handleClearAnswer: (qId: string) => void;
     handleStudentAnswerImageUpload: (qId: string) => void;
@@ -66,7 +66,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     answer={answer}
                     question={q}
                     rawView={rawView}
-                    setRawView={(id, val) => setRawView(prev => ({...prev, [id]: val}))}
+                    setRawView={setRawView}
                     setLightboxImageUrl={setLightboxImageUrl}
                     handleClearAnswer={handleClearAnswer}
                     handleStudentAnswerImageUpload={handleStudentAnswerImageUpload}
