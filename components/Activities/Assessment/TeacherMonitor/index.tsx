@@ -284,7 +284,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     };
 
     const handlePrintMaster = (isKey: boolean) => {
-        const mode = isKey ? 'ANSWER_KEY' : 'BLANK_COPY';
+        const mode: PrintMode = isKey ? 'ANSWER_KEY' : 'BLANK';
         const name = isKey ? 'Answer Key' : 'Question Paper';
         handlePrint([{ id: 'master-copy', name, data: { answers: {} } }], mode);
     };
