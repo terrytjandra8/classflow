@@ -276,17 +276,36 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                                 <div className="space-y-2">{q.options?.map((opt, optIdx) => { const isSelected = answer === optIdx.toString(); const isCorrectOpt = q.correctAnswer === optIdx.toString(); let c = 'border-white/10 bg-black/20'; if (isSelected && isCorrectOpt) c = 'border-green-500 bg-green-900/30'; else if (isSelected && !isCorrectOpt) c = 'border-red-500 bg-red-900/30'; else if (isCorrectOpt) c = 'border-green-500/50'; return (<div key={optIdx} className={`p-3 rounded-lg border flex items-start gap-3 ${c}`}><div className="mt-1 w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: isSelected ? '#3b82f6' : 'transparent', border: '2px solid ' + (isSelected ? '#3b82f6' : '#6b7280')}}>{isSelected && <Check size={10} className="text-white"/>}</div><div className="text-sm" dangerouslySetInnerHTML={{ __html: parseMath(opt) }} /></div>);})}</div>
                                             ) : (
                                                 <div>
-                                                    {rawView[q.id] ? (
-                                                        <pre className="bg-black/50 p-3 rounded-lg text-xs whitespace-pre-wrap break-all border border-white/10"><code>{answer}</code></pre>
-                                                    ) : (
-                                                        (answer.startsWith('http') || answer.includes('<img')) ? (
-                                                            <div className="bg-black/30 p-3 rounded-lg border border-white/10 cursor-pointer hover:border-blue-500 transition-colors" onClick={() => (answer.match(/src="(.*?)"/) || [])[1] && setLightboxImageUrl((answer.match(/src="(.*?)"/) || [])[1])}>
-                                                                <div className="w-full rich-text-content" dangerouslySetInnerHTML={{ __html: answer }}/>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="bg-black/30 p-3 rounded-lg text-sm whitespace-pre-wrap min-h-[100px] border border-white/10 rich-text-content" dangerouslySetInnerHTML={{__html: parseMath(answer || '<p class="text-gray-500">No answer submitted.</p>')}}></div>
-                                                        )
-                                                    )}
+                                                    {(() => {
+                                                        const isImageURL = answer.startsWith('http') && !answer.includes('<');
+                                                        const isImageHTML = answer.includes('<img');
+
+                                                        if (rawView[q.id]) {
+                                                            return <pre className="bg-black/50 p-3 rounded-lg text-xs whitespace-pre-wrap break-all border border-white/10"><code>{answer}</code></pre>;
+                                                        }
+
+                                                        if (isImageURL) {
+                                                            return (
+                                                                <div className="bg-black/30 p-3 rounded-lg border border-white/10 cursor-pointer hover:border-blue-500 transition-colors" onClick={() => setLightboxImageUrl(answer)}>
+                                                                    <img src={answer} className="max-w-full w-full rounded-lg bg-white" alt="Student submission"/>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (isImageHTML) {
+                                                            const imageUrl = (answer.match(/src="(.*?)"/) || [])[1];
+                                                            return (
+                                                                <div className="bg-black/30 p-3 rounded-lg border border-white/10 cursor-pointer hover:border-blue-500 transition-colors" onClick={() => imageUrl && setLightboxImageUrl(imageUrl)}>
+                                                                    <div className="w-full rich-text-content" dangerouslySetInnerHTML={{ __html: answer }} />
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <div className="bg-black/30 p-3 rounded-lg text-sm whitespace-pre-wrap min-h-[100px] border border-white/10 rich-text-content" 
+                                                                 dangerouslySetInnerHTML={{ __html: parseMath(answer || '<p class="text-gray-500">No answer submitted.</p>') }} />
+                                                        );
+                                                    })()}
                                                     {isTextAnswer && (
                                                         <div className={`text-right text-xs mt-1.5 font-bold flex items-center justify-end gap-1.5 ${isUnderWordLimit || isSpamming ? 'text-amber-500' : 'text-gray-400'}`}>
                                                             {isSpamming && <><ShieldAlert size={14} /><span>Spam Detected</span></>}
