@@ -12,6 +12,8 @@ interface PrintHeaderProps {
     totalPoints: number;
 }
 
+const BlankLine = () => <div style={{ borderBottom: '1px solid #000', minHeight: '1.2em' }} />;
+
 export const PrintHeader: React.FC<PrintHeaderProps> = ({
     ipekaLogoUrl, ibLogoUrl, isMasterKey, isRealStudent, participantName, className, score, totalPoints
 }) => (
@@ -29,14 +31,18 @@ export const PrintHeader: React.FC<PrintHeaderProps> = ({
                 <tr>
                     <td className="label-cell" style={{ width: '70px' }}>Name</td>
                     <td className="value-cell">
-                        {isMasterKey ? "TEACHER KEY" : (isRealStudent ? participantName : "")}
+                        { (isMasterKey ? "TEACHER KEY" : (isRealStudent ? participantName : null)) || <BlankLine /> }
                     </td>
                     <td className="label-cell" style={{ width: '70px' }}>Class</td>
-                    <td className="value-cell">{className || ''}</td>
+                    <td className="value-cell">
+                        { className || <BlankLine /> }
+                    </td>
                 </tr>
                 <tr>
                     <td className="label-cell" style={{ width: '70px' }}>Date</td>
-                    <td className="value-cell">{isRealStudent ? new Date().toLocaleDateString() : ""}</td>
+                    <td className="value-cell">
+                        { (isRealStudent ? new Date().toLocaleDateString() : null) || <BlankLine /> }
+                    </td>
                     <td className="label-cell" style={{ width: '70px' }}>Score</td>
                     <td className="value-cell">
                         {isRealStudent ? (
