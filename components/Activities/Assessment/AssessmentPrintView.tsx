@@ -47,11 +47,10 @@ export const AssessmentPrintView: React.FC<AssessmentPrintViewProps> = ({
         };
     }, [onAfterPrint]);
 
-    // Based on the printMode, we can determine what to show.
-    const showAnswerKey = printMode === 'ANSWER_KEY';
-    const includeStudentAnswers = printMode === 'WITH_ANSWERS' || printMode === 'WITH_ANSWERS_AND_FEEDBACK';
-    const includeFeedback = printMode === 'WITH_ANSWERS_AND_FEEDBACK';
     const isBlankCopy = printMode === 'BLANK';
+    const showAnswerKey = printMode === 'ANSWER_KEY' && !isBlankCopy;
+    const includeStudentAnswers = (printMode === 'WITH_ANSWERS' || printMode === 'WITH_ANSWERS_AND_FEEDBACK') && !isBlankCopy;
+    const includeFeedback = printMode === 'WITH_ANSWERS_AND_FEEDBACK' && !isBlankCopy;
 
     return createPortal(
         <div id="assessment-print-view">
