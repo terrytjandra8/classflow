@@ -24,7 +24,7 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
         return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
     };
 
-    if (isImageAnswer(studentAnswer || '')) {
+    if (isImageAnswer(studentAnswer || '') && !isBlank) {
         return <img src={studentAnswer} alt="Student Drawing" className="print-answer-image" />;
     }
 
@@ -105,7 +105,7 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
                             <AnswerArea 
                                 question={q} 
                                 isBlank={isBlankCopy || (!isMasterKey && !answer)}
-                                studentAnswer={answer}
+                                studentAnswer={isBlankCopy ? '' : answer}
                             />
                         )}
                     </div>

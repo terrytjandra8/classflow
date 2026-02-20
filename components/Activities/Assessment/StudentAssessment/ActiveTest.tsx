@@ -60,7 +60,7 @@ const QuestionItem = memo(({
     }
 
     const isEssay = q.type === 'essay';
-    const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
+    const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text';
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
     
@@ -212,8 +212,8 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [activeDrawingQId, setActiveDrawingQId] = useState<string | null>(null);
     const [drawingSaveStatus, setDrawingSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     
-    // This state holds the drawing data (as a blob) while the drawing modal is open.
-    // It is isolated from the main 'answers' state to prevent re-rendering the whole page.
+    // Holds the drawing data (blob) *while* the canvas is open. This state is isolated to prevent
+    // the main test page from re-rendering on every drawing change, ensuring a fluid experience.
     const [liveDrawingBlob, setLiveDrawingBlob] = useState<Blob | null>(null);
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
@@ -229,14 +229,18 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         setTimeout(() => setIsSyncing(false), 800);
     };
     
-    // This function performs the actual save operation.
-    // It is designed to be called in the background and not trigger page-level re-renders.
+    /**
+     * Handles the background upload of a drawing blob to Supabase storage.
+     * This function is designed to be silent and not trigger any page-level state changes,
+     * only updating the ephemeral `drawingSaveStatus` for the modal.
+     */
     const saveDrawing = useCallback(async (blob: Blob, qId: string): Promise<string | null> => {
         setDrawingSaveStatus('saving');
         try {
             const currentAnswer = answers[qId];
             let fileName;
 
+            // Reuse the existing file name if we're updating a drawing to prevent orphaned files.
             if (currentAnswer && currentAnswer.startsWith('http') && !currentAnswer.startsWith('blob:')) {
                 const urlParts = currentAnswer.split('/');
                 fileName = urlParts[urlParts.length - 1].split('?')[0];
@@ -248,7 +252,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             if (error) throw error;
 
             const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName);
-            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
+            const finalUrl = `${publicUrl}?t=${new Date().getTime()}`; // Cache-busting parameter
             
             setDrawingSaveStatus('saved');
             return finalUrl;
@@ -259,47 +263,55 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
         }
     }, [answers]);
 
-    // A debounced version of the save function to run in the background while drawing.
+    /**
+     * A debounced version of the `saveDrawing` function. This is triggered while the student is drawing.
+     * It waits for a pause in drawing (2.5 seconds) before silently saving the work in the background.
+     */
     const debouncedSave = useMemo(() =>
         debounce((blob: Blob, qId: string) => {
             saveDrawing(blob, qId);
         }, 2500),
     [saveDrawing]);
 
-    // Effect to trigger the debounced save when the live drawing blob changes.
+    // Effect to trigger the silent, debounced save whenever the `liveDrawingBlob` changes.
     useEffect(() => {
         if (liveDrawingBlob && activeDrawingQId) {
-            setDrawingSaveStatus('saving'); // Show saving indicator immediately
+            setDrawingSaveStatus('saving'); // Provide immediate feedback that a save is pending.
             debouncedSave(liveDrawingBlob, activeDrawingQId);
         }
         return () => {
-            debouncedSave.cancel();
+            debouncedSave.cancel(); // Cancel any pending saves when the component unmounts or dependencies change.
         };
     }, [liveDrawingBlob, activeDrawingQId, debouncedSave]);
 
-    // Called when the user closes the drawing modal.
+    /**
+     * Handles the closing of the drawing modal. This is a critical step for the fluid experience.
+     */
     const handleCloseDrawingModal = useCallback(() => {
-        debouncedSave.cancel();
+        debouncedSave.cancel(); // Ensure any pending background save is cancelled.
         const qId = activeDrawingQId;
 
         if (qId && liveDrawingBlob) {
-            // Create a temporary local URL for an immediate, optimistic update on the main page.
+            // 1. OPTIMISTIC UI UPDATE: Immediately create a local blob URL for the drawing.
+            //    This makes the UI feel instant, as we don't wait for the upload to finish.
+            //    The `onAnswerChange` call with `immediate: false` updates the main `answers` state.
             const tempUrl = URL.createObjectURL(liveDrawingBlob);
-            onAnswerChange(qId, tempUrl, false);
+            onAnswerChange(qId, tempUrl, false); // `false` prevents an immediate full save, we do that next.
             
-            // Perform the final save in the background.
+            // 2. FINAL BACKGROUND SAVE: Trigger a final, non-debounced save of the latest blob.
             saveDrawing(liveDrawingBlob, qId).then(finalUrl => {
                 if (finalUrl) {
-                    // Preload the final image before updating the state to prevent blinking.
+                    // 3. SEAMLESS SWAP: To prevent a blink, preload the final uploaded image.
                     const img = new Image();
                     img.src = finalUrl;
                     img.onload = () => {
-                        onAnswerChange(qId, finalUrl, true);
-                        URL.revokeObjectURL(tempUrl); // Clean up the temporary URL
+                        // Once the final image is cached by the browser, update the answer state to point to the permanent URL.
+                        onAnswerChange(qId, finalUrl, true); // `true` triggers a final, definite persist to DB.
+                        URL.revokeObjectURL(tempUrl); // Clean up the temporary blob URL from memory.
                     };
                     img.onerror = () => {
-                        // If preloading fails, update anyway but log the error.
-                        console.error("Failed to preload final image.");
+                        // If preloading fails, update anyway to ensure the answer is saved.
+                        console.error("Failed to preload final image, swapping directly.");
                         onAnswerChange(qId, finalUrl, true);
                         URL.revokeObjectURL(tempUrl);
                     }
@@ -307,7 +319,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
             });
         }
         
-        // Reset modal-specific state.
+        // Reset all modal-related state for a clean next opening.
         setActiveDrawingQId(null);
         setLiveDrawingBlob(null);
         setDrawingSaveStatus('idle');
@@ -318,7 +330,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     return (
         <div 
             className="h-full flex flex-col bg-[#111] text-white overflow-hidden relative" 
-            onContextMenu={e => e.preventDefault()}
+            onContextMenu={e => { e.preventDefault(); onViolation(); }}
         >
             
             {isPreviewMode && (
