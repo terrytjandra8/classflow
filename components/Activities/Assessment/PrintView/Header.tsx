@@ -30,7 +30,7 @@ export const PrintHeader: React.FC<PrintHeaderProps> = ({
                     <td className="label-cell">Name</td>
                     <td className="value-cell">
                         {/* Show name or a line if it's a real student with no name, otherwise show nothing */}
-                        {isMasterKey ? "TEACHER KEY" : (isRealStudent ? (participantName || <BlankLine />) : <BlankLine />)}
+                        {isMasterKey ? "TEACHER KEY" : (isRealStudent ? (participantName || <BlankLine />) : '')}
                     </td>
                     <td className="label-cell">Class</td>
                     <td className="value-cell">
