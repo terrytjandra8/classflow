@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AssessmentQuestion, Board, AssessmentConfig } from '../../../../types';
-import { useFocusMode } from '../../../../hooks/useFocusMode';
 import { supabase } from '../../../../services/supabaseClient';
 import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
@@ -268,8 +267,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         
         await persistToDB(answersRef.current, newCount, true, true);
     };
-
-    useFocusMode(((isTestActive || isReadingMode) && !submitted && !isDisqualified && !isPreviewMode && !isPracticeMode), handleViolation);
 
     const handleAnswerChange = useCallback((qId: string, value: string, immediate = false) => {
         if (isDisqualified || submitted || isClosed || isReadingMode) return;
