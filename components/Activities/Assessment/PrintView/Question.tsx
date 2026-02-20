@@ -14,11 +14,10 @@ interface PrintQuestionProps {
     includeFeedback?: boolean;
 }
 
-// New component for rendering the answer area
 const AnswerArea = ({ question, isBlank, studentAnswer }: { question: AssessmentQuestion, isBlank: boolean, studentAnswer?: string }) => {
     const format = question.answerAreaFormat || 'box';
-    const minWords = question.minWords || 50; // Default to 50 words if not set
-    const estimatedLines = Math.ceil(minWords / 10); // Rough estimate: 10 words per line
+    const minWords = question.minWords || 50;
+    const estimatedLines = Math.ceil(minWords / 10);
     const minHeight = isBlank ? Math.max(100, estimatedLines * 24) : 60;
 
     const isImageAnswer = (text: string) => {
@@ -39,18 +38,15 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
                 </div>
             );
         }
-        // Default to box
         return <div style={{ border: '1px solid #000', minHeight: `${minHeight}px`, backgroundColor: '#fff' }}></div>;
     }
 
-    // For student answers or when not blank
     return (
         <div style={{ border: '1px solid #000', padding: '10px', minHeight: '60px', fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}>
             {studentAnswer || ""}
         </div>
     );
 };
-
 
 export const PrintQuestion: React.FC<PrintQuestionProps> = ({
     q, qNum, answer, gradeInfo, isMasterKey, isRealStudent, isBlankCopy, includeFeedback = true
@@ -60,24 +56,44 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
 
     return (
         <div className="question-block">
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
                     <span style={{ fontWeight: 'bold', marginRight: '8px', fontSize: '11pt' }}>{qNum}.</span>
-                    <div 
-                        className="rich-text-content"
-                        dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} 
-                    />
+                    <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
                 </div>
                 <div style={{ fontSize: '10pt', fontWeight: 'bold', border: '1px solid black', padding: '2px 8px', borderRadius: '4px', height: 'fit-content', whiteSpace: 'nowrap', marginLeft: '10px' }}>
                     {isRealStudent ? `${obtained} / ` : ''}{q.points} pts
                 </div>
             </div>
 
-            {/* Content */}
             <div style={{ paddingLeft: '20px' }}>
                 {isMCQ ? (
-                    // ... (MCQ rendering logic remains the same)
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {q.options?.map((opt, optIdx) => {
+                            const idxStr = optIdx.toString();
+                            const isSelected = answer === idxStr;
+                            const isCorrectOption = q.correctAnswer === idxStr;
+                            const shouldMarkCorrect = !isBlankCopy && ((isMasterKey && isCorrectOption) || (isRealStudent && isCorrectOption && isSelected));
+                            const shouldMarkWrong = !isBlankCopy && (isRealStudent && isSelected && !isCorrectOption);
+                            const showTick = !isBlankCopy && ((isMasterKey || isRealStudent) && isCorrectOption);
+                            const showSelection = !isBlankCopy && (isSelected || (isMasterKey && isCorrectOption));
+                            
+                            return (
+                                <div key={optIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11pt' }}>
+                                    <div style={{ 
+                                        width: '18px', height: '18px', borderRadius: '50%', border: '1px solid black', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: showSelection ? 'black' : 'white'
+                                    }}>
+                                        {showSelection && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'white' }} />}
+                                    </div>
+                                    <span className={shouldMarkCorrect ? 'correct-option' : (shouldMarkWrong ? 'wrong-option' : '')} dangerouslySetInnerHTML={{ __html: parseMath(opt) }} />
+                                    {showTick && <span style={{ fontSize: '12pt', color: 'black', fontWeight: 'bold', marginLeft: '5px' }}>✓</span>}
+                                    {shouldMarkWrong && <span style={{ fontSize: '12pt', color: 'black', fontWeight: 'bold', marginLeft: '5px' }}>✗</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
                 ) : (
                     <div style={{ marginTop: '10px' }}>
                         {isMasterKey && !isBlankCopy ? (
@@ -96,7 +112,9 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
                 )}
                 
                 {isRealStudent && includeFeedback && gradeInfo?.feedback && (
-                    // ... (Feedback rendering logic remains the same)
+                    <div style={{ marginTop: '8px', paddingLeft: '8px', borderLeft: '2px solid black', fontSize: '10pt', paddingTop: '2px', paddingBottom: '2px' }}>
+                        <strong>Feedback:</strong> <span dangerouslySetInnerHTML={{ __html: gradeInfo.feedback }} />
+                    </div>
                 )}
             </div>
         </div>

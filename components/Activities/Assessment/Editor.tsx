@@ -255,7 +255,22 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                 )}
 
                                 {q.type === 'mcq' && (
-                                   // ... MCQ options rendering ...
+                                    <div className="space-y-4 pt-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><span>Answer Options</span><span className="text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded border border-green-500/20 normal-case">Select the correct answer</span></label>
+                                        <div className="space-y-3">
+                                            {q.options?.map((opt, idx) => (
+                                                <div key={idx} className="flex items-start gap-3 group relative">
+                                                    <button onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-8 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}><CheckCircle size={16}/></button>
+                                                    <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'} ${activeEditor === `${q.id}-options-${idx}` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-options-${idx}`)}>
+                                                        {renderToolbar(`${q.id}-options-${idx}`)}
+                                                        <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
+                                                    </div>
+                                                    <button onClick={() => updateQuestion(q.id, { options: q.options?.filter((_, i) => i !== idx) })} className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><X size={16}/></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={() => updateQuestion(q.id, { options: [...(q.options || []), ''] })} className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-2 mt-4 px-3 py-2 hover:bg-blue-500/10 rounded-lg transition-colors w-fit"><Plus size={14}/> Add Option</button>
+                                    </div>
                                 )}
                             </div>
                         </div>
