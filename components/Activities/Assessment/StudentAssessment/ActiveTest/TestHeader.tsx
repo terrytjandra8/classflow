@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, BookOpen, AlertCircle, RefreshCcw, Clock, Rocket } from 'lucide-react';
 import { formatTime } from './utils';
-import { AssessmentConfig } from '../../../../types';
+import { AssessmentConfig } from '../../../../../types';
 
 interface TestHeaderProps {
     boardTitle: string;

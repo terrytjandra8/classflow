@@ -1,9 +1,9 @@
 import React, { memo, useState } from 'react';
-import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
+import { AssessmentQuestion, AssessmentConfig } from '../../../../../types';
 import { Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Minus, Square, PenTool, ShieldAlert, Check } from 'lucide-react';
-import { RichTextEditor, FormatState, getActiveFormat } from '../../../RichTextEditor';
-import { parseMath } from '../../../../utils/mappers';
-import { countQualityWords } from '../../../../utils/validation';
+import { RichTextEditor, FormatState, getActiveFormat } from '../../../../RichTextEditor';
+import { parseMath } from '../../../../../utils/mappers';
+import { countQualityWords } from '../../../../../utils/validation';
 
 interface QuestionItemProps {
     q: AssessmentQuestion;
@@ -100,7 +100,7 @@ export const QuestionItem = memo(({
 
             {q.type === 'mcq' && (
                 <div className="space-y-3">
-                    {q.options?.map((opt, optIdx) => (
+                    {q.options?.map((opt: string, optIdx: number) => (
                         <label 
                             key={optIdx} 
                             className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
@@ -178,8 +178,8 @@ export const QuestionItem = memo(({
                             )}
                             <RichTextEditor 
                                 value={answer || ''}
-                                onChange={(val) => onAnswerChange(q.id, val)}
-                                onFormatChange={(formats) => setActiveFormats({ ...formats, box: getActiveFormat('', ['SPAN.box']) })}
+                                onChange={(val: string) => onAnswerChange(q.id, val)}
+                                onFormatChange={(formats: FormatState) => setActiveFormats({ ...formats, box: getActiveFormat('', ['SPAN.box']) })}
                                 imageUploadDisabled={!config.allowStudentImages}
                                 readOnly={isReadingMode || isReadOnly}
                                 className={`w-full bg-transparent p-4 text-white outline-none min-h-[150px] leading-relaxed`}

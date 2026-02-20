@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, PenTool, RefreshCcw, Check, AlertTriangle } from 'lucide-react';
-import { DrawingCanvas } from '../../../ui/DrawingCanvas';
+import { DrawingCanvas } from '../../../../ui/DrawingCanvas';
 
 interface DrawingModalProps {
     isOpen: boolean;

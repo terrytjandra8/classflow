@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { supabase } from '../../../../services/supabaseClient';
+import { supabase } from '../../../../../services/supabaseClient';
 import { debounce } from 'lodash';
 
 export const useDrawing = (answers: Record<string, string>, onAnswerChange: (qId: string, value: string, immediate?: boolean) => void) => {

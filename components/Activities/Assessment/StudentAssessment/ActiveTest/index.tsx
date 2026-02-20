@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AssessmentQuestion, AssessmentConfig } from '../../../../types';
+import { AssessmentQuestion, AssessmentConfig } from '../../../../../types';
 import { useDrawing } from './hooks';
 import { DrawingModal } from './DrawingModal';
 import { SubmitModal } from './SubmitModal';
