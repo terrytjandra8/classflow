@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { FiMaximize2, FiTrash2, FiUploadCloud, FiFileText } from 'react-icons/fi';
-import { IconButton } from '../../../../../../components/common/IconButton';
 import { AssessmentQuestion } from '../../../../../../types';
 import { isContentImage, parseAnswer } from '../../../../../../utils/helpers';
 
@@ -30,33 +29,37 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                 <h4 className="text-base font-semibold text-cyan-400">Student Answer</h4>
                 <div className="flex items-center gap-2">
                     {answerIsImage && (
-                        <IconButton
-                            icon={FiMaximize2}
-                            tooltip="View Full Image"
+                        <button
+                            title="View Full Image"
                             onClick={() => setLightboxImageUrl(answer)}
                             className="text-gray-400 hover:text-white"
-                        />
+                        >
+                            <FiMaximize2 />
+                        </button>
                     )}
                     {question.type === 'essay' && (
-                         <IconButton
-                            icon={FiFileText}
-                            tooltip={rawView ? "Show Formatted View" : "Show Raw HTML"}
+                         <button
+                            title={rawView ? "Show Formatted View" : "Show Raw HTML"}
                             onClick={() => setRawView(prev => ({...prev, [qId]: !prev[qId]}))}
                             className={rawView ? "text-blue-400 hover:text-blue-300" : "text-gray-400 hover:text-white"}
-                        />
+                        >
+                            <FiFileText />
+                        </button>
                     )}
-                     <IconButton
-                        icon={FiUploadCloud}
-                        tooltip="Upload Corrected Answer"
+                     <button
+                        title="Upload Corrected Answer"
                         onClick={() => handleStudentAnswerImageUpload(qId)}
                         className="text-gray-400 hover:text-white"
-                    />
-                    <IconButton
-                        icon={FiTrash2}
-                        tooltip="Clear Answer"
+                    >
+                        <FiUploadCloud />
+                    </button>
+                    <button
+                        title="Clear Answer"
                         onClick={() => handleClearAnswer(qId)}
                         className="text-red-500 hover:text-red-400"
-                    />
+                    >
+                        <FiTrash2 />
+                    </button>
                 </div>
             </div>
 
