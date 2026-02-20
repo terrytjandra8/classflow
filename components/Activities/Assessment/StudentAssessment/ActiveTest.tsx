@@ -108,7 +108,7 @@ const QuestionItem = memo(({
         `p-1.5 rounded transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`;
 
     return (
-        <div className={`rounded-2xl p-6 shadow-lg transition-all ${isReadingMode ? 'bg-[#1a1a1a]/50 border border-white/5 opacity-80' : 'bg-[#1a1a1a] border border-white/10'}`}>
+        <div className={`rounded-2xl p-6 shadow-lg transition-all ${isReadingMode || isReadOnly ? 'bg-[#1a1a1a]/50 border border-white/5 opacity-80' : 'bg-[#1a1a1a] border border-white/10'}`}>
             <div className="flex justify-between mb-4">
                 <span className="text-sm font-bold text-blue-400">Question {questionNumber}</span>
                 <span className="text-xs font-bold text-gray-500">{q.points} pts</span>
@@ -187,28 +187,31 @@ const QuestionItem = memo(({
                     )}
 
                     {isTextVisible && (
-                        <div className={`relative bg-[#111] border rounded-xl focus-within:border-blue-500 transition-colors ${isReadingMode || isReadOnly ? 'border-transparent' : 'border-white/10'}`}>
-                             <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl">
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
-                                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
-                                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
-                                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertHorizontalRule'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Line"><Minus size={14}/></button>
-                                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock'); }} className={getBtnClass(activeFormats.box)} title="Box"><Square size={14}/></button>
-                            </div>
+                        <div className={`relative bg-[#111] border rounded-xl focus-within:border-blue-500 transition-colors ${isReadingMode || isReadOnly ? 'border-transparent opacity-70' : 'border-white/10'}`}>
+                            {!(isReadingMode || isReadOnly) && (
+                                <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl">
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
+                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
+                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
+                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('insertHorizontalRule'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Line"><Minus size={14}/></button>
+                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock'); }} className={getBtnClass(activeFormats.box)} title="Box"><Square size={14}/></button>
+                                </div>
+                            )}
                             <RichTextEditor 
                                 value={answer || ''}
                                 onChange={(val) => onAnswerChange(q.id, val)}
                                 onFormatChange={(formats) => setActiveFormats({ ...formats, box: getActiveFormat('', ['SPAN.box']) })}
                                 imageUploadDisabled={!config.allowStudentImages}
-                                className={`w-full bg-transparent p-4 text-white outline-none min-h-[150px] leading-relaxed transition-colors ${isReadingMode || isReadOnly ? 'cursor-not-allowed opacity-50' : ''}`}
-                                placeholder={isReadingMode ? "Reading time active..." : (isReadOnly ? "Question is locked." : "Type your answer here...")}
+                                readOnly={isReadingMode || isReadOnly}
+                                className={`w-full bg-transparent p-4 text-white outline-none min-h-[150px] leading-relaxed`}
+                                placeholder={isReadingMode ? "Reading time active..." : (isReadOnly ? "This question is locked for revision." : "Type your answer here...")}
                             />
                             {isSpamming && (
                                 <div className="absolute bottom-4 right-4 text-xs font-bold text-red-500 flex items-center gap-1 bg-black/50 backdrop-blur px-2 py-1 rounded">

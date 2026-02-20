@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../services/supabaseClient'; // Ensure this path is correct
 
 export interface FormatState {
@@ -50,11 +50,19 @@ interface RichTextEditorProps {
     autoFocus?: boolean;
     style?: React.CSSProperties;
     imageUploadDisabled?: boolean;
+    readOnly?: boolean;
 }
 
-const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({ 
-    id, value, onChange, placeholder, className, onKeyDown, onFormatChange, onPaste, autoFocus, style, imageUploadDisabled = false 
-}) => {
+export interface RichTextEditorRef {
+    focus: () => void;
+    execCommand: (command: string, value?: string) => void;
+    insertHTML: (html: string) => void;
+    getHTML: () => string;
+}
+
+const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProps>(({ 
+    id, value, onChange, placeholder, className, onKeyDown, onFormatChange, onPaste, autoFocus, style, imageUploadDisabled = false, readOnly = false 
+}, ref) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const lastFormats = useRef<FormatState>({
         bold: false, italic: false, underline: false, strikeThrough: false,
@@ -64,11 +72,37 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
     });
     const isInternalChange = useRef(false);
 
+    useImperativeHandle(ref, () => ({
+        focus: () => {
+            editorRef.current?.focus();
+        },
+        execCommand: (command: string, value?: string) => {
+            if (editorRef.current) {
+                editorRef.current.focus();
+                document.execCommand(command, false, value);
+                isInternalChange.current = true;
+                onChange(editorRef.current.innerHTML);
+                checkFormats();
+            }
+        },
+        insertHTML: (html: string) => {
+             if (editorRef.current) {
+                editorRef.current.focus();
+                document.execCommand('insertHTML', false, html);
+                isInternalChange.current = true;
+                onChange(editorRef.current.innerHTML);
+            }
+        },
+        getHTML: () => {
+            return editorRef.current?.innerHTML || '';
+        }
+    }));
+
     useEffect(() => {
-        if (autoFocus && editorRef.current) {
+        if (autoFocus && editorRef.current && !readOnly) {
             editorRef.current.focus();
         }
-    }, [autoFocus]);
+    }, [autoFocus, readOnly]);
 
     useEffect(() => {
         if (isInternalChange.current) {
@@ -82,8 +116,14 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
         }
     }, [value]);
 
+    useEffect(() => {
+        if (editorRef.current) {
+            editorRef.current.contentEditable = readOnly ? 'false' : 'true';
+        }
+    }, [readOnly]);
+
     const checkFormats = useCallback(() => {
-        if (onFormatChange) {
+        if (onFormatChange && !readOnly) {
             const selection = window.getSelection();
             if (!selection || !editorRef.current || !editorRef.current.contains(selection.anchorNode)) {
                 return;
@@ -127,7 +167,7 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 onFormatChange(newFormats);
             }
         }
-    }, [onFormatChange]);
+    }, [onFormatChange, readOnly]);
 
     useEffect(() => {
         const handleSelectionChange = () => checkFormats();
@@ -136,12 +176,14 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
     }, [checkFormats]);
 
     const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+        if(readOnly) return;
         isInternalChange.current = true;
         onChange(e.currentTarget.innerHTML);
         checkFormats();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if(readOnly) { e.preventDefault(); return; };
         if (onKeyDown) onKeyDown(e);
         if (e.ctrlKey || e.metaKey) {
             const key = e.key.toLowerCase();
@@ -167,6 +209,7 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
     };
 
     const handlePasteLogic = async (e: React.ClipboardEvent) => {
+        if(readOnly) { e.preventDefault(); return; };
         if (onPaste) onPaste(e);
         if (e.defaultPrevented) return;
         
@@ -332,8 +375,8 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
             <div
                 id={id}
                 ref={editorRef}
-                contentEditable
-                className={`rich-text-content outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500 cursor-text overflow-auto break-words whitespace-pre-wrap ${className}`}
+                contentEditable={!readOnly}
+                className={`rich-text-content outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500 overflow-auto break-words whitespace-pre-wrap ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-text'} ${className}`}
                 onInput={handleInput}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePasteLogic}
@@ -341,11 +384,11 @@ const RichTextEditorComponent: React.FC<RichTextEditorProps> = ({
                 onKeyUp={checkFormats}
                 data-placeholder={placeholder}
                 style={{ overflowWrap: 'break-word', wordBreak: 'break-word', ...style }}
-                spellCheck={true}
+                spellCheck={!readOnly}
                 suppressContentEditableWarning={true}
             />
         </>
     );
-};
+});
 
 export const RichTextEditor = React.memo(RichTextEditorComponent);
