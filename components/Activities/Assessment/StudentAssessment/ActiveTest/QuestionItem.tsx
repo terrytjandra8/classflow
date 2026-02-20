@@ -54,24 +54,20 @@ export const QuestionItem = memo(({
     const renderedNotes = q.notes ? parseMath(q.notes) : null;
 
     const handleCommand = (cmd: string) => {
-        if (cmd === 'formatBlock' && getActiveFormat('', ['SPAN.box'])) {
-            document.execCommand('removeFormat'); 
-        }
+        const isBoxActive = getActiveFormat('', ['SPAN.box']);
 
-        if (cmd === 'insertHorizontalRule' && getActiveFormat('', ['SPAN.box'])) {
-            return;
-        }
-        if (cmd === 'formatBlock' && getActiveFormat('insertHorizontalRule')) {
-            return; 
-        }
-
-        if (cmd === 'formatBlock') {
-            const isBox = getActiveFormat('', ['SPAN.box']);
+        if (cmd === 'formatBlock') { // Toggling the box
             document.execCommand('removeFormat');
-            if(!isBox) {
+            if (!isBoxActive) {
                 document.execCommand('insertHTML', false, `<span class="box">${window.getSelection()?.toString()}</span>`);
             }
-        } else {
+        } else if (cmd === 'insertHorizontalRule') { // Inserting a line
+            if (isBoxActive && !config.allowLineInBox) {
+                // If in a box and combining is not allowed, remove the box first.
+                document.execCommand('removeFormat');
+            }
+            document.execCommand(cmd, false);
+        } else { // All other commands
             document.execCommand(cmd, false);
         }
     }
