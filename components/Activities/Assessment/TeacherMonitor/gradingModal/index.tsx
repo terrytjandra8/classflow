@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AssessmentQuestion } from '../../../../../types';
+import { AssessmentQuestion } from '../../../../types';
 import { useGradingState } from './useGradingState';
 import { Lightbox } from './components/Lightbox';
 import { GradingModalHeader } from './components/GradingModalHeader';
@@ -11,7 +11,7 @@ interface GradingModalProps {
     participant: any;
     onClose: () => void;
     questions: AssessmentQuestion[];
-    onSave: (release: boolean, retryIds?: string[]) => void;
+    onSave: (grades: Record<string, { score: number, feedback: string }>, release: boolean, retryIds?: string[]) => void;
     onAutoSave: (
         grades: Record<string, { score: number, feedback: string }>,
         updatedAnswers?: Record<string, string>,
@@ -45,12 +45,12 @@ export const GradingModal: React.FC<GradingModalProps> = ({
             alert('Please select which question(s) the student needs to revise.');
             return;
         }
-        onSave(false, Array.from(questionsToRevise));
+        onSave(currentGrades, false, Array.from(questionsToRevise));
         onClose();
     };
     
     const handleSave = (release: boolean) => {
-        onSave(release, Array.from(questionsToRevise));
+        onSave(currentGrades, release, Array.from(questionsToRevise));
     }
 
     if (!isOpen || !participant) return null;
@@ -91,7 +91,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                                     answer={answer}
                                     grade={grade}
                                     rawView={rawView[q.id] || false}
-                                    setRawView={setRawView as any} 
+                                    setRawView={setRawView as any} // Cast needed due to complex state type
                                     setLightboxImageUrl={setLightboxImageUrl}
                                     handleClearAnswer={handleClearAnswer}
                                     handleStudentAnswerImageUpload={handleStudentAnswerImageUpload}
