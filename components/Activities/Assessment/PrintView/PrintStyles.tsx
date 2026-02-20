@@ -73,8 +73,8 @@ export const PrintStyles = () => (
             /* Header */
             .print-header {
                 display: flex;
-                justify-content: space-between;
                 align-items: flex-start;
+                gap: 40px; /* Control space between logos and table */
                 border-bottom: 2px solid black;
                 padding-bottom: 15px;
                 margin-bottom: 20px;
@@ -84,13 +84,15 @@ export const PrintStyles = () => (
                 display: flex;
                 align-items: center;
                 gap: 20px;
-                 flex-shrink: 0; /* Prevent logos from shrinking */
+                flex-shrink: 0; /* Prevent logos from shrinking */
             }
 
             /* Info Table */
             .header-info-table {
                 border-collapse: collapse;
-                width: 50%; /* Make table take up 50% of header width */
+                flex: 1 1 0; /* Allow table to grow and fill available space */
+                width: 100%; /* Needed for table-layout:fixed with % widths */
+                table-layout: fixed;
                 font-size: 10pt !important;
                 color: black !important;
             }
@@ -99,18 +101,24 @@ export const PrintStyles = () => (
                 border: 1px solid #ccc !important;
                 padding: 4px 8px;
                 vertical-align: middle;
-                 height: 25px; /* Ensure a minimum height for all cells */
+                height: 25px; /* Ensure a minimum height for all cells */
             }
 
             .label-cell {
                 font-weight: bold;
-                width: 70px; /* Fixed width for labels */
                 background-color: #f0f0f0 !important;
             }
 
             .value-cell {
-                width: auto; /* Allow value cells to fill remaining space */
+                /* Widths are now handled by the rules below */
             }
+
+            /* Set column widths as percentages */
+            .header-info-table tr td:nth-of-type(1) { width: 15%; } /* Name/Date Label */
+            .header-info-table tr td:nth-of-type(2) { width: 40%; } /* Name/Date Value */
+            .header-info-table tr td:nth-of-type(3) { width: 15%; } /* Class/Score Label */
+            .header-info-table tr td:nth-of-type(4) { width: 30%; } /* Class/Score Value */
+
 
             /* Content Typography */
             h3 {
