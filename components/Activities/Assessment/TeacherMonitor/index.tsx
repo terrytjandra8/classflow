@@ -64,6 +64,12 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
     const ibLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/IB.png').data.publicUrl;
 
+    const totalPoints = useMemo(() => {
+        return questions
+            .filter(q => q.type !== 'section')
+            .reduce((acc, q) => acc + (q.points || 0), 0);
+    }, [questions]);
+
     // Process Data (Memoized)
     const { teachers, students } = useMemo(() => {
         const checkWordCounts = (answers: Record<string, string>) => {
@@ -384,6 +390,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 onAllowRevision={handleAllowRevision}
                 onPrint={(participant, mode) => handlePrint([participant], mode)}
                 onGrade={openGrading}
+                totalPoints={totalPoints}
             />
             
             <RetryModal 
