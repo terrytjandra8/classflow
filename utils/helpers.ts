@@ -17,9 +17,9 @@ export const getWordCount = (text: string): number => {
     return plainText.trim().split(/\s+/).filter(Boolean).length;
 };
 
-// Placeholder for isContentImage - assuming it's a simple check
+// This regex now correctly handles image URLs with query parameters.
 export const isContentImage = (content: string): boolean => {
-    return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg))$/.test(content);
+    return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg))(\?.*)?$/.test(content);
 };
 
 // Placeholder for parseAnswer - assuming it returns a string

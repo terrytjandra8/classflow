@@ -32,7 +32,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     question,
     participant,
     questionsToRevise,
-    handleToggleQuestionToRevise,
+    handleToggleQuestionTo revise,
     answer,
     grade,
     rawView,
@@ -50,6 +50,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     const wordCount = getWordCount(answer);
     const minWords = question.minWords || 0;
     const isBelowWordLimit = minWords > 0 && wordCount < minWords;
+    const correctAnswerMcqOption = question.type === 'mcq' && question.options ? question.options[parseInt(question.correctAnswer ?? '')] : undefined;
 
     return (
         <div className="bg-white/5 border border-white/10 rounded-lg p-5 transition-all duration-300 relative">
@@ -114,6 +115,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     points={question.points}
                     questionType={question.type}
                     correctAnswer={question.correctAnswer}
+                    correctAnswerMcqOption={correctAnswerMcqOption}
                     handleGradeChange={handleGradeChange}
                     handleFeedbackImageUpload={handleFeedbackImageUpload}
                     feedbackEditorRefs={feedbackEditorRefs}
