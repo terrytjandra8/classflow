@@ -15,40 +15,24 @@ interface ParticipantCardProps {
 
 const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant, onReset, onContinue, onAllowRevision, onPrint, onGrade, isSelected, onToggleSelect }) => {
     const [isPrintMenuOpen, setPrintMenuOpen] = useState(false);
-    
-    // Debug Log (If you see this, the new code is live!)
-    console.log("🚀 DEPLOYED VERSION - Data for:", participant.name, participant);
 
     const isTeacher = participant.role === 'teacher';
-    // Fallback logic: Even if the JSON fails, we check the top-level data
-    const hasScore = participant.score !== undefined && participant.score !== null;
     const isDQ = !!participant.disqualified;
-    const isFinished = participant.progress >= 1; // If progress is 100%, they are done.
+    const hasScore = participant.score !== undefined && participant.score !== null;
 
-    // 1. Parse JSON safely
+    // Safely parse JSON just for status indicators
     let assessmentData: any = {};
     try {
-      if (typeof participant.connections === 'string') {
-        assessmentData = JSON.parse(participant.connections);
-      } else if (typeof participant.connections === 'object' && participant.connections !== null) {
-        assessmentData = participant.connections;
-      }
-    } catch (error) {
-        // Ignore silently
-    }
+      if (typeof participant.connections === 'string') assessmentData = JSON.parse(participant.connections);
+      else if (typeof participant.connections === 'object' && participant.connections !== null) assessmentData = participant.connections;
+    } catch (error) {}
 
-    // 2. Ultra-Safe State Checks (Combines JSON data + hard fallbacks)
     const isReleased = assessmentData?.released === true;
     const isGraded = (assessmentData?.graded === true || hasScore) && !isReleased;
-    const isSubmitted = (assessmentData?.submitted === true || isFinished) && !isGraded && !isReleased;
-
-    // FORCE BUTTONS TO SHOW if they are submitted, graded, released, DQ'd, have 100% progress, OR have a score
-    const showActionButtons = isGraded || isReleased || isSubmitted || isDQ || isFinished || hasScore;
+    const isSubmitted = assessmentData?.submitted === true && !isGraded && !isReleased;
+    const isInProgress = participant.progress > 0 && !isSubmitted && !isGraded && !isReleased && !isDQ;
     
-    const isInProgress = participant.progress > 0 && !showActionButtons;
-    const isInteractive = !isTeacher && (showActionButtons || isInProgress);
-    
-    // 3. Status UI
+    // Status UI
     const getStatus = () => {
         if (isTeacher) return { icon: <Activity size={10} />, text: 'Monitoring', color: 'text-green-500' };
         if (isDQ) return { icon: <Ban size={10} />, text: 'Disqualified', color: 'text-red-500' };
@@ -62,7 +46,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
 
     const handleInteraction = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.selection-checkbox')) return;
-        if (isInteractive) onGrade(participant);
+        if (!isTeacher) onGrade(participant);
     };
 
     const handlePrintClick = (e: React.MouseEvent, mode: PrintMode) => {
@@ -75,7 +59,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         <div 
             onClick={handleInteraction}
             onDoubleClick={handleInteraction}
-            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50' : (isReleased ? 'bg-purple-500/10 border-purple-500/30' : (isGraded ? 'bg-green-500/10 border-green-500/30' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10')))} ${isInteractive ? 'hover:bg-opacity-20 cursor-pointer' : 'cursor-default'} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50' : (isReleased ? 'bg-purple-500/10 border-purple-500/30' : (isGraded ? 'bg-green-500/10 border-green-500/30' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10')))} ${!isTeacher ? 'hover:bg-opacity-20 cursor-pointer' : 'cursor-default'} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
         >
              {!isTeacher && (
                 <div className="absolute top-2 right-2 z-20 selection-checkbox p-1" onClick={(e) => { e.stopPropagation(); onToggleSelect(participant.id); }}>
@@ -87,67 +71,44 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
                 <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border w-fit ${isTeacher ? 'bg-pink-500/10 text-pink-500 border-pink-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'}`}>
                     {isTeacher ? <span className="flex items-center gap-1"><ShieldCheck size={10}/> Teacher</span> : <span className="flex items-center gap-1"><User size={10}/> Student</span>}
                 </div>
-                {!isTeacher && (isDQ ? <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 mr-6"><Ban size={10} /> DQ</div> : participant.violations > 0 ? <div className="bg-orange-500/20 text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded border border-orange-500/30 flex items-center gap-1 mr-6"><ShieldAlert size={10} /> {participant.violations} Flags</div> : participant.hasLowWordCount ? <div className="bg-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1 mr-6"><FileWarning size={10} /> Short</div> : null)}
             </div>
             
             <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 shrink-0 ${isDQ ? 'bg-red-600 text-white border-red-400' : 'bg-white/5 border-white/10 text-gray-300'}`}>{participant.name?.charAt(0).toUpperCase()}</div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 shrink-0 ${isDQ ? 'bg-red-600 text-white border-red-400' : 'bg-white/5 border-white/10 text-gray-300'}`}>{participant.name?.charAt(0).toUpperCase() || '?'}</div>
                 <div className="min-w-0 flex-1">
                     <div className={`font-bold truncate ${isDQ ? 'text-red-400' : 'text-white'}`}>{participant.name}</div>
                     <div className={`text-xs flex items-center gap-1.5 ${isDQ ? 'text-red-500 font-bold' : status.color}`}>{status.icon} {status.text}</div>
                 </div>
             </div>
-            
-            {isInProgress && !showActionButtons && <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-[1px]"><div className="bg-blue-600/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg animate-in zoom-in duration-200"><ExternalLink size={12} /> View Live</div></div>}
 
-            {/* THE BUTTON CONTAINER: Always rendering if not a teacher */}
+            {/* ACTION BUTTONS CONTAINER */}
             {!isTeacher && (
                 <div className="flex gap-2 mt-2 relative z-10" onClick={e => e.stopPropagation()}>
                      
-                     {/* View / Grade Button */}
-                     {(isGraded || isReleased || hasScore) && !isDQ ? (
-                         <button onClick={() => onGrade(participant)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 ${isReleased ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20' : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20'}`} title={isReleased ? 'View Submission' : 'View or Grade Submission'}>
-                             <Eye size={12} /> {isReleased ? 'View' : 'View / Grade'}
-                         </button>
-                    ) : (isSubmitted || isFinished) && !isDQ ? (
-                         <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Grade Submission">
-                             <Eye size={12} /> Grade
-                         </button>
-                    ) : null}
+                     {/* 🚨 NUCLEAR OPTION: THIS BUTTON WILL ALWAYS SHOW 🚨 */}
+                     <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Force View/Grade">
+                         <Eye size={12} /> Force Grade
+                     </button>
 
-                    {/* DQ Buttons */}
-                    {isDQ && <button onClick={() => onContinue(participant)} className="flex-1 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock student to continue"><Unlock size={12} /> Continue</button>}
-                    {isDQ && <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="View Submission"><Eye size={12} /> View</button>}
+                    {/* Other utilities */}
+                    {isDQ && <button onClick={() => onContinue(participant)} className="flex-1 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock student to continue"><Unlock size={12} /></button>}
                     
-                    {/* Revision Button */}
-                    {(isGraded || isReleased || hasScore) && !isDQ && (
-                       <button onClick={() => onAllowRevision(participant)} className="py-1.5 px-2 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock for revision"><RotateCcw size={12} /></button>
-                    )}
+                    <button onClick={() => onAllowRevision(participant)} className="py-1.5 px-2 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock for revision"><RotateCcw size={12} /></button>
                     
-                    {/* Reset Button */}
-                    <button onClick={() => onReset(participant)} className="py-1.5 px-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Wipe data and restart">
-                        <RefreshCw size={12} /> Reset
-                    </button>
+                    <button onClick={() => onReset(participant)} className="py-1.5 px-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Wipe data and restart"><RefreshCw size={12} /></button>
                     
-                    {/* Print Button */}
-                    {(isGraded || isReleased || hasScore) && !isDQ && (
-                        <div className="relative">
-                             <button 
-                                onClick={() => setPrintMenuOpen(prev => !prev)}
-                                className="w-full h-full py-1.5 px-2 bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 border border-gray-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
-                                title="Export to PDF"
-                            >
-                                <Printer size={12} />
-                            </button>
-                            {isPrintMenuOpen && (
-                                <div className="absolute bottom-full right-0 mb-1 w-40 bg-[#222] border border-white/10 rounded-lg shadow-xl z-10 animate-in fade-in slide-in-from-bottom-2" onMouseLeave={() => setPrintMenuOpen(false)}>
-                                    <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-white">With Feedback</button>
-                                    <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-white">Answers Only</button>
-                                    <button onClick={(e) => handlePrintClick(e, 'BLANK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-white">Blank Paper</button>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <div className="relative">
+                        <button onClick={() => setPrintMenuOpen(prev => !prev)} className="w-full h-full py-1.5 px-2 bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 border border-gray-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Export to PDF">
+                            <Printer size={12} />
+                        </button>
+                        {isPrintMenuOpen && (
+                            <div className="absolute bottom-full right-0 mb-1 w-40 bg-[#222] border border-white/10 rounded-lg shadow-xl z-10 animate-in fade-in slide-in-from-bottom-2" onMouseLeave={() => setPrintMenuOpen(false)}>
+                                <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-white">With Feedback</button>
+                                <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-white">Answers Only</button>
+                                <button onClick={(e) => handlePrintClick(e, 'BLANK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-white">Blank Paper</button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
