@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { CheckSquare, Square, User, AlertTriangle, Printer, Edit, RotateCcw, Play, FileText, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { CheckSquare, Square, User, AlertTriangle, Printer, Edit, RotateCcw, Play, FileText, CheckCircle2, File, FileX } from 'lucide-react';
 import { PrintMode } from '../AssessmentPrintView';
 
 interface ParticipantCardProps {
@@ -17,11 +17,24 @@ interface ParticipantCardProps {
 
 export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, isSelected, onToggleSelect, onReset, onContinue, onAllowRevision, onPrint, onGrade, totalPoints }) => {
 
+    const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
+    const printMenuRef = useRef<HTMLDivElement>(null);
+
     const isGraded = participant.status.includes('Graded');
     const isSubmitted = participant.status.includes('Submitted');
     const isReady = participant.status === 'Ready';
 
     const percentage = totalPoints > 0 ? (participant.score / totalPoints) * 100 : 0;
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (printMenuRef.current && !printMenuRef.current.contains(event.target as Node)) {
+                setIsPrintMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const getStatusIcon = () => {
         switch (participant.status) {
@@ -122,7 +135,37 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
                         {isGraded && (
                             <button onClick={() => onAllowRevision(participant)} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors" title="Allow Revision"><RotateCcw size={18}/></button>
                         )}
-                        <button onClick={() => onPrint(participant, 'WITH_ANSWERS_AND_FEEDBACK')} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors" title="Print Submission"><Printer size={18}/></button>
+                        <div className="relative" ref={printMenuRef}>
+                            <button 
+                                onClick={() => setIsPrintMenuOpen(prev => !prev)}
+                                className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors"
+                                title="Print Options"
+                            >
+                                <Printer size={18}/>
+                            </button>
+                            {isPrintMenuOpen && (
+                                <div className="absolute bottom-full right-0 mb-2 w-56 bg-[#2a2a2a] border border-white/10 rounded-lg shadow-xl z-20 animate-in fade-in zoom-in-95">
+                                    <button 
+                                        onClick={() => { onPrint(participant, 'WITH_ANSWERS_AND_FEEDBACK'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300"
+                                    >
+                                        <FileText size={14} /> With Feedback
+                                    </button>
+                                    <button 
+                                        onClick={() => { onPrint(participant, 'WITH_ANSWERS'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300"
+                                    >
+                                        <File size={14} /> Submission Only
+                                    </button>
+                                    <button 
+                                        onClick={() => { onPrint(participant, 'BLANK'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300"
+                                    >
+                                        <FileX size={14} /> Blank Paper
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 }
             </div>

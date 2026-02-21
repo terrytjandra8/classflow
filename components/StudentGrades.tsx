@@ -269,6 +269,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
             {printRequest && selectedItem && (
                 <AssessmentPrintView 
                     participants={[{
+                        id: userId,
                         name: userName,
                         score: selectedItem.score,
                         data: selectedItem.submissionData
@@ -365,7 +366,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                             <thead className={`text-xs uppercase font-bold text-gray-500 ${theme === 'light' ? 'bg-gray-50' : 'bg-[#111]'}`}>
                                 <tr>
                                     <th className="px-6 py-4 font-bold tracking-wider">Assessment Name</th>
-                                    <th className="px-6 py-4 font-bold tracking-wider">Submitted Date</th>
+                                    <th className.jsx("px-6 py-4 font-bold tracking-wider", "Submitted Date", "th")}>
                                     <th className="px-6 py-4 font-bold tracking-wider">Status</th>
                                     <th className="px-6 py-4 font-bold tracking-wider">Feedback</th>
                                     <th className="px-6 py-4 font-bold tracking-wider text-right">Score</th>
@@ -380,8 +381,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                                         <tr 
                                             key={item.boardId} 
                                             onClick={() => setSelectedItem(item)}
-                                            className={`group cursor-pointer transition-colors ${theme === 'light' ? 'hover:bg-slate-50' : 'hover:bg-white/5'}`}
-                                        >
+                                            className={`group cursor-pointer transition-colors ${theme === 'light' ? 'hover:bg-slate-50' : 'hover:bg-white/5'}`}>
                                             <td className="px-6 py-4">
                                                 <div className="font-bold group-hover:text-green-400">{item.boardTitle}</div>
                                                 <div className="text-xs text-gray-500">{item.className}</div>
