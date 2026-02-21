@@ -48,7 +48,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
 
     const wordCount = getWordCount(answer);
-    const minWords = question.config?.minWords || 0;
+    const minWords = question.minWords || 0;
     const isBelowWordLimit = minWords > 0 && wordCount < minWords;
 
     return (
@@ -94,29 +94,32 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
                 <div className="flex flex-col items-end ml-4">
                     <div className="text-sm text-white/60">Points</div>
-                    <div className="text-2xl font-bold">{question.config?.points || 0}</div>
+                    <div className="text-2xl font-bold">{question.points || 0}</div>
                 </div>
             </div>
 
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <StudentAnswer
                     qId={question.id}
+                    question={question}
                     answer={answer}
                     rawView={rawView}
                     setRawView={setRawView}
                     setLightboxImageUrl={setLightboxImageUrl}
-                    onClearAnswer={handleClearAnswer}
+                    onClear={handleClearAnswer}
                     onImageUpload={handleStudentAnswerImageUpload}
                 />
                 <GradingSection
                     qId={question.id}
                     grade={grade}
-                    maxPoints={question.config?.points || 0}
-                    onGradeChange={handleGradeChange}
-                    onImageUpload={handleFeedbackImageUpload}
-                    feedbackEditorRef={el => feedbackEditorRefs.current[question.id] = el}
-                    activeFormats={activeFeedbackFormats[question.id]}
-                    setActiveFormats={(formats) => setActiveFeedbackFormats(prev => ({ ...prev, [question.id]: formats }))}
+                    points={question.points}
+                    questionType={question.type}
+                    correctAnswer={question.correctAnswer}
+                    handleGradeChange={handleGradeChange}
+                    handleFeedbackImageUpload={handleFeedbackImageUpload}
+                    feedbackEditorRefs={feedbackEditorRefs}
+                    activeFeedbackFormats={activeFeedbackFormats}
+                    setActiveFeedbackFormats={setActiveFeedbackFormats}
                 />
             </div>
         </div>

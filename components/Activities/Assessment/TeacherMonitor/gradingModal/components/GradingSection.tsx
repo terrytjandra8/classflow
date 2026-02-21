@@ -8,9 +8,9 @@ interface GradingSectionProps {
     qId: string;
     grade: { score: number, feedback: string };
     points: number;
+    questionType: 'mcq' | 'essay' | 'section';
     correctAnswer?: string;
-    correctAnswerMcqOption?: string;
-    questionType: string;
+    correctAnswerMcqOption?: string; // Add this to handle MCQ options
     handleGradeChange: (qId: string, score: number, feedback: string) => void;
     handleFeedbackImageUpload: (qId: string) => void;
     feedbackEditorRefs: React.MutableRefObject<Record<string, RichTextEditorRef | null>>;
@@ -19,9 +19,17 @@ interface GradingSectionProps {
 }
 
 export const GradingSection: React.FC<GradingSectionProps> = ({
-    qId, grade, points, correctAnswer, correctAnswerMcqOption, questionType,
-    handleGradeChange, handleFeedbackImageUpload,
-    feedbackEditorRefs, activeFeedbackFormats, setActiveFeedbackFormats
+    qId, 
+    grade, 
+    points, 
+    questionType,
+    correctAnswer,
+    correctAnswerMcqOption,
+    handleGradeChange, 
+    handleFeedbackImageUpload,
+    feedbackEditorRefs, 
+    activeFeedbackFormats, 
+    setActiveFeedbackFormats
 }) => {
     return (
         <div className="flex flex-col h-full bg-[#1c1c1c] rounded-lg">
@@ -48,10 +56,10 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
                     activeFormats={activeFeedbackFormats[qId] || { bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false, subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false, alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false }}
                 />
                 <RichTextEditor
-                    ref={ref => feedbackEditorRefs.current[qId] = ref}
+                    ref={(el: any) => feedbackEditorRefs.current[qId] = el}
                     value={grade.feedback}
                     onChange={text => handleGradeChange(qId, grade.score, text)}
-                    onFormatChange={formats => setActiveFeedbackFormats(prev => ({...prev, [qId]: formats}))}
+                    onFormatChange={(formats: any) => setActiveFeedbackFormats(prev => ({...prev, [qId]: formats}))}
                     placeholder="Provide feedback..."
                     className="w-full flex-1 bg-transparent p-3 text-sm outline-none resize-none"
                 />

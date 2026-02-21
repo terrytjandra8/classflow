@@ -10,14 +10,14 @@ interface StudentAnswerProps {
     answer: string;
     rawView: boolean;
     setRawView: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-    setLightboxImageUrl: (url: string) => void;
-    handleClearAnswer: (qId: string) => void;
-    handleStudentAnswerImageUpload: (qId: string) => void;
+    setLightboxImageUrl: (url: string | null) => void;
+    onClear: (qId: string) => void;
+    onImageUpload: (qId: string) => void;
 }
 
 export const StudentAnswer: React.FC<StudentAnswerProps> = ({
     qId, question, answer, rawView, setRawView, setLightboxImageUrl, 
-    handleClearAnswer, handleStudentAnswerImageUpload
+    onClear, onImageUpload
 }) => {
 
     const answerIsImage = isContentImage(answer);
@@ -48,14 +48,14 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                     )}
                      <button
                         title="Upload Corrected Answer"
-                        onClick={() => handleStudentAnswerImageUpload(qId)}
+                        onClick={() => onImageUpload(qId)}
                         className="text-gray-400 hover:text-white"
                     >
                         <FiUploadCloud />
                     </button>
                     <button
                         title="Clear Answer"
-                        onClick={() => handleClearAnswer(qId)}
+                        onClick={() => onClear(qId)}
                         className="text-red-500 hover:text-red-400"
                     >
                         <FiTrash2 />
@@ -73,7 +73,7 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
             ) : (
                 <div
                     className="text-gray-300 prose prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-1 whitespace-pre-wrap text-sm"
-                    dangerouslySetInnerHTML={{ __html: displayAnswer }}
+                    dangerouslySetInnerHTML={{ __html: displayAnswer || "" }}
                 />
             )}
         </div>
