@@ -19,9 +19,11 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
     const isTeacher = participant.role === 'teacher';
     
     const isDQ = participant.disqualified;
-    const isSubmitted = participant.status === 'Submitted' || participant.status === 'Graded';
+    // FIX: A participant with a score should be treated as submitted, even if their status is bugged (e.g., stuck on 'Ready').
+    const isSubmitted = participant.status === 'Submitted' || participant.status === 'Graded' || participant.score != null;
     const isInProgress = participant.status === 'In Progress' || participant.status === 'Revising';
-    const isReady = participant.status === 'Ready';
+    // FIX: A participant with a score should not be considered 'Ready' in the monitor view.
+    const isReady = participant.status === 'Ready' && participant.score == null;
 
     const isInteractive = !isTeacher && (isSubmitted || isDQ || isInProgress);
 
