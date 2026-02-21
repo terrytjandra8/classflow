@@ -172,7 +172,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                                 )}
                             </div>
                             <div className="text-right border-l pl-4 border-gray-200 dark:border-white/10">
-                                <div className="text-3xl font-black">{selectedItem.score} <span className="text-lg text-gray-400 font-medium">/ {selectedItem.maxScore}</span></div>
+                                <div className="text-3xl font-black">{selectedItem.score} <span className="text-lg text-gray-400 font-medium">/ {selectedItem.maxScore} marks</span></div>
                                 <div className={`text-xs font-bold uppercase tracking-wider ${selectedItem.passed ? 'text-green-500' : 'text-red-500'}`}>
                                     {selectedItem.passed ? 'Passed' : 'Needs Improvement'}
                                 </div>
@@ -206,7 +206,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                                                 />
                                             </div>
                                             <div className={`px-3 py-1 rounded text-sm font-bold border ${earnedPoints === maxPoints ? 'bg-green-500/10 text-green-500 border-green-500/20' : (earnedPoints === 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20')}`}>
-                                                {earnedPoints} / {maxPoints} pts
+                                                {earnedPoints} / {maxPoints} marks
                                             </div>
                                         </div>
 
@@ -391,7 +391,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                                             <td className="px-6 py-4 text-gray-500 text-xs font-bold">{item.feedbackCount > 0 ? `${item.feedbackCount} Comments` : 'None'}</td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="font-bold text-lg">{percentage}%</div>
-                                                <div className="text-xs text-gray-500">{item.score}/{item.maxScore} pts</div>
+                                                <div className="text-xs text-gray-500">{item.score}/{item.maxScore} marks</div>
                                             </td>
                                             <td className="px-6 py-4 text-right"><ChevronRight size={18} className="text-gray-500"/></td>
                                         </tr>
