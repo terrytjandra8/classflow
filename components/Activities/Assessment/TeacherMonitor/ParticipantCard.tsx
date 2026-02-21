@@ -16,7 +16,8 @@ interface ParticipantCardProps {
 
 const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant, onReset, onContinue, onAllowRevision, onPrint, onGrade, isSelected, onToggleSelect }) => {
     const [isPrintMenuOpen, setPrintMenuOpen] = useState(false);
-    
+    console.log("🔍 LOOK HERE - Participant Data for " + participant.name + ":", participant);
+
     // --- START: Fail-Safe State Logic from User (Corrected) ---
     const isTeacher = participant.role === 'teacher';
     const hasScore = participant.score != null;
