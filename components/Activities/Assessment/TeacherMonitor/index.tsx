@@ -66,7 +66,6 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
     // Process Data (Memoized)
     const { teachers, students } = useMemo(() => {
-        // ... (rest of the processing logic is unchanged)
         const checkWordCounts = (answers: Record<string, string>) => {
             return questions.some(q => {
                 if(q.type !== 'essay' || !q.minWords) return false;
@@ -192,6 +191,50 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setSelectedStudentIds(new Set());
     };
 
+    const handleBulkReleaseGrades = async () => {
+        if (selectedStudentIds.size === 0) return;
+    
+        const targets = students.filter(s => selectedStudentIds.has(s.id) && s.data?.graded && !s.data?.released);
+    
+        if (targets.length === 0) {
+            alert("No selected students are ready for grade release (must be graded but not yet released).");
+            return;
+        }
+    
+        if (!confirm(`This will release grades to ${targets.length} selected students. They will be able to see their scores and feedback immediately. Proceed?`)) return;
+    
+        try {
+            const noteUpdates = targets.map(p => {
+                const updatedData = { ...(p.data || {}), released: true };
+                const submissionContent = `Graded: ${p.score}`;
+                return supabase.from('notes').update({
+                    connections: updatedData,
+                    content: submissionContent,
+                    color: 'bg-green-200'
+                }).eq('id', p.noteId);
+            });
+    
+            const gradeUpserts = targets.map(p => {
+                return supabase.from('grades').upsert({ 
+                    student_id: p.id, 
+                    board_id: boardId, 
+                    score: p.score, 
+                    feedback: 'See assessment details' 
+                }, { onConflict: 'student_id, board_id' });
+            });
+    
+            await Promise.all([...noteUpdates, ...gradeUpserts]);
+    
+            handleForceRefresh();
+            setSelectedStudentIds(new Set());
+            alert(`${targets.length} grades released successfully.`);
+    
+        } catch (error) {
+            console.error("Failed to bulk release grades:", error);
+            alert("An error occurred while releasing grades. Please try again.");
+        }
+    };
+
     const confirmReset = async () => {
         const { participant } = retryModal;
         if (!participant || !participant.noteId) return;
@@ -230,7 +273,6 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             return;
         }
         
-        // Optimistically update local state for a smoother experience
         setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData } : sub));
 
     }, [gradingModal.participant]);
@@ -272,12 +314,10 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                  if (gradeError) throw gradeError;
             }
             
-            // Close modal only on regular save, not on release
             if (!release) {
                 setGradingModal({ isOpen: false, participant: null });
             }
 
-            // Refresh data in the background
             handleForceRefresh(); 
             return true;
 
@@ -331,6 +371,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 onSelectAll={selectAll}
                 onPrintSelected={() => handlePrint(students.filter(s => selectedStudentIds.has(s.id)), 'WITH_ANSWERS_AND_FEEDBACK')}
                 onAllowRevisionSelected={handleBulkAllowRevision}
+                onReleaseGradesSelected={handleBulkReleaseGrades}
             />
 
             <ParticipantsSection 

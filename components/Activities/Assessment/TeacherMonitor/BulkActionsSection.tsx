@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { CheckSquare, Square, Printer, RotateCcw } from 'lucide-react';
+import { CheckSquare, Square, Printer, RotateCcw, Send } from 'lucide-react';
 
 interface BulkActionsSectionProps {
     hasStudents: boolean;
@@ -9,9 +9,13 @@ interface BulkActionsSectionProps {
     onSelectAll: () => void;
     onPrintSelected: () => void;
     onAllowRevisionSelected: () => void;
+    onReleaseGradesSelected: () => void;
 }
 
-export const BulkActionsSection: React.FC<BulkActionsSectionProps> = ({ hasStudents, selectedCount, totalCount, onSelectAll, onPrintSelected, onAllowRevisionSelected }) => {
+export const BulkActionsSection: React.FC<BulkActionsSectionProps> = ({ 
+    hasStudents, selectedCount, totalCount, onSelectAll, 
+    onPrintSelected, onAllowRevisionSelected, onReleaseGradesSelected 
+}) => {
 
     if (!hasStudents) return null;
 
@@ -29,6 +33,14 @@ export const BulkActionsSection: React.FC<BulkActionsSectionProps> = ({ hasStude
                 <div className="flex items-center gap-2 border-l border-white/10 pl-4">
                     <span className="text-xs font-bold text-blue-400">{selectedCount} Selected</span>
                     
+                    <button 
+                        onClick={onReleaseGradesSelected}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg"
+                        title="Release grades to selected students"
+                    >
+                        <Send size={14} /> Release Grades
+                    </button>
+
                     <button 
                         onClick={onAllowRevisionSelected}
                         className="flex items-center gap-2 px-4 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg"
