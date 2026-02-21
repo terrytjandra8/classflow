@@ -17,26 +17,38 @@ interface ParticipantCardProps {
 const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant, onReset, onContinue, onAllowRevision, onPrint, onGrade, isSelected, onToggleSelect }) => {
     const [isPrintMenuOpen, setPrintMenuOpen] = useState(false);
     
+    // --- START: Fail-Safe State Logic from User ---
     const isTeacher = participant.role === 'teacher';
-    const isDQ = participant.disqualified;
     const hasScore = participant.score != null;
+    const isDQ = !!participant.disqualified;
 
-    // --- START: Refined State Logic ---
-    // The participant's state is determined by a clear hierarchy.
-    // Correctly reference the boolean flags from the `participant.data` object.
-    const isReleased = !!participant.data?.released;
-    const isGraded = !!participant.data?.graded && !isReleased;
+    // 1. Safely parse the connections column data from participant.data
+    let assessmentData: any = {};
+    try {
+      if (typeof participant.data === 'string') {
+        assessmentData = JSON.parse(participant.data);
+      } else if (typeof participant.data === 'object' && participant.data !== null) {
+        assessmentData = participant.data;
+      }
+    } catch (error) {
+      console.error("Error parsing connections JSON:", error);
+    }
 
-    const isSubmitted = participant.progress === 1 && !isGraded && !isReleased;
-    const isInProgress = participant.progress > 0 && participant.progress < 1 && !isGraded && !isReleased;
-    // Any other state is considered Ready.
-    const isReady = !isReleased && !isGraded && !isSubmitted && !isInProgress && !isTeacher;
+    // 2. Extract the exact boolean values with strict checking
+    const isReleased = assessmentData.released === true;
+    const isGraded = assessmentData.graded === true && !isReleased; // Ensure Graded is not also Released
+    const isSubmitted = assessmentData.submitted === true && !isGraded && !isReleased;
 
+    // 3. Set the button visibility based on all actionable states
     const showActionButtons = isGraded || isReleased || isSubmitted || isDQ;
+    
+    const isInProgress = participant.progress > 0 && !isSubmitted && !isGraded && !isReleased && !isDQ;
     const isInteractive = !isTeacher && (showActionButtons || isInProgress);
-
+    
+    // 4. Set the UI text status
     const getStatus = () => {
         if (isTeacher) return { icon: <Activity size={10} />, text: 'Monitoring', color: 'text-green-500' };
+        if (isDQ) return { icon: <Ban size={10} />, text: 'Disqualified', color: 'text-red-500' };
         if (isReleased) return { icon: <CheckCircle size={10} />, text: 'Graded & Released', color: 'text-purple-400' };
         if (isGraded) return { icon: <CheckCircle size={10} />, text: 'Graded', color: 'text-green-400' };
         if (isSubmitted) return { icon: <CheckCircle size={10} />, text: 'Submitted', color: 'text-gray-400' };
@@ -44,7 +56,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         return { icon: <Users size={10} />, text: 'Ready', color: 'text-gray-500' };
     };
     const status = getStatus();
-    // --- END: Refined State Logic ---
+    // --- END: Fail-Safe State Logic from User ---
 
     const handleInteraction = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.selection-checkbox')) return;
@@ -61,7 +73,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         <div 
             onClick={handleInteraction}
             onDoubleClick={handleInteraction}
-            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50' : (isReleased ? 'bg-purple-500/10 border-purple-500/30' : (isGraded ? 'bg-green-500/10 border-green-500/30' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10')))} ${isInteractive ? 'hover:bg-opacity-20 cursor-pointer' : 'cursor-default'} ${isSelected ? 'ring-2 ring-blue-500' : ''} ${hasScore ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-black' : ''}`}>
+            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50' : (isReleased ? 'bg-purple-500/10 border-purple-500/30' : (isGraded ? 'bg-green-500/10 border-green-500/30' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10')))} ${isInteractive ? 'hover:bg-opacity-20 cursor-pointer' : 'cursor-default'} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
              {!isTeacher && (
                 <div className="absolute top-2 right-2 z-20 selection-checkbox p-1" onClick={(e) => { e.stopPropagation(); onToggleSelect(participant.id); }}>
                     {isSelected ? <CheckSquare className="text-blue-500 fill-blue-500/20 cursor-pointer" size={20} /> : <Square className="text-gray-600 hover:text-white cursor-pointer" size={20} />}
