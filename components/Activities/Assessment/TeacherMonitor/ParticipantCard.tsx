@@ -22,6 +22,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
 
     const hasScore = participant.score != null;
     const isSubmitted = participant.status === 'Submitted' || participant.status === 'Graded' || hasScore;
+    const isGraded = participant.status === 'Graded' || hasScore;
     const isReleased = participant.status === 'Graded & Released';
     const isInProgress = participant.status === 'In Progress' || participant.status === 'Revising';
     const isReady = participant.status === 'Ready' && !hasScore;
@@ -43,7 +44,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         <div 
             onClick={handleInteraction}
             onDoubleClick={handleInteraction}
-            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50 shadow-[0_0_20px_rgba(220,38,38,0.1)] hover:bg-red-900/20' : (isSubmitted || isReleased ? 'bg-[#1a1a1a] border-green-500/30 hover:bg-[#222] hover:border-green-500/50' : (isInProgress ? 'bg-[#1a1a1a] border-blue-500/30 hover:bg-[#222] hover:border-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-[#1a1a1a] border-white/5 hover:bg-[#202020] opacity-70'))} ${isSelected ? 'ring-2 ring-blue-500' : ''} ${isInteractive ? 'cursor-pointer' : 'cursor-default'}`}
+            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50 shadow-[0_0_20px_rgba(220,38,38,0.1)] hover:bg-red-900/20' : (isReleased ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20' : (isGraded ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20' : 'bg-white/5 border-white/10')))} ${isSelected ? 'ring-2 ring-blue-500' : ''} ${isInteractive ? 'cursor-pointer' : 'cursor-default'}`}
         >
             {!isTeacher && (
                 <div className="absolute top-2 right-2 z-20 selection-checkbox p-1" onClick={(e) => { e.stopPropagation(); onToggleSelect(participant.id); }}>
@@ -62,7 +63,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 shrink-0 ${isDQ ? 'bg-red-600 text-white border-red-400' : 'bg-white/5 border-white/10 text-gray-300'}`}>{participant.name.charAt(0).toUpperCase()}</div>
                 <div className="min-w-0 flex-1">
                     <div className={`font-bold truncate ${isDQ ? 'text-red-400' : 'text-white'}`}>{participant.name}</div>
-                    <div className={`text-xs flex items-center gap-1 ${isDQ ? 'text-red-500 font-bold' : 'text-gray-500'}`}>{isTeacher ? <><Activity size={10} className="text-green-500"/> Monitoring</> : <>{(isSubmitted || isReleased) ? <CheckCircle size={10} className="text-green-500"/> : (isReady ? <Users size={10} /> : <Clock size={10} className="text-blue-400"/>)} {participant.status}</>}</div>
+                    <div className={`text-xs flex items-center gap-1 ${isDQ ? 'text-red-500 font-bold' : 'text-gray-500'}`}>{isTeacher ? <><Activity size={10} className="text-green-500"/> Monitoring</> : <>{(isGraded || isReleased) ? <CheckCircle size={10} className={isReleased ? 'text-purple-400' : 'text-green-400'}/> : (isReady ? <Users size={10} /> : <Clock size={10} className="text-blue-400"/>)} {participant.status}</>}</div>
                 </div>
             </div>
             
@@ -70,20 +71,27 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
 
             {!isTeacher && !isReady && (
                 <div className="flex gap-2 mt-2 relative z-10" onClick={e => e.stopPropagation()}>
-                    {(isSubmitted || isReleased) && !isDQ && (
+                    {isGraded && !isReleased && !isDQ && (
                          <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="View or Grade Submission">
-                             <Eye size={12} /> {isReleased ? 'View' : 'View / Grade'}
+                             <Eye size={12} /> View / Grade
                          </button>
                     )}
+                    {isReleased && !isDQ && (
+                        <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="View Submission">
+                            <Eye size={12} /> View
+                        </button>
+                    )
+                    }
                     {isDQ && <button onClick={() => onContinue(participant)} className="flex-1 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock student to continue"><Unlock size={12} /> Continue</button>}
+                    {isDQ && <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="View Submission"><Eye size={12} /> View</button>}
                     
-                    {(isSubmitted || isReleased) && !isDQ && (
+                    {(isGraded || isReleased) && !isDQ && (
                        <button onClick={() => onAllowRevision(participant)} className="py-1.5 px-2 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock for revision"><RotateCcw size={12} /></button>
                     )}
                     
                     <button onClick={() => onReset(participant)} className="py-1.5 px-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center" title="Wipe data and restart"><RefreshCw size={12} /></button>
                     
-                    {(isSubmitted || isReleased) && !isDQ && (
+                    {(isGraded || isReleased) && !isDQ && (
                         <div className="relative">
                              <button 
                                 onClick={() => setPrintMenuOpen(prev => !prev)}
@@ -105,7 +113,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
             )}
 
             {!isTeacher && !isReady && <div className="space-y-1 mt-auto relative z-0"><div className="flex justify-between text-[10px] text-gray-500 font-bold uppercase tracking-wider"><span>Progress</span><span>{Math.round(participant.progress * 100)}%</span></div><div className="w-full h-1.5 bg-black rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${isDQ ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${participant.progress * 100}%` }}></div></div></div>}
-            {!isTeacher && ((isSubmitted || isReleased) || isDQ) && <div className="pt-3 border-t border-white/5 flex justify-between items-center relative z-0"><span className="text-xs text-gray-500 font-medium">Final Score</span><span className={`font-mono font-bold text-xl ${isDQ ? 'text-red-500' : 'text-green-400'}`}>{participant.score} <span className="text-xs text-gray-500 font-normal">pts</span></span></div>}
+            {!isTeacher && ((isGraded || isReleased) || isDQ) && <div className="pt-3 border-t border-white/5 flex justify-between items-center relative z-0"><span className="text-xs text-gray-500 font-medium">Final Score</span><span className={`font-mono font-bold text-xl ${isDQ ? 'text-red-500' : (isReleased ? 'text-purple-400' : 'text-green-400')}`}>{participant.score} <span className="text-xs text-gray-500 font-normal">pts</span></span></div>}
         </div>
     );
 };
