@@ -1,25 +1,23 @@
 
 import React from 'react';
+import { AssessmentQuestion } from '../../../../../../types';
+import { RichTextEditorRef, FormatState } from '../../../../../RichTextEditor';
 import { StudentAnswer } from './StudentAnswer';
 import { GradingSection } from './GradingSection';
-import { AssessmentQuestion } from '../../../../../../types';
-import { parseMath } from '../../../../../../utils/mappers';
-
-// Forward ref for RichTextEditor
-import { RichTextEditorRef, FormatState } from '../../../../../RichTextEditor';
+import { getWordCount } from '../../../../../../utils/helpers';
+import { TbAlertTriangle } from 'react-icons/tb';
 
 interface QuestionCardProps {
-    question: AssessmentQuestion;
     qNum: number;
+    question: AssessmentQuestion;
     participant: any;
     questionsToRevise: Set<string>;
     handleToggleQuestionToRevise: (qId: string) => void;
-    // From useGradingState hook
     answer: string;
     grade: { score: number, feedback: string };
     rawView: boolean;
     setRawView: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-    setLightboxImageUrl: (url: string) => void;
+    setLightboxImageUrl: (url: string | null) => void;
     handleClearAnswer: (qId: string) => void;
     handleStudentAnswerImageUpload: (qId: string) => void;
     handleGradeChange: (qId: string, score: number, feedback: string) => void;
@@ -30,62 +28,97 @@ interface QuestionCardProps {
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
-    question: q, qNum, participant, questionsToRevise, handleToggleQuestionToRevise,
-    answer, grade, rawView, setRawView, setLightboxImageUrl,
-    handleClearAnswer, handleStudentAnswerImageUpload,
-    handleGradeChange, handleFeedbackImageUpload,
-    feedbackEditorRefs, activeFeedbackFormats, setActiveFeedbackFormats
+    qNum,
+    question,
+    participant,
+    questionsToRevise,
+    handleToggleQuestionToRevise,
+    answer,
+    grade,
+    rawView,
+    setRawView,
+    setLightboxImageUrl,
+    handleClearAnswer,
+    handleStudentAnswerImageUpload,
+    handleGradeChange,
+    handleFeedbackImageUpload,
+    feedbackEditorRefs,
+    activeFeedbackFormats,
+    setActiveFeedbackFormats,
 }) => {
-    if (q.type === 'section') return null;
 
-    const isRetry = participant.data?.retryQuestions?.includes(q.id);
-    const cardBorderColor = questionsToRevise.has(q.id) ? 'border-amber-500' : (isRetry ? 'border-orange-500/50' : 'border-white/10');
+    const wordCount = getWordCount(answer);
+    const minWords = question.config?.minWords || 0;
+    const isBelowWordLimit = minWords > 0 && wordCount < minWords;
 
     return (
-        <div key={q.id} className={`p-4 rounded-xl bg-[#111] border ${cardBorderColor} transition-colors`}>
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                    <input 
-                        type="checkbox" 
-                        checked={questionsToRevise.has(q.id)} 
-                        onChange={() => handleToggleQuestionToRevise(q.id)} 
-                        className="w-4 h-4 rounded bg-black/20 border-white/20 text-amber-500 focus:ring-amber-500 cursor-pointer"
-                        title="Mark for revision"
-                    />
-                    <span className="text-sm font-bold text-blue-400">Question {qNum}</span>
-                    {isRetry && <span className="text-xs font-bold text-orange-400 bg-orange-900/50 px-2 py-0.5 rounded-full border border-orange-500/50">Revision</span>}
+        <div className="bg-white/5 border border-white/10 rounded-lg p-5 transition-all duration-300 relative">
+            <div className="flex justify-between items-start">
+                <div className="flex-1">
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm font-bold bg-white/10 px-2 py-1 rounded-md">
+                            QUESTION {qNum}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id={`revise-${question.id}`}
+                                className="h-4 w-4 rounded bg-white/5 border-white/20 text-blue-500 focus:ring-blue-500"
+                                checked={questionsToRevise.has(question.id)}
+                                onChange={() => handleToggleQuestionToRevise(question.id)}
+                                disabled={participant.data?.released}
+                            />
+                            <label htmlFor={`revise-${question.id}`} className="text-sm text-white/60">
+                                Allow student to revise
+                            </label>
+                        </div>
+                    </div>
+                    <div className="mt-3 text-white/80" dangerouslySetInnerHTML={{ __html: question.text }} />
+                    <div className="flex items-center gap-4 mt-3">
+                        <div className="text-xs text-white/40">
+                            Word Count: {wordCount}
+                        </div>
+                        {minWords > 0 && (
+                            <div className="text-xs text-white/40">
+                                (Min: {minWords})
+                            </div>
+                        )}
+                        {isBelowWordLimit && (
+                            <div className="flex items-center gap-1 text-yellow-500 text-xs">
+                                <TbAlertTriangle />
+                                <span>Below word limit</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <span className="text-sm font-bold text-gray-400">{q.points} pts</span>
+
+                <div className="flex flex-col items-end ml-4">
+                    <div className="text-sm text-white/60">Points</div>
+                    <div className="text-2xl font-bold">{question.config?.points || 0}</div>
+                </div>
             </div>
 
-            <div className="text-gray-300 mb-4 rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
-            
-            <div className="grid grid-cols-2 gap-4">
-                <StudentAnswer 
-                    qId={q.id}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <StudentAnswer
+                    qId={question.id}
                     answer={answer}
-                    question={q}
                     rawView={rawView}
                     setRawView={setRawView}
                     setLightboxImageUrl={setLightboxImageUrl}
-                    handleClearAnswer={handleClearAnswer}
-                    handleStudentAnswerImageUpload={handleStudentAnswerImageUpload}
+                    onClearAnswer={handleClearAnswer}
+                    onImageUpload={handleStudentAnswerImageUpload}
                 />
-
                 <GradingSection
-                    qId={q.id}
+                    qId={question.id}
                     grade={grade}
-                    points={q.points ?? 0}
-                    correctAnswer={q.correctAnswer}
-                    correctAnswerMcqOption={q.type === 'mcq' ? q.options?.[Number(q.correctAnswer)] : undefined}
-                    questionType={q.type}
-                    handleGradeChange={handleGradeChange}
-                    handleFeedbackImageUpload={handleFeedbackImageUpload}
-                    feedbackEditorRefs={feedbackEditorRefs}
-                    activeFeedbackFormats={activeFeedbackFormats}
-                    setActiveFeedbackFormats={setActiveFeedbackFormats}
+                    maxPoints={question.config?.points || 0}
+                    onGradeChange={handleGradeChange}
+                    onImageUpload={handleFeedbackImageUpload}
+                    feedbackEditorRef={el => feedbackEditorRefs.current[question.id] = el}
+                    activeFormats={activeFeedbackFormats[question.id]}
+                    setActiveFormats={(formats) => setActiveFeedbackFormats(prev => ({ ...prev, [question.id]: formats }))}
                 />
             </div>
         </div>
-    );
+    )
 };
