@@ -1,6 +1,6 @@
 
 import React, { memo, useState } from 'react';
-import { CheckSquare, Square, ShieldCheck, User, Ban, ShieldAlert, FileWarning, Activity, CheckCircle, Clock, Users, RefreshCw, Printer, ExternalLink, PlayCircle, Unlock, RotateCcw, ChevronDown } from 'lucide-react';
+import { CheckSquare, Square, ShieldCheck, User, Ban, ShieldAlert, FileWarning, Activity, CheckCircle, Clock, Users, RefreshCw, Printer, ExternalLink, PlayCircle, Unlock, RotateCcw, ChevronDown, Eye } from 'lucide-react';
 import { PrintMode } from '../AssessmentPrintView';
 
 interface ParticipantCardProps {
@@ -19,11 +19,14 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
     const isTeacher = participant.role === 'teacher';
     
     const isDQ = participant.disqualified;
-    // FIX: A participant with a score should be treated as submitted, even if their status is bugged (e.g., stuck on 'Ready').
-    const isSubmitted = participant.status === 'Submitted' || participant.status === 'Graded' || participant.score != null;
+
+    // FIX: A participant with a score should always be considered 'submitted' for the purpose of the monitor UI,
+    // even if their status is incorrectly marked as 'Ready'.
+    const hasScore = participant.score != null;
+    const isSubmitted = participant.status === 'Submitted' || participant.status === 'Graded' || participant.status === 'Graded & Released' || hasScore;
     const isInProgress = participant.status === 'In Progress' || participant.status === 'Revising';
-    // FIX: A participant with a score should not be considered 'Ready' in the monitor view.
-    const isReady = participant.status === 'Ready' && participant.score == null;
+    // A participant is only 'Ready' if they have not started and have no score.
+    const isReady = participant.status === 'Ready' && !hasScore;
 
     const isInteractive = !isTeacher && (isSubmitted || isDQ || isInProgress);
 
@@ -67,28 +70,40 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
             
             {isInProgress && <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-[1px]"><div className="bg-blue-600/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg animate-in zoom-in duration-200"><ExternalLink size={12} /> View Live</div></div>}
 
+            {/* FIX: Add an explicit "View/Grade" button and refactor the button container for clarity. */}
             {!isTeacher && !isReady && (
                 <div className="flex gap-2 mt-2 relative z-10" onClick={e => e.stopPropagation()}>
+                    {isSubmitted && !isDQ && (
+                         <button onClick={() => onGrade(participant)} className="flex-1 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="View or Grade Submission">
+                             <Eye size={12} /> View / Grade
+                         </button>
+                    )}
                     {isDQ && <button onClick={() => onContinue(participant)} className="flex-1 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock student to continue"><Unlock size={12} /> Continue</button>}
-                    {isSubmitted && <button onClick={() => onAllowRevision(participant)} className="flex-1 py-1.5 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock for revision"><RotateCcw size={12} /> Revise</button>}
-                    <button onClick={() => onReset(participant)} className="w-8 py-1.5 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center" title="Wipe data and restart"><RefreshCw size={12} /></button>
                     
-                    <div className="relative flex-1">
-                         <button 
-                            onClick={() => setPrintMenuOpen(prev => !prev)}
-                            className="w-full py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
-                            title="Export to PDF"
-                        >
-                            <Printer size={12} /> <ChevronDown size={14} />
-                        </button>
-                        {isPrintMenuOpen && (
-                            <div className="absolute bottom-full left-0 mb-1 w-40 bg-[#222] border border-white/10 rounded-lg shadow-xl z-10 animate-in fade-in slide-in-from-bottom-2" onMouseLeave={() => setPrintMenuOpen(false)}>
-                                <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">With Feedback</button>
-                                <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Answers Only</button>
-                                <button onClick={(e) => handlePrintClick(e, 'BLANK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Blank Paper</button>
-                            </div>
-                        )}
-                    </div>
+                    {isSubmitted && !isDQ && (
+                       <button onClick={() => onAllowRevision(participant)} className="py-1.5 px-2 bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1" title="Unlock for revision"><RotateCcw size={12} /></button>
+                    )}
+                    
+                    <button onClick={() => onReset(participant)} className="py-1.5 px-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded-lg text-xs font-bold transition-colors flex items-center justify-center" title="Wipe data and restart"><RefreshCw size={12} /></button>
+                    
+                    {isSubmitted && !isDQ && (
+                        <div className="relative">
+                             <button 
+                                onClick={() => setPrintMenuOpen(prev => !prev)}
+                                className="w-full py-1.5 px-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                                title="Export to PDF"
+                            >
+                                <Printer size={12} />
+                            </button>
+                            {isPrintMenuOpen && (
+                                <div className="absolute bottom-full right-0 mb-1 w-40 bg-[#222] border border-white/10 rounded-lg shadow-xl z-10 animate-in fade-in slide-in-from-bottom-2" onMouseLeave={() => setPrintMenuOpen(false)}>
+                                    <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">With Feedback</button>
+                                    <button onClick={(e) => handlePrintClick(e, 'WITH_ANSWERS')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Answers Only</button>
+                                    <button onClick={(e) => handlePrintClick(e, 'BLANK')} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5">Blank Paper</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
