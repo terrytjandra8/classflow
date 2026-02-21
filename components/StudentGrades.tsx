@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../services/supabaseClient';
-import { Award, ChevronRight, Clock, MessageSquare, X, Search, Filter, ChevronDown, Eye, Printer, FileText, CheckCircle, RefreshCw, File } from 'lucide-react';
+import { Award, ChevronRight, Clock, MessageSquare, X, Search, Filter, ChevronDown, Eye, Printer, FileText, CheckCircle, RefreshCw, File, FileX } from 'lucide-react';
 import { AssessmentQuestion, Board } from '../types';
 import { AssessmentPrintView, PrintMode } from './Activities/Assessment/AssessmentPrintView';
 import { parseMath, mapBoard } from '../utils/mappers';
@@ -59,7 +59,6 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
 
     const fetchGrades = async () => {
         setLoading(true);
-        // ... (fetchGrades logic remains the same)
         try {
             const { data: submissions, error } = await supabase
                 .from('notes')
@@ -184,7 +183,6 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-                        {/* Modal Body Content (unchanged) */}
                         {
                          questions.map((q, idx) => {
                                 if (q.type === 'section') {
@@ -283,7 +281,6 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                     printMode={printRequest.mode}
                 />
             )}
-            {/* Main Page Content (unchanged) */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-green-500 text-black rounded-xl shadow-lg shadow-green-900/20">
