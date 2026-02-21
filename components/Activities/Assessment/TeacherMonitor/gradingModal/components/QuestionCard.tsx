@@ -66,7 +66,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                 className="h-4 w-4 rounded bg-white/5 border-white/20 text-blue-500 focus:ring-blue-500"
                                 checked={questionsToRevise.has(question.id)}
                                 onChange={() => handleToggleQuestionToRevise(question.id)}
-                                disabled={participant.data?.released}
                             />
                             <label htmlFor={`revise-${question.id}`} className="text-sm text-white/60">
                                 Allow student to revise

@@ -13,7 +13,8 @@ export const getWordCount = (text: string): number => {
     if (!text) return 0;
     // This regex strips HTML tags and counts words.
     const plainText = text.replace(/<[^>]*>/g, ' ');
-    return plainText.trim().split(/\\s+/).filter(Boolean).length;
+    // Correctly split by one or more whitespace characters.
+    return plainText.trim().split(/\s+/).filter(Boolean).length;
 };
 
 // Placeholder for isContentImage - assuming it's a simple check
