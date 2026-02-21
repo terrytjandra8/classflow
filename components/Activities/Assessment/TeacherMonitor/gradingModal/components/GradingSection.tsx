@@ -40,10 +40,22 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
 
     const handleScoreInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        if (value === '' || /^[0-9]+$/.test(value)) {
-            setDisplayScore(value);
-            const newScore = parseInt(value, 10);
-            handleGradeChange(qId, isNaN(newScore) ? 0 : newScore, grade.feedback);
+
+        if (value === '') {
+            setDisplayScore('');
+            handleGradeChange(qId, 0, grade.feedback);
+            return;
+        }
+
+        if (/^[0-9]+$/.test(value)) {
+            let newScore = parseInt(value, 10);
+
+            if (newScore > points) {
+                newScore = points; // Cap the score at the maximum points
+            }
+
+            setDisplayScore(String(newScore));
+            handleGradeChange(qId, newScore, grade.feedback);
         }
     };
 
