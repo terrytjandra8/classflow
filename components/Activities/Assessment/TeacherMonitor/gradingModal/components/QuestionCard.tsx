@@ -32,7 +32,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     question,
     participant,
     questionsToRevise,
-    handleToggleQuestionTo revise,
+    handleToggleQuestionToRevise,
     answer,
     grade,
     rawView,
