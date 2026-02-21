@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { RichTextEditor, RichTextEditorRef, FormatState } from '../../../../../RichTextEditor';
 import { FeedbackToolbar } from './FeedbackToolbar';
 import { parseMath } from '../../../../../../utils/mappers';
@@ -31,6 +31,28 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
     activeFeedbackFormats, 
     setActiveFeedbackFormats
 }) => {
+
+    const [displayScore, setDisplayScore] = useState(String(grade.score));
+
+    useEffect(() => {
+        setDisplayScore(String(grade.score));
+    }, [grade.score]);
+
+    const handleScoreInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (value === '' || /^[0-9]+$/.test(value)) {
+            setDisplayScore(value);
+            const newScore = parseInt(value, 10);
+            handleGradeChange(qId, isNaN(newScore) ? 0 : newScore, grade.feedback);
+        }
+    };
+
+    const handleScoreInputBlur = () => {
+        if (displayScore === '') {
+            setDisplayScore('0');
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-[#1c1c1c] rounded-lg">
             <div className="p-3">
@@ -38,8 +60,9 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
                 <div className="flex items-center gap-2 mb-3">
                     <input 
                         type="number" 
-                        value={grade.score}
-                        onChange={e => handleGradeChange(qId, parseInt(e.target.value) || 0, grade.feedback)}
+                        value={displayScore}
+                        onChange={handleScoreInputChange}
+                        onBlur={handleScoreInputBlur}
                         className="w-24 bg-black/50 border border-white/10 rounded-md px-2 py-1 text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                         max={points}
                         min={0}
