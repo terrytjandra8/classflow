@@ -17,18 +17,18 @@ interface ParticipantCardProps {
 const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant, onReset, onContinue, onAllowRevision, onPrint, onGrade, isSelected, onToggleSelect }) => {
     const [isPrintMenuOpen, setPrintMenuOpen] = useState(false);
     
-    // --- START: Fail-Safe State Logic from User ---
+    // --- START: Fail-Safe State Logic from User (Corrected) ---
     const isTeacher = participant.role === 'teacher';
     const hasScore = participant.score != null;
     const isDQ = !!participant.disqualified;
 
-    // 1. Safely parse the connections column data from participant.data
+    // 1. Safely parse the connections column from participant.connections
     let assessmentData: any = {};
     try {
-      if (typeof participant.data === 'string') {
-        assessmentData = JSON.parse(participant.data);
-      } else if (typeof participant.data === 'object' && participant.data !== null) {
-        assessmentData = participant.data;
+      if (typeof participant.connections === 'string') {
+        assessmentData = JSON.parse(participant.connections);
+      } else if (typeof participant.connections === 'object' && participant.connections !== null) {
+        assessmentData = participant.connections;
       }
     } catch (error) {
       console.error("Error parsing connections JSON:", error);
@@ -56,7 +56,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         return { icon: <Users size={10} />, text: 'Ready', color: 'text-gray-500' };
     };
     const status = getStatus();
-    // --- END: Fail-Safe State Logic from User ---
+    // --- END: Fail-Safe State Logic from User (Corrected) ---
 
     const handleInteraction = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.selection-checkbox')) return;
