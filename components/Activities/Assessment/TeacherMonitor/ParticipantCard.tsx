@@ -18,18 +18,19 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
     const [isPrintMenuOpen, setPrintMenuOpen] = useState(false);
     
     const isTeacher = participant.role === 'teacher';
-    const isDQ = !!participant.disqualified;
+    const isDQ = participant.disqualified;
     const hasScore = participant.score != null;
 
-    // --- START: Corrected State Logic ---
-    // Logic now uses boolean flags `graded` and `released` from the payload, instead of a `status` string.
-    const isReleased = !!participant.released;
-    const isGraded = !!participant.graded && !isReleased;
+    // --- START: Refined State Logic ---
+    // The participant's state is determined by a clear hierarchy.
+    // Correctly reference the boolean flags from the `participant.data` object.
+    const isReleased = !!participant.data?.released;
+    const isGraded = !!participant.data?.graded && !isReleased;
 
-    // Other states are deduced from progress and the primary boolean flags.
-    const isSubmitted = participant.progress === 1 && !isGraded && !isReleased && !isDQ;
-    const isInProgress = participant.progress > 0 && participant.progress < 1 && !isGraded && !isReleased && !isDQ;
-    const isReady = !(isSubmitted || isInProgress || isGraded || isReleased || isDQ || isTeacher);
+    const isSubmitted = participant.progress === 1 && !isGraded && !isReleased;
+    const isInProgress = participant.progress > 0 && participant.progress < 1 && !isGraded && !isReleased;
+    // Any other state is considered Ready.
+    const isReady = !isReleased && !isGraded && !isSubmitted && !isInProgress && !isTeacher;
 
     const showActionButtons = isGraded || isReleased || isSubmitted || isDQ;
     const isInteractive = !isTeacher && (showActionButtons || isInProgress);
@@ -43,7 +44,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         return { icon: <Users size={10} />, text: 'Ready', color: 'text-gray-500' };
     };
     const status = getStatus();
-    // --- END: Corrected State Logic ---
+    // --- END: Refined State Logic ---
 
     const handleInteraction = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.selection-checkbox')) return;
@@ -60,7 +61,7 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         <div 
             onClick={handleInteraction}
             onDoubleClick={handleInteraction}
-            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50' : (isReleased ? 'bg-purple-500/10 border-purple-500/30' : (isGraded ? 'bg-green-500/10 border-green-500/30' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10')))} ${isInteractive ? 'hover:bg-opacity-20 cursor-pointer' : 'cursor-default'} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+            className={`relative overflow-hidden rounded-xl p-4 border transition-all group flex flex-col gap-3 select-none ${isDQ ? 'bg-red-900/10 border-red-500/50' : (isReleased ? 'bg-purple-500/10 border-purple-500/30' : (isGraded ? 'bg-green-500/10 border-green-500/30' : (isInProgress ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10')))} ${isInteractive ? 'hover:bg-opacity-20 cursor-pointer' : 'cursor-default'} ${isSelected ? 'ring-2 ring-blue-500' : ''} ${hasScore ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-black' : ''}`}>
              {!isTeacher && (
                 <div className="absolute top-2 right-2 z-20 selection-checkbox p-1" onClick={(e) => { e.stopPropagation(); onToggleSelect(participant.id); }}>
                     {isSelected ? <CheckSquare className="text-blue-500 fill-blue-500/20 cursor-pointer" size={20} /> : <Square className="text-gray-600 hover:text-white cursor-pointer" size={20} />}
