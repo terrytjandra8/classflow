@@ -1,4 +1,3 @@
-
 import React, { memo, useState } from 'react';
 import { CheckSquare, Square, ShieldCheck, User, Ban, ShieldAlert, FileWarning, Activity, CheckCircle, Clock, Users, RefreshCw, Printer, ExternalLink, PlayCircle, Unlock, RotateCcw, ChevronDown, Eye } from 'lucide-react';
 import { PrintMode } from '../AssessmentPrintView';
@@ -54,7 +53,13 @@ const ParticipantCardComponent: React.FC<ParticipantCardProps> = ({ participant,
         onPrint(participant, mode);
         setPrintMenuOpen(false);
     };
-
+    console.log(`Data for ${participant.name}:`, { 
+        status: participant.status, 
+        score: participant.score, 
+        isReleased, 
+        isGraded,
+        showActionButtons
+    });
     return (
         <div 
             onClick={handleInteraction}
