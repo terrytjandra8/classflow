@@ -46,7 +46,8 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 onAutoSave(grades, answers);
-                setIsDirty(false); // Reset dirty flag after autosave
+                // NOTE: We do NOT reset the dirty flag here. The dirty flag should persist until a MANUAL
+                // save action is performed (Save, Save & Release, Republish).
             }, 2000);
         };
     }, [onAutoSave]);
@@ -140,6 +141,10 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
         return Object.values(currentGrades).reduce((acc, curr) => acc + (curr?.score || 0), 0);
     }, [currentGrades]);
 
+    const resetDirty = useCallback(() => {
+        setIsDirty(false);
+    }, []);
+
     return {
         currentAnswers,
         currentGrades,
@@ -152,7 +157,7 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
         setLightboxImageUrl,
         setRawView,
         setActiveFeedbackFormats,
-        resetDirty: () => setIsDirty(false),
+        resetDirty,
         handleAnswerChange,
         handleGradeChange,
         handleClearAnswer,

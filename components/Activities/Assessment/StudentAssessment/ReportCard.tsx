@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, Home, Printer, Eye, MessageSquare, ChevronDown } from 'lucide-react';
+import { CheckCircle, Home, Printer, Eye, MessageSquare, ChevronDown, File, FileText, FileX } from 'lucide-react';
 import { AssessmentQuestion, Board } from '../../../../types';
 import { useBoard } from '../../../BoardView/BoardContext';
 import { supabase } from '../../../../services/supabaseClient';
@@ -29,6 +29,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
     const totalMaxScore = questions.reduce((acc, q) => acc + (q.points || 0), 0);
     const answers = submissionData?.answers || {};
+    const isGraded = submissionData?.graded || submissionData?.released;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -101,10 +102,18 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                             <Printer size={18} /> Export to PDF <ChevronDown size={16} className={`transition-transform ${showPrintDropdown ? 'rotate-180' : ''}`} />
                         </button>
                         {showPrintDropdown && (
-                            <div className="absolute top-full right-0 mt-2 w-56 bg-[#282828] border border-white/10 rounded-lg shadow-2xl z-10 text-left overflow-hidden animate-in fade-in zoom-in-95">
-                                <button onClick={() => handlePrintRequest('BLANK')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper Only</button>
-                                <button onClick={() => handlePrintRequest('WITH_ANSWERS')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper + My Answer</button>
-                                <button onClick={() => handlePrintRequest('WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-sm px-3 py-2.5 hover:bg-white/5 flex items-center gap-3">Paper + Answer + Feedback</button>
+                            <div className="absolute top-full right-0 mt-2 w-64 bg-[#282828] border border-white/10 rounded-lg shadow-2xl z-10 text-left overflow-hidden animate-in fade-in zoom-in-95">
+                                {isGraded && (
+                                    <button onClick={() => handlePrintRequest('WITH_ANSWERS_AND_FEEDBACK')} className="w-full text-sm px-4 py-3 hover:bg-white/5 flex items-center gap-3">
+                                        <FileText size={16} /> Print with Feedback
+                                    </button>
+                                )}
+                                <button onClick={() => handlePrintRequest('WITH_ANSWERS')} className="w-full text-sm px-4 py-3 hover:bg-white/5 flex items-center gap-3">
+                                    <File size={16} /> Print My Submission
+                                </button>
+                                <button onClick={() => handlePrintRequest('BLANK')} className="w-full text-sm px-4 py-3 hover:bg-white/5 flex items-center gap-3">
+                                    <FileX size={16} /> Print Blank Paper
+                                </button>
                             </div>
                         )}
                     </div>
