@@ -366,7 +366,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                             <thead className={`text-xs uppercase font-bold text-gray-500 ${theme === 'light' ? 'bg-gray-50' : 'bg-[#111]'}`}>
                                 <tr>
                                     <th className="px-6 py-4 font-bold tracking-wider">Assessment Name</th>
-                                    <th className.jsx("px-6 py-4 font-bold tracking-wider", "Submitted Date", "th")}>
+                                    <th className="px-6 py-4 font-bold tracking-wider">Submitted Date</th>
                                     <th className="px-6 py-4 font-bold tracking-wider">Status</th>
                                     <th className="px-6 py-4 font-bold tracking-wider">Feedback</th>
                                     <th className="px-6 py-4 font-bold tracking-wider text-right">Score</th>
