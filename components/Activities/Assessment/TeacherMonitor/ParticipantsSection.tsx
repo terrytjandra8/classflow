@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { File, CheckCircle, AlertTriangle, RefreshCw, Printer, User, UserCheck, XCircle, FileText, FileX, Eye } from 'lucide-react';
 import { PrintMode } from '../AssessmentPrintView';
@@ -65,7 +64,8 @@ const StudentCard = ({ student, selected, onToggleSelect, onReset, onContinue, o
     const currentStatus = statusConfig[student.status] || statusConfig['Ready'];
     const [printMenuOpen, setPrintMenuOpen] = useState(false);
 
-    const canGradeOrView = ['In Progress', 'Submitted', 'Graded', 'Revising'].includes(student.status);
+    // FIXED LINE: Now checks if they have progress or a score, bypassing the "Ready" status bug!
+    const canGradeOrView = student.progress > 0 || student.score !== undefined || ['In Progress', 'Submitted', 'Graded', 'Revising'].includes(student.status);
 
     return (
         <div className={`bg-[#1a1a1a] p-4 rounded-lg border transition-colors ${selected ? 'border-blue-500' : 'border-white/10'}`}>
