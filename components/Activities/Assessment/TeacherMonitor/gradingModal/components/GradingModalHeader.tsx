@@ -1,21 +1,61 @@
 
-import React from 'react';
-import { User, Save, RefreshCcw, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Save, RefreshCcw, Check, X, Loader2, CheckCircle, UploadCloud } from 'lucide-react';
 
 interface GradingModalHeaderProps {
     participantName: string;
     participantId: string;
     totalScore: number;
     questionsToReviseCount: number;
-    onSave: (release: boolean) => void;
+    isReleased: boolean;
+    isDirty: boolean;
+    onSave: (release: boolean) => Promise<boolean>;
     onAllowRevision: () => void;
     onClose: () => void;
 }
 
 export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(({
     participantName, participantId, totalScore, questionsToReviseCount,
-    onSave, onAllowRevision, onClose
+    isReleased, isDirty, onSave, onAllowRevision, onClose
 }) => {
+    
+    const [status, setStatus] = useState<'idle' | 'saving' | 'releasing'>('idle');
+    const [localIsReleased, setLocalIsReleased] = useState(isReleased);
+
+    useEffect(() => {
+        setLocalIsReleased(isReleased);
+    }, [isReleased]);
+
+    const handleSaveGrades = async () => {
+        setStatus('saving');
+        const success = await onSave(false);
+        if (success) {
+            // The parent component will close the modal, no need for a 'saved' state here
+        } else {
+            setStatus('idle'); // Stay open on failure
+        }
+    };
+
+    const handleSaveAndRelease = async () => {
+        setStatus('releasing');
+        const success = await onSave(true);
+        if (success) {
+            setLocalIsReleased(true);
+        } 
+        // Keep the modal open to show status, reset button state
+        setStatus('idle');
+    };
+
+    const isActionInProgress = status === 'saving' || status === 'releasing';
+    const isPublished = localIsReleased && !isDirty;
+
+    const getReleaseButtonContent = () => {
+        if (isActionInProgress) return <><Loader2 size={16} className="animate-spin"/> Releasing...</>;
+        if (isPublished) return <><CheckCircle size={16}/> Released</>;
+        if (localIsReleased && isDirty) return <><UploadCloud size={16}/> Republish</>;
+        return <><Check size={16}/> Save & Release</>;
+    };
+
     return (
         <div className="flex justify-between items-center p-4 border-b border-white/10 shrink-0 bg-[#1a1a1a] rounded-t-2xl">
             <div>
@@ -29,16 +69,18 @@ export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(
                 </div>
                 
                 <button 
-                    onClick={() => onSave(false)} 
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+                    onClick={handleSaveGrades} 
+                    disabled={isActionInProgress || !isDirty}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md disabled:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
                     title="Save the current grades without releasing them to the student."
                 >
-                    <Save size={16}/> Save Grades
+                    {status === 'saving' ? <><Loader2 size={16} className="animate-spin"/> Saving...</> : <><Save size={16}/> Save Grades</>}
                 </button>
 
                 <button 
                     onClick={onAllowRevision}
-                    className="relative px-4 py-2 bg-amber-600 text-white rounded-lg font-bold text-sm hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-md"
+                    disabled={isActionInProgress}
+                    className="relative px-4 py-2 bg-amber-600 text-white rounded-lg font-bold text-sm hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-md disabled:opacity-50"
                     title="Allow the student to revise the selected questions."
                 >
                     <RefreshCcw size={16}/> Allow Revision
@@ -48,11 +90,12 @@ export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(
                 </button>
 
                 <button 
-                    onClick={() => onSave(true)} 
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-md"
-                    title="Save the grades and make them visible to the student."
+                    onClick={handleSaveAndRelease} 
+                    disabled={isActionInProgress || isPublished}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-md disabled:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    title={isPublished ? "Grades have been released and are up to date." : (localIsReleased && isDirty) ? "Republish the updated grades to the student." : "Save the grades and make them visible to the student."}
                 >
-                    <Check size={16}/> Save & Release
+                    {getReleaseButtonContent()}
                 </button>
 
                 <button 

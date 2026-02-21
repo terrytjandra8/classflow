@@ -11,7 +11,7 @@ interface GradingModalProps {
     participant: any;
     onClose: () => void;
     questions: AssessmentQuestion[];
-    onSave: (grades: Record<string, { score: number, feedback: string }>, release: boolean, retryIds?: string[]) => void;
+    onSave: (grades: Record<string, { score: number, feedback: string }>, release: boolean, retryIds?: string[]) => Promise<boolean>; // Returns true on success
     onAutoSave: (
         grades: Record<string, { score: number, feedback: string }>,
         updatedAnswers?: Record<string, string>,
@@ -29,9 +29,11 @@ export const GradingModal: React.FC<GradingModalProps> = ({
         rawView,
         feedbackEditorRefs,
         activeFeedbackFormats,
+        isDirty,
         setLightboxImageUrl,
         setRawView,
         setActiveFeedbackFormats,
+        resetDirty,
         handleClearAnswer,
         handleStudentAnswerImageUpload,
         handleGradeChange,
@@ -40,18 +42,31 @@ export const GradingModal: React.FC<GradingModalProps> = ({
         totalScore,
     } = useGradingState({ isOpen, participant, questions, onAutoSave });
 
-    const handleAllowRevision = () => {
+    const handleSaveAndClose = async (release: boolean) => {
+        const success = await onSave(currentGrades, release, Array.from(questionsToRevise));
+        if (success) {
+            if (release) {
+                // For 'Save & Release', we let the header handle the state
+                resetDirty();
+                return true;
+            } else {
+                // For regular 'Save', we can close immediately
+                onClose();
+            }
+        }
+        return success;
+    };
+
+    const handleAllowRevision = async () => {
         if (questionsToRevise.size === 0) {
             alert('Please select which question(s) the student needs to revise.');
             return;
         }
-        onSave(currentGrades, false, Array.from(questionsToRevise));
-        onClose();
+        const success = await onSave(currentGrades, false, Array.from(questionsToRevise));
+        if (success) {
+            onClose();
+        }
     };
-    
-    const handleSave = (release: boolean) => {
-        onSave(currentGrades, release, Array.from(questionsToRevise));
-    }
 
     if (!isOpen || !participant) return null;
 
@@ -67,7 +82,9 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                         participantId={participant.id}
                         totalScore={totalScore}
                         questionsToReviseCount={questionsToRevise.size}
-                        onSave={handleSave}
+                        isReleased={participant.data?.released}
+                        isDirty={isDirty}
+                        onSave={handleSaveAndClose}
                         onAllowRevision={handleAllowRevision}
                         onClose={onClose}
                     />

@@ -34,20 +34,22 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         setSubmissions(initialSubmissions);
     }, [initialSubmissions]);
 
-    const handleForceRefresh = async () => {
+    const handleForceRefresh = useCallback(async () => {
         if (boardId) {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('notes')
                 .select('*')
                 .eq('board_id', boardId)
                 .eq('type', 'assessment_submission');
             
-            if (data) {
+            if (data && !error) {
                 const mapped = data.map(mapNote);
                 setSubmissions(mapped);
+            } else {
+                console.error("Error fetching submissions:", error);
             }
         }
-    };
+    }, [boardId]);
 
     // Modal States
     const [retryModal, setRetryModal] = useState<{isOpen: boolean, participant: any}>({isOpen: false, participant: null});
@@ -62,11 +64,9 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
     const ibLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/IB.png').data.publicUrl;
 
-    // Local grading state
-    const [currentGrades, setCurrentGrades] = useState<Record<string, {score: number, feedback: string}>>({});
-
     // Process Data (Memoized)
     const { teachers, students } = useMemo(() => {
+        // ... (rest of the processing logic is unchanged)
         const checkWordCounts = (answers: Record<string, string>) => {
             return questions.some(q => {
                 if(q.type !== 'essay' || !q.minWords) return false;
@@ -86,7 +86,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             
             let status = 'In Progress';
             if (isDQ) status = 'Disqualified';
-            else if (data?.graded || data?.released) status = 'Graded';
+            else if (data?.released) status = 'Graded & Released';
+            else if (data?.graded) status = 'Graded';
             else if (data?.submitted) status = 'Submitted';
 
             const answers = data?.answers || {};
@@ -163,17 +164,15 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     const handleContinue = async (participant: any) => {
         if (!participant.noteId) return;
         const updatedData = { ...participant.data, submitted: false, disqualified: false, graded: false, released: false };
-        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: 'In Progress', color: NoteColor.WHITE } : sub));
         await supabase.from('notes').update({ connections: updatedData, content: 'In Progress', color: 'bg-white' }).eq('id', participant.noteId);
-        setTimeout(handleForceRefresh, 500);
+        handleForceRefresh();
     };
 
     const handleAllowRevision = async (participant: any) => {
         if (!participant.noteId) return;
         const updatedData = { ...participant.data, submitted: false, graded: false, released: false, retryQuestions: [] };
-        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: 'Revising', color: NoteColor.WHITE } : sub));
         await supabase.from('notes').update({ connections: updatedData, content: 'Revising', color: 'bg-white' }).eq('id', participant.noteId);
-        setTimeout(handleForceRefresh, 500);
+        handleForceRefresh();
     };
     
     const handleBulkAllowRevision = async () => {
@@ -182,14 +181,6 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         const targets = students.filter(s => selectedStudentIds.has(s.id));
         const noteIdsToUpdate = targets.map(p => p.noteId).filter(Boolean);
 
-        setSubmissions(prev => prev.map(sub => {
-            if (noteIdsToUpdate.includes(sub.id)) {
-                 const updatedData = { ...(sub.connections as any || {}), submitted: false, graded: false, released: false, retryQuestions: [] };
-                 return { ...sub, connections: updatedData, content: 'Revising', color: NoteColor.WHITE };
-            }
-            return sub;
-        }));
-
         const updates = noteIdsToUpdate.map(noteId => {
              const p = targets.find(t => t.noteId === noteId);
              const updatedData = { ...(p?.data || {}), submitted: false, graded: false, released: false, retryQuestions: [] };
@@ -197,7 +188,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         });
 
         await Promise.all(updates);
-        setTimeout(handleForceRefresh, 500);
+        handleForceRefresh();
         setSelectedStudentIds(new Set());
     };
 
@@ -206,10 +197,9 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         if (!participant || !participant.noteId) return;
 
         const updatedData = { ...participant.data, answers: {}, violations: 0, score: 0, submitted: false, disqualified: false, graded: false, released: false, retryQuestions: [] };
-        setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData, content: 'Restarted', color: NoteColor.WHITE } : sub));
         await supabase.from('notes').update({ connections: updatedData, content: 'Restarted', color: 'bg-white' }).eq('id', participant.noteId);
         
-        setTimeout(handleForceRefresh, 500);
+        handleForceRefresh();
         setRetryModal({ isOpen: false, participant: null });
     };
 
@@ -218,24 +208,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             alert(`Student ${participant.name} has not started the assessment yet.`);
             return;
         }
-        
-        const data = participant.data || {};
-        const answers = data.answers || {};
-        const initGrades: Record<string, {score: number, feedback: string}> = {};
-        
-        questions.forEach(q => {
-            if (q.type === 'section') return;
-            const existingGrade = data.grading?.[q.id];
-            if (existingGrade) {
-                initGrades[q.id] = existingGrade;
-            } else {
-                let score = (q.type === 'mcq' && answers[q.id] === q.correctAnswer) ? q.points : 0;
-                initGrades[q.id] = { score, feedback: '' };
-            }
-        });
-
-        setCurrentGrades(initGrades);
-        setGradingModal({ isOpen: true, participant: { ...participant, data } });
+        setGradingModal({ isOpen: true, participant });
     };
 
     const handleAutoSave = useCallback(async (grades: Record<string, { score: number, feedback: string }>, updatedAnswers?: Record<string, string>) => {
@@ -247,58 +220,72 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             ...participant.data,
             grading: grades,
             score: totalScore,
-            graded: true, 
-            submitted: true,
+            graded: true,
             ...(updatedAnswers && { answers: updatedAnswers }),
         };
 
         const { error } = await supabase.from('notes').update({ connections: updatedData }).eq('id', participant.noteId);
-        if (error) throw error;
+        if (error) {
+            console.error("Autosave error:", error);
+            return;
+        }
         
+        // Optimistically update local state for a smoother experience
         setSubmissions(prev => prev.map(sub => sub.id === participant.noteId ? { ...sub, connections: updatedData } : sub));
-    }, [gradingModal]);
 
-    const saveGrades = async (grades: Record<string, { score: number, feedback: string }>, release: boolean, retryIds?: string[]) => {
+    }, [gradingModal.participant]);
+
+    const saveGrades = async (grades: Record<string, { score: number, feedback: string }>, release: boolean, retryIds?: string[]): Promise<boolean> => {
         const { participant } = gradingModal;
-        if (!participant || !participant.noteId) return;
+        if (!participant || !participant.noteId) return false;
 
         const totalScore = Object.values(grades).reduce((acc: number, curr: any) => acc + (curr.score || 0), 0);
+        const isRevision = retryIds && retryIds.length > 0;
         const updatedData = { 
             ...participant.data, 
             grading: grades, 
             score: totalScore, 
-            graded: true, 
-            released: release, 
-            submitted: true,
-            ...(retryIds && { retryQuestions: retryIds, submitted: false, graded: false, released: false }),
+            graded: !isRevision,
+            released: release && !isRevision,
+            submitted: !isRevision,
+            ...(isRevision && { retryQuestions: retryIds, submitted: false, graded: false, released: false }),
         };
 
-        const submissionContent = release ? `Graded: ${totalScore}` : (retryIds && retryIds.length > 0 ? 'Revising' : 'Submitted (Grading)');
-        const submissionColor = release ? NoteColor.GREEN : NoteColor.WHITE;
+        const submissionContent = isRevision ? 'Revising' : (release ? `Graded: ${totalScore}` : 'Submitted (Graded)');
 
-        setSubmissions(prev => prev.map(sub => 
-            sub.id === participant.noteId ? 
-            { ...sub, connections: updatedData, content: submissionContent, color: submissionColor } : 
-            sub
-        ));
-        setGradingModal({ isOpen: false, participant: null });
+        try {
+            const { error: noteError } = await supabase.from('notes').update({
+                connections: updatedData,
+                content: submissionContent,
+                color: release ? 'bg-green-200' : 'bg-white'
+            }).eq('id', participant.noteId);
 
-        await supabase.from('notes').update({ 
-            connections: updatedData, 
-            content: submissionContent, 
-            color: release ? 'bg-green-200' : 'bg-white' 
-        }).eq('id', participant.noteId);
+            if (noteError) throw noteError;
 
-        if (boardId && participant.id && release) {
-             await supabase.from('grades').upsert({ 
-                 student_id: participant.id, 
-                 board_id: boardId, 
-                 score: totalScore, 
-                 feedback: 'See assessment details' 
-             }, { onConflict: 'student_id, board_id' });
+            if (boardId && participant.id && release && !isRevision) {
+                 const { error: gradeError } = await supabase.from('grades').upsert({ 
+                     student_id: participant.id, 
+                     board_id: boardId, 
+                     score: totalScore, 
+                     feedback: 'See assessment details' 
+                 }, { onConflict: 'student_id, board_id' });
+                 if (gradeError) throw gradeError;
+            }
+            
+            // Close modal only on regular save, not on release
+            if (!release) {
+                setGradingModal({ isOpen: false, participant: null });
+            }
+
+            // Refresh data in the background
+            handleForceRefresh(); 
+            return true;
+
+        } catch (error) {
+            console.error("Failed to save grades:", error);
+            alert(`An error occurred while saving grades for ${participant.name}. Please try again.`);
+            return false;
         }
-
-        setTimeout(handleForceRefresh, 500);
     };
 
     const handlePrint = (targets: any[], mode: PrintMode) => {
@@ -332,7 +319,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
             <HeaderSection 
                 activeStudentsCount={activeStudents.length} 
-                submittedCount={students.filter(s => s.status === 'Submitted' || s.status === 'Graded').length}
+                submittedCount={students.filter(s => s.status.includes('Graded') || s.status.includes('Submitted')).length}
                 onPrintMaster={handlePrintMaster}
                 onForceRefresh={handleForceRefresh}
             />
@@ -359,7 +346,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
             />
             
             <RetryModal 
-                isOpen={retryModal.isOpen} 
+                isOpen={retryModal.isOpen}
                 participant={retryModal.participant} 
                 onClose={() => setRetryModal({ isOpen: false, participant: null })}
                 onConfirm={confirmReset}

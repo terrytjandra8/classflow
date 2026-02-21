@@ -18,13 +18,13 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
     const [currentAnswers, setCurrentAnswers] = useState<Record<string, string>>({});
     const [currentGrades, setCurrentGrades] = useState<Record<string, { score: number, feedback: string }>>({});
     const [questionsToRevise, setQuestionsToRevise] = useState<Set<string>>(new Set());
+    const [isDirty, setIsDirty] = useState(false);
     
     const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
     const [rawView, setRawView] = useState<Record<string, boolean>>({});
     const feedbackEditorRefs = useRef<Record<string, RichTextEditorRef | null>>({});
     const [activeFeedbackFormats, setActiveFeedbackFormats] = useState<Record<string, FormatState>>({});
 
-    // Initialize state when the modal opens
     useEffect(() => {
         if (isOpen && participant) {
             setCurrentAnswers(getInitialAnswers(participant));
@@ -32,45 +32,49 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
             setQuestionsToRevise(new Set(participant.data?.retryQuestions || []));
             setRawView({});
             setActiveFeedbackFormats({});
+            setIsDirty(false); // Reset dirty state on open
         } else {
-            // Reset state on close to avoid stale data flashing
             setCurrentAnswers({});
             setCurrentGrades({});
             setQuestionsToRevise(new Set());
         }
     }, [isOpen, participant, questions]);
 
-    // Debounced autosave logic
     const debouncedAutoSave = useMemo(() => {
         let timeoutId: NodeJS.Timeout;
         return (grades: Record<string, { score: number, feedback: string }>, answers: Record<string, string>) => {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 onAutoSave(grades, answers);
-            }, 1500);
+                setIsDirty(false); // Reset dirty flag after autosave
+            }, 2000);
         };
     }, [onAutoSave]);
 
     const handleAnswerChange = useCallback((qId: string, value: string) => {
         const newAnswers = { ...currentAnswers, [qId]: value };
         setCurrentAnswers(newAnswers);
+        setIsDirty(true);
         debouncedAutoSave(currentGrades, newAnswers);
     }, [currentAnswers, currentGrades, debouncedAutoSave]);
 
     const handleGradeChange = useCallback((qId: string, score: number, feedback: string) => {
         const newGrades = { ...currentGrades, [qId]: { score, feedback } };
         setCurrentGrades(newGrades);
+        setIsDirty(true);
         debouncedAutoSave(newGrades, currentAnswers);
     }, [currentGrades, currentAnswers, debouncedAutoSave]);
 
     const handleClearAnswer = useCallback((qId: string) => {
         if (window.confirm('Are you sure you want to permanently erase this student\'s answer? This cannot be undone.')) {
+            setIsDirty(true);
             handleAnswerChange(qId, '');
             handleGradeChange(qId, 0, currentGrades[qId]?.feedback || '');
         }
     }, [handleAnswerChange, handleGradeChange, currentGrades]);
 
     const handleToggleQuestionToRevise = useCallback((qId: string) => {
+        setIsDirty(true);
         setQuestionsToRevise(prev => {
             const newSet = new Set(prev);
             if (newSet.has(qId)) {
@@ -89,7 +93,7 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
         input.onchange = async (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (!file) return;
-
+            setIsDirty(true);
             uploadImage(
                 file,
                 (placeholder) => handleAnswerChange(qId, placeholder),
@@ -109,12 +113,11 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
             if (!file) return;
             const editorRef = feedbackEditorRefs.current[qId];
             if (!editorRef) return;
-
+            setIsDirty(true);
             uploadImage(
                 file,
                 (placeholder) => editorRef.insertHTML(placeholder),
                 (finalHtml, _) => {
-                    // Wait for the placeholder to be rendered before replacing it
                     setTimeout(() => {
                         const currentContent = editorRef.getHTML();
                         const newContent = currentContent.replace(/<img id="temp-img-.*?"[^>]*>/, finalHtml);
@@ -138,7 +141,6 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
     }, [currentGrades]);
 
     return {
-        // State
         currentAnswers,
         currentGrades,
         questionsToRevise,
@@ -146,21 +148,17 @@ export const useGradingState = ({ isOpen, participant, questions, onAutoSave }: 
         rawView,
         feedbackEditorRefs,
         activeFeedbackFormats,
-
-        // State Setters
+        isDirty,
         setLightboxImageUrl,
         setRawView,
         setActiveFeedbackFormats,
-
-        // Handlers
+        resetDirty: () => setIsDirty(false),
         handleAnswerChange,
         handleGradeChange,
         handleClearAnswer,
         handleToggleQuestionToRevise,
         handleStudentAnswerImageUpload,
         handleFeedbackImageUpload,
-
-        // Derived State
         totalScore,
     };
 };
