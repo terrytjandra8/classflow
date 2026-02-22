@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Play, Pause, Lock, BookOpen, SkipForward, Eye, Share2, Settings, Radio, EyeOff, Printer, Users, ChevronDown, Rocket } from 'lucide-react';
 import { AssessmentConfig } from '../../../../types';
 
@@ -40,14 +40,28 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
     const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(title);
+    const titleInputRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        if (isEditingTitle && titleInputRef.current) {
+            const textarea = titleInputRef.current;
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+            textarea.focus();
+            textarea.select();
+        }
+    }, [isEditingTitle]);
 
     const handleTitleDoubleClick = () => {
         setEditedTitle(title);
         setIsEditingTitle(true);
     };
 
-    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setEditedTitle(e.target.value);
+        const textarea = e.target;
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
     };
 
     const handleTitleBlur = () => {
@@ -57,8 +71,9 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
         setIsEditingTitle(false);
     };
 
-    const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter') {
+            e.preventDefault();
             handleTitleBlur();
         } else if (e.key === 'Escape') {
             setIsEditingTitle(false);
@@ -72,19 +87,19 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                 <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
                 
                 {isEditingTitle ? (
-                    <input
-                        type="text"
+                    <textarea
+                        ref={titleInputRef}
                         value={editedTitle}
                         onChange={handleTitleChange}
                         onBlur={handleTitleBlur}
                         onKeyDown={handleTitleKeyDown}
-                        className="bg-transparent border-b border-white/50 text-lg font-bold focus:outline-none focus:border-blue-500 text-white"
-                        autoFocus
+                        className="bg-transparent border-b border-white/50 text-lg font-bold focus:outline-none focus:border-blue-500 text-white resize-none overflow-hidden"
+                        rows={1}
                     />
                 ) : (
                     <h1 onDoubleClick={handleTitleDoubleClick} className="font-bold text-lg flex items-center gap-2 cursor-pointer" title="Double-click to edit">
                         <Lock size={16} className="text-red-500 shrink-0"/>
-                        <span className="truncate">{title}</span>
+                        <span className="break-words">{title}</span>
                     </h1>
                 )}
                 
