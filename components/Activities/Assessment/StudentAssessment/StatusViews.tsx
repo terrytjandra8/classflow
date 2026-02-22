@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Lock, Clock, RefreshCw, Eye, Ban, ShieldAlert, Home, CheckCircle, Rocket, UserCheck } from 'lucide-react';
+import { Lock, Clock, RefreshCw, Eye, Ban, ShieldAlert, Home, CheckCircle, Rocket, UserCheck, Puzzle } from 'lucide-react';
 import { AssessmentConfig, AssessmentQuestion, Board } from '../../../../types';
 
 interface StatusViewProps {
@@ -14,6 +14,7 @@ interface StatusViewProps {
     onStartTest?: () => void;
     onManualRefresh?: () => void;
     submissionData?: any;
+    onCheckStatus?: () => void; // Added for checking second chance
 }
 
 const PreviewBanner = ({ onExit }: { onExit?: () => void }) => (
@@ -25,8 +26,20 @@ const PreviewBanner = ({ onExit }: { onExit?: () => void }) => (
     </div>
 );
 
+const RuleItem = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+    <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-900/50 border border-red-500/20 flex items-center justify-center text-red-400 mt-1">
+            {icon}
+        </div>
+        <div>
+            <h4 className="font-bold text-white">{title}</h4>
+            <p className="text-gray-400 text-sm">{description}</p>
+        </div>
+    </div>
+);
+
 export const StatusViews: React.FC<StatusViewProps> = ({ 
-    type, board, config, questions, isPreviewMode, onExitPreview, onReturnHome, onStartTest, onManualRefresh, submissionData 
+    type, board, config, questions, isPreviewMode, onExitPreview, onReturnHome, onStartTest, onManualRefresh, submissionData, onCheckStatus
 }) => {
 
     if (type === 'setup') {
@@ -34,16 +47,14 @@ export const StatusViews: React.FC<StatusViewProps> = ({
             <div className="h-full flex flex-col items-center justify-center bg-[#050505] text-white p-6">
                 <div className="max-w-md w-full text-center space-y-8 animate-in fade-in">
                     
-                    {/* Header */}
                     <div className="space-y-2">
                         <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto animate-pulse border border-blue-500/20 shadow-lg mb-6">
                             <Clock size={40} className="text-blue-500" />
                         </div>
                         <h1 className="text-2xl font-black mb-2 text-white">Waiting for Teacher</h1>
-                        <p className="text-gray-400 text-sm">Please wait in the lobby until the assessment begins.</p>
+                        <p className="text-gray-400 text-sm">The assessment will begin shortly. Please wait here.</p>
                     </div>
 
-                    {/* Assessment Details Card */}
                     <div className="bg-[#1a1a1a] p-6 rounded-2xl border border-white/10 text-left shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <UserCheck size={80} className="text-white" />
@@ -103,26 +114,38 @@ export const StatusViews: React.FC<StatusViewProps> = ({
                                 <CheckCircle size={20} /> Open Practice
                             </h3>
                             <p className="text-gray-300 text-sm leading-relaxed">
-                                This is an untimed practice session.
+                               This is an untimed practice session where you can freely explore the questions.
                             </p>
-                            <ul className="list-disc pl-5 mt-2 text-sm text-gray-300 space-y-1">
-                                <li>You can leave and return freely.</li>
-                                <li>No time limit.</li>
-                                <li>Focus mode (Anti-Cheat) is <strong>DISABLED</strong>.</li>
+                            <ul className="list-disc pl-5 mt-3 text-sm text-gray-300 space-y-1">
+                                <li>You can leave and return to this activity anytime.</li>
+                                <li>Security features like fullscreen lock and tab monitoring are <strong>DISABLED</strong>.</li>
                             </ul>
                         </div>
                     ) : (
-                        <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-left">
-                            <h3 className="text-red-400 font-bold flex items-center gap-2 mb-2">
-                                <Ban size={20} /> Zero Tolerance Policy
+                        <div className="bg-[#1a1a1a] border border-white/10 p-6 rounded-2xl text-left space-y-6">
+                            <h3 className="text-red-400 font-bold flex items-center gap-2">
+                                <Ban size={20} /> Assessment Rules
                             </h3>
-                            <p className="text-gray-300 text-sm leading-relaxed">
-                                This assessment monitors your window activity. If you switch tabs or leave this page:
-                            </p>
-                            <ul className="list-disc pl-5 mt-2 text-sm text-gray-300 space-y-1">
-                                <li>You will be immediately disqualified.</li>
-                                <li>Your score will be set to 0.</li>
-                            </ul>
+                            <div className="space-y-5">
+                                <RuleItem 
+                                    icon={<Eye size={16} />}
+                                    title="Stay in the Test Window"
+                                    description="Navigating away, switching tabs, or minimizing the browser will result in immediate disqualification."
+                                />
+                                <RuleItem 
+                                    icon={<Puzzle size={16} />}
+                                    title="No Browser Extensions"
+                                    description="Interacting with extensions (like Grammarly) is treated as leaving the test and will cause disqualification."
+                                />
+                                <RuleItem 
+                                    icon={<Ban size={16} />}
+                                    title="No Right-Clicking"
+                                    description="Attempting to use the context menu (right-click) is disabled and will trigger a violation."
+                                />
+                            </div>
+                            <div className="bg-red-900/50 text-red-300 text-xs p-3 rounded-lg border border-red-500/20">
+                                Breaking these rules will automatically end the assessment and your score will be set to 0. This action is final.
+                            </div>
                         </div>
                     )}
                     
@@ -172,7 +195,8 @@ export const StatusViews: React.FC<StatusViewProps> = ({
                     <p className="text-red-400 font-bold text-lg mb-6">Focus Mode Violation Detected</p>
                     <div className="bg-black/40 p-4 rounded-xl border border-red-500/20 text-left mb-8">
                         <p className="text-gray-300 text-sm leading-relaxed">
-                            You navigated away from the assessment window.
+                           You navigated away from the assessment window, or your session was terminated by the teacher.
+                           <br/>If you believe this was a mistake, please contact your teacher.
                         </p>
                         <div className="mt-4 pt-4 border-t border-red-500/20">
                             <div className="flex justify-between items-center text-red-300 font-bold text-sm">
@@ -181,12 +205,24 @@ export const StatusViews: React.FC<StatusViewProps> = ({
                             </div>
                         </div>
                     </div>
-                    <button 
-                        onClick={onReturnHome}
-                        className="w-full bg-white text-red-900 font-bold py-3 rounded-xl hover:bg-gray-100 transition-colors border border-white flex items-center justify-center gap-2"
-                    >
-                        <Home size={18} /> Return to Dashboard
-                    </button>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <button 
+                            onClick={onReturnHome}
+                            className="w-full bg-white text-red-900 font-bold py-3 rounded-xl hover:bg-gray-100 transition-colors border border-white flex items-center justify-center gap-2"
+                        >
+                            <Home size={18} /> Return to Dashboard
+                        </button>
+                         <button 
+                            onClick={onCheckStatus}
+                            className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-500 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <RefreshCw size={18} /> Check for Second Chance
+                        </button>
+                    </div>
+                     <p className="text-xs text-gray-500 mt-4">
+                        If your teacher grants you a second chance, click the button above to rejoin.
+                    </p>
                 </div>
             </div>
         );

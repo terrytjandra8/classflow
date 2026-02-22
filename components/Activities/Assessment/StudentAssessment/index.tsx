@@ -36,6 +36,11 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     const isCreatingRef = useRef(false);
 
     const [submissionData, setSubmissionData] = useState<any>(null);
+    const submissionDataRef = useRef(submissionData);
+
+    useEffect(() => {
+        submissionDataRef.current = submissionData;
+    }, [submissionData]);
     
     const [now, setNow] = useState(Date.now());
     
@@ -110,6 +115,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     } else {
                         setSubmitted(true);
                         if (finalData.disqualified) setIsDisqualified(true);
+                        else setIsDisqualified(false); // Explicitly reset disqualification status
                         setHasStarted(true);
                     }
                     
@@ -124,7 +130,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
         if (localBackup) {
             if (localBackup.status === 'submitted' || localBackup.status === 'disqualified') {
-                console.log("Restoring FINAL state from local backup");
                 finalAnswers = localBackup.answers || {};
                 finalViolations = localBackup.violations || 0;
                 
@@ -136,8 +141,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 answersRef.current = finalAnswers;
                 setViolationCount(finalViolations);
                 violationCountRef.current = finalViolations;
-                
-                // Removed incorrect persistToDB call
                 return;
             }
 
@@ -145,20 +148,18 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             const serverCount = Object.keys(finalAnswers).length;
 
             if (localCount > serverCount) {
-                console.log("Restoring DRAFT from local backup (Newer Data Found)");
                 finalAnswers = { ...finalAnswers, ...localBackup.answers };
                 finalViolations = Math.max(finalViolations, localBackup.violations || 0);
-                
-                // Removed incorrect persistToDB call
             }
         }
 
         setSubmissionData(finalData);
         setAnswers(finalAnswers);
         answersRef.current = finalAnswers;
-        
         setViolationCount(finalViolations);
         violationCountRef.current = finalViolations;
+        setIsDisqualified(false); // Reset disqualification if fetched data is not terminal
+        setSubmitted(false);
 
         if (Object.keys(finalAnswers).length > 0 || dbId) {
             setHasStarted(true);
@@ -178,7 +179,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const persistToDB = useCallback(async (currentAnswers: Record<string, string>, currentViolations: number, disqualified: boolean, isFinalSubmit: boolean) => {
         if (isPreviewMode) return;
-        
         if (!submissionIdRef.current && isCreatingRef.current) return;
 
         setSaveStatus('saving');
@@ -193,10 +193,10 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             });
         }
         
-        const existingRetries = submissionData?.retryQuestions || [];
+        const existingRetries = submissionDataRef.current?.retryQuestions || [];
 
         const newSubmissionData = {
-            ...submissionData,
+            ...submissionDataRef.current,
             answers: currentAnswers,
             violations: currentViolations,
             score: autoScore,
@@ -239,7 +239,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             setSaveStatus('error');
             isCreatingRef.current = false;
         }
-    }, [board.id, userId, questions, isPreviewMode, submissionData, backupKey]);
+    }, [board.id, userId, questions, isPreviewMode, backupKey]);
 
     const handleManualSync = async () => {
         await persistToDB(answersRef.current, violationCountRef.current, false, false);
@@ -247,39 +247,23 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const handleViolation = useCallback(async () => {
         if (isPracticeMode) return;
-
         if ((!isTestActive && !isReadingMode) || submitted || isDisqualified) return;
 
         const newCount = violationCountRef.current + 1;
-        
         setViolationCount(newCount);
         violationCountRef.current = newCount;
-        
         setIsDisqualified(true);
         setSubmitted(true); 
         
-        saveToBackup({
-            answers: answersRef.current,
-            violations: newCount,
-            status: 'disqualified'
-        });
-        
+        saveToBackup({ answers: answersRef.current, violations: newCount, status: 'disqualified' });
         await persistToDB(answersRef.current, newCount, true, true);
     }, [isPracticeMode, isTestActive, isReadingMode, submitted, isDisqualified, saveToBackup, persistToDB]);
 
-
     const handleAnswerChange = useCallback((qId: string, value: string, immediate = false) => {
         if (isDisqualified || submitted || isClosed || isReadingMode) return;
-        
         answersRef.current = { ...answersRef.current, [qId]: value };
-        
         setAnswers(prev => ({ ...prev, [qId]: value }));
-        
-        saveToBackup({
-            answers: answersRef.current,
-            violations: violationCountRef.current,
-            status: 'active'
-        });
+        saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, status: 'active' });
         
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         setSaveStatus('saving');
@@ -298,19 +282,9 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const handleConfirmSubmit = async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        
-        if (retryQuestions.length > 0) {
-            setRetryQuestions([]); 
-        }
-
+        if (retryQuestions.length > 0) setRetryQuestions([]);
         setSubmitted(true);
-        
-        saveToBackup({
-            answers: answersRef.current,
-            violations: violationCountRef.current,
-            status: 'submitted'
-        });
-
+        saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, status: 'submitted' });
         await persistToDB(answersRef.current, violationCountRef.current, false, true);
     };
 
@@ -318,26 +292,18 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         if (!isPreviewMode && !isPracticeMode) {
             try {
                 await document.documentElement.requestFullscreen();
-            } catch (e) {
-                console.log("Fullscreen optional");
-            }
+            } catch (e) { console.log("Fullscreen optional"); }
         }
         setHasStarted(true);
         await persistToDB(answers, 0, false, false);
     };
 
     const returnToHome = () => {
-        if (isPreviewMode && onExitPreview) {
-            onExitPreview();
-        } else {
-            window.location.href = '/';
-        }
+        if (isPreviewMode && onExitPreview) onExitPreview();
+        else window.location.href = '/';
     };
 
-    const countWords = (text: string) => {
-        if (!text) return 0;
-        return text.trim().split(/\s+/).filter(w => w.length > 0).length;
-    };
+    const countWords = (text: string) => text ? text.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
 
     const meetsRequirements = useMemo(() => {
         return !questions.some(q => {
@@ -351,20 +317,18 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return <ReportCard board={board} questions={questions} submissionData={submissionData} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
     }
 
-    if (isDisqualified) return <StatusViews type="disqualified" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
+    if (isDisqualified) return <StatusViews type="disqualified" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} onCheckStatus={fetchSubmission} />;
     if (isClosed) return <StatusViews type="closed" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} submissionData={submissionData} />;
-    
     if (submitted && retryQuestions.length === 0) return <StatusViews type="submitted" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
-    
     if (config.status === 'setup' && !isPreviewMode) {
         return <StatusViews type="setup" board={board} config={config} questions={questions} onManualRefresh={() => window.location.reload()} />;
     }
-
     if (!hasStarted && !isReadingMode) {
         return <StatusViews type="intro" board={board} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onStartTest={startTest} config={config} />;
     }
 
     const isGuardEnabled = !!board.blockScreenshots && (isTestActive || isReadingMode || isPracticeMode) && !isDisqualified && !submitted;
+    const MemoizedActiveTest = React.memo(ActiveTest);
 
     return (
         <ScreenshotGuard isEnabled={isGuardEnabled} username={userName}>
@@ -388,7 +352,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     )}
                 </div>
 
-                <ActiveTest 
+                <MemoizedActiveTest 
                     boardTitle={board.title}
                     questions={questions}
                     config={config}
