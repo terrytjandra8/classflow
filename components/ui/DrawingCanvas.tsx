@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { PenTool, Trash2, Undo, Redo, Eraser } from 'lucide-react';
 
@@ -13,7 +14,7 @@ interface DrawingCanvasProps {
 }
 
 const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
-const STROKE_SIZES = [3, 6, 12]; // Small, Medium, Large
+const STROKE_SIZES = [3, 6, 12];
 
 export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
     onDrawEnd, 
@@ -155,15 +156,18 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         let clientX, clientY;
-        if ('touches' in e) {
-            clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+        if ('touches' in e && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
         } else {
-            clientX = (e as React.MouseEvent).clientX; clientY = (e as React.MouseEvent).clientY;
+            clientX = (e as React.MouseEvent).clientX;
+            clientY = (e as React.MouseEvent).clientY;
         }
         return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
     };
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -175,6 +179,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     };
 
     const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
         if (!isDrawing) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
