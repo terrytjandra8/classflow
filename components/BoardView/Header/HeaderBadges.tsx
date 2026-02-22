@@ -10,7 +10,7 @@ export const HeaderBadges: React.FC = () => {
     } = useHeaderLogic();
 
     return (
-        <div className="flex items-center gap-2 shrink-0 mt-1.5 pointer-events-auto relative z-[200]">
+        <div className="flex items-center gap-2 shrink-0 pointer-events-auto relative z-[200]">
             {/* Custom Class Group Dropdown */}
             <div className="relative">
                 <button 

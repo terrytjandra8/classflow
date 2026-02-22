@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, MonitorPlay, Minimize2, Loader2, Eye } from 'lucide-react';
 import { BoardProps } from './boardTypes';
@@ -15,7 +16,6 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     const parentContext = useBoard();
     const [isPresenting, setIsPresenting] = useState(false);
     
-    // 1. Merge Context with Props to create a local source of truth
     const board = props.board || parentContext.board;
     const isStudent = props.isStudent !== undefined ? props.isStudent : parentContext.isStudent;
     const sectionIdFilter = props.sectionIdFilter || parentContext.sectionIdFilter;
@@ -24,10 +24,8 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     const fontClass = props.fontClass || parentContext.fontClass;
     const userAvatar = props.userAvatar || parentContext.userAvatar;
     
-    // Combine props/context presentation mode with local fullscreen toggle
     const effectivePresentationMode = props.isPresentationMode || parentContext.isPresentationMode || isPresenting;
     
-    // Actions fallback to context if not in props
     const contextValue = useMemo(() => ({
         ...parentContext,
         board,
@@ -68,7 +66,6 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
         return () => document.removeEventListener('fullscreenchange', handleFsChange);
     }, []);
 
-    // AUTO-SCROLL TO HIGHLIGHTED STUDENT (MULTI-COLUMN SMART SCROLL)
     useEffect(() => {
         const highlightedId = parentContext.highlightedUserId;
         if (!highlightedId) return;
@@ -76,45 +73,30 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
         setTimeout(() => {
             const selector = `[data-author-id="${highlightedId}"]`;
             const elements = document.querySelectorAll(selector);
-            
             if (elements.length === 0) return;
 
-            // 1. Vertical Alignment for ALL columns
-            // Ensure every note by this author is vertically visible within its column
             elements.forEach((el) => {
                 const card = el as HTMLElement;
                 let parent = card.parentElement;
-                
-                // Find the nearest scrollable container
                 while (parent) {
                     const style = window.getComputedStyle(parent);
                     if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                        // Calculate target scroll position to center the card in this container
                         const parentRect = parent.getBoundingClientRect();
                         const cardRect = card.getBoundingClientRect();
-                        
-                        // Formula: CurrentScroll + (Distance to Viewport Top diff) - (Centering offset)
                         const targetScroll = parent.scrollTop + (cardRect.top - parentRect.top) - (parent.clientHeight / 2) + (card.clientHeight / 2);
-                        
-                        parent.scrollTo({
-                            top: targetScroll,
-                            behavior: 'smooth'
-                        });
-                        break; // Stop at first scrollable parent (Column)
+                        parent.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                        break;
                     }
                     parent = parent.parentElement;
                 }
             });
 
-            // 2. Horizontal / Global Alignment
-            // Bring the FIRST note (Left-most, Top-most) into the main viewport center
             setTimeout(() => {
                 const firstElement = elements[0] as HTMLElement;
                 if (firstElement) {
                     firstElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
                 }
-            }, 300); // Slight delay to allow vertical scrolls to settle
-
+            }, 300);
         }, 100);
         
     }, [parentContext.highlightedUserId]);
@@ -130,22 +112,14 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     };
 
     const renderContent = () => {
-        // Direct format check - no forced fallbacks based on filters
         switch (board.format) {
-            case 'stream': 
-                return <StreamLayout />;
-            case 'timeline':
-                return <TimelineLayout />;
-            case 'map':
-                return <MapLayout />;
+            case 'stream': return <StreamLayout />;
+            case 'timeline': return <TimelineLayout />;
+            case 'map': return <MapLayout />;
             case 'canvas':
-            case 'freeform':
-                return <SandboxLayout />;
+            case 'freeform': return <SandboxLayout />;
             case 'columns':
-                if (sectionIdFilter) {
-                     // If filtered to a single section (e.g. lesson slide), show grid instead of broken columns
-                     return <GridLayout gridClass="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6" isStudent={isStudent} />;
-                }
+                if (sectionIdFilter) return <GridLayout gridClass="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6" isStudent={isStudent} />;
                 return <ColumnsLayout isStudent={isStudent} />;
             case 'grid': 
             case 'wall': 
@@ -159,29 +133,17 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
             <div className={`absolute inset-0 z-0 ${embeddedMode ? '' : 'fixed'}`} style={backgroundStyle}></div>
             
             <div className="relative z-10 flex flex-col h-full">
-                {/* Header: Visible unless embedded or fullscreen presenting */}
-                {!embeddedMode && (
-                    <BoardHeader 
-                        isPresenting={isPresenting}
-                        onTogglePresentation={togglePresentation}
-                    />
-                )}
+                {!embeddedMode && <BoardHeader isPresenting={isPresenting} onTogglePresentation={togglePresentation} />}
                 
-                {/* Presentation Mode Banner */}
                 {effectivePresentationMode && (
                     <div className="absolute top-4 left-4 z-50 pointer-events-none">
-                        <span className="bg-green-600/90 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur border border-white/20 uppercase tracking-widest animate-pulse">
-                            PROJECTOR VIEW
-                        </span>
+                        <span className="bg-green-600/90 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur border border-white/20 uppercase tracking-widest animate-pulse">PROJECTOR VIEW</span>
                     </div>
                 )}
 
-                {/* Simulation Banner - VISIBLE CONFIRMATION FOR TEACHER */}
                 {parentContext.isSimulatingStudent && (
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[60] animate-in slide-in-from-top-4 fade-in pointer-events-none">
-                        <div className="bg-indigo-600/90 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-2xl backdrop-blur-md border border-indigo-400 flex items-center gap-2">
-                            <Eye size={14} className="animate-pulse" /> Viewing as Student
-                        </div>
+                    <div className="w-full flex-shrink-0 bg-indigo-600/90 text-white px-4 py-1.5 text-xs font-bold shadow-lg backdrop-blur-md border-y border-indigo-400 flex items-center justify-center gap-2 z-40">
+                        <Eye size={14} /> Viewing as Student
                     </div>
                 )}
                 
@@ -197,20 +159,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
                 )}
 
                 <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isPresenting || effectivePresentationMode ? 'presentation-mode' : ''} ${embeddedMode ? '' : ''}`}>
-                    <style>{`
-                        .presentation-mode {
-                            font-size: 1.25rem;
-                        }
-                        .presentation-mode .note-card-title {
-                            font-size: 1.5rem !important;
-                        }
-                        .presentation-mode .note-card-content {
-                            font-size: 1.1rem !important;
-                        }
-                        .presentation-mode .board-header-hidden {
-                            display: none;
-                        }
-                    `}</style>
+                    <style>{`.presentation-mode { font-size: 1.25rem; } .presentation-mode .note-card-title { font-size: 1.5rem !important; } .presentation-mode .note-card-content { font-size: 1.1rem !important; }`}</style>
                     
                     {isLoadingNotes ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/5 backdrop-blur-[1px] z-20">
