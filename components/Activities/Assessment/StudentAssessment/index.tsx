@@ -6,7 +6,7 @@ import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
 import { ScreenshotGuard } from '../../../Security/ScreenshotGuard';
-import { Cloud, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Cloud, Loader2, AlertCircle } from 'lucide-react';
 
 interface StudentAssessmentProps {
     board: Board;
@@ -18,6 +18,31 @@ interface StudentAssessmentProps {
     isPreviewMode?: boolean;
     onExitPreview?: () => void;
 }
+
+const SaveStatusIndicator: React.FC<{ status: 'saved' | 'saving' | 'error' | 'idle'; onRetry: () => void }> = React.memo(({ status, onRetry }) => {
+    if (status === 'idle') return null;
+
+    return (
+        <div className="absolute top-4 right-6 z-50 transition-opacity duration-300">
+            {status === 'saving' && (
+                <div className="flex items-center gap-2 text-yellow-500 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg">
+                    <Loader2 size={12} className="animate-spin" /> Saving...
+                </div>
+            )}
+            {status === 'saved' && (
+                <div className="flex items-center gap-2 text-green-400 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg animate-in fade-in zoom-in">
+                    <Cloud size={12} /> Progress saved
+                </div>
+            )}
+            {status === 'error' && (
+                <div className="flex items-center gap-2 text-red-400 bg-red-500/10 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-red-500/50 shadow-lg">
+                    <AlertCircle size={12} /> 
+                    <span>Sync Failed. <span className="font-bold underline cursor-pointer" onClick={onRetry}>Retry</span></span>
+                </div>
+            )}
+        </div>
+    );
+});
 
 export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, questions, userId, config, timeLeft, isPreviewMode, onExitPreview }) => {
     const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -115,7 +140,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     } else {
                         setSubmitted(true);
                         if (finalData.disqualified) setIsDisqualified(true);
-                        else setIsDisqualified(false); // Explicitly reset disqualification status
+                        else setIsDisqualified(false);
                         setHasStarted(true);
                     }
                     
@@ -132,11 +157,9 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             if (localBackup.status === 'submitted' || localBackup.status === 'disqualified') {
                 finalAnswers = localBackup.answers || {};
                 finalViolations = localBackup.violations || 0;
-                
                 setSubmitted(true);
                 if (localBackup.status === 'disqualified') setIsDisqualified(true);
                 setHasStarted(true);
-                
                 setAnswers(finalAnswers);
                 answersRef.current = finalAnswers;
                 setViolationCount(finalViolations);
@@ -158,7 +181,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         answersRef.current = finalAnswers;
         setViolationCount(finalViolations);
         violationCountRef.current = finalViolations;
-        setIsDisqualified(false); // Reset disqualification if fetched data is not terminal
+        setIsDisqualified(false);
         setSubmitted(false);
 
         if (Object.keys(finalAnswers).length > 0 || dbId) {
@@ -223,17 +246,11 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 isCreatingRef.current = true;
                 const { data, error } = await supabase.from('notes').insert({ ...payload, x: 0, y: 0 }).select().single();
                 isCreatingRef.current = false;
-                
-                if (data && !error) {
-                    submissionIdRef.current = data.id;
-                }
+                if (data && !error) submissionIdRef.current = data.id;
             }
             setSubmissionData(newSubmissionData);
             setSaveStatus('saved');
-            
-            if (isFinalSubmit) {
-                localStorage.removeItem(backupKey);
-            }
+            if (isFinalSubmit) localStorage.removeItem(backupKey);
         } catch (e) {
             console.error("Save failed", e);
             setSaveStatus('error');
@@ -241,20 +258,17 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         }
     }, [board.id, userId, questions, isPreviewMode, backupKey]);
 
-    const handleManualSync = async () => {
-        await persistToDB(answersRef.current, violationCountRef.current, false, false);
-    };
+    const handleManualSync = useCallback(() => {
+        persistToDB(answersRef.current, violationCountRef.current, false, false);
+    }, [persistToDB]);
 
     const handleViolation = useCallback(async () => {
-        if (isPracticeMode) return;
-        if ((!isTestActive && !isReadingMode) || submitted || isDisqualified) return;
-
+        if (isPracticeMode || (!isTestActive && !isReadingMode) || submitted || isDisqualified) return;
         const newCount = violationCountRef.current + 1;
-        setViolationCount(newCount);
         violationCountRef.current = newCount;
+        setViolationCount(newCount);
         setIsDisqualified(true);
         setSubmitted(true); 
-        
         saveToBackup({ answers: answersRef.current, violations: newCount, status: 'disqualified' });
         await persistToDB(answersRef.current, newCount, true, true);
     }, [isPracticeMode, isTestActive, isReadingMode, submitted, isDisqualified, saveToBackup, persistToDB]);
@@ -273,22 +287,21 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         } else {
             const jitter = Math.floor(Math.random() * 1000); 
             const delay = 1500 + jitter;
-
             saveTimeoutRef.current = setTimeout(() => {
                 persistToDB(answersRef.current, violationCountRef.current, false, false);
             }, delay);
         }
     }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB, saveToBackup]);
 
-    const handleConfirmSubmit = async () => {
+    const handleConfirmSubmit = useCallback(async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         if (retryQuestions.length > 0) setRetryQuestions([]);
         setSubmitted(true);
         saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, status: 'submitted' });
         await persistToDB(answersRef.current, violationCountRef.current, false, true);
-    };
+    }, [retryQuestions, persistToDB, saveToBackup]);
 
-    const startTest = async () => {
+    const startTest = useCallback(async () => {
         if (!isPreviewMode && !isPracticeMode) {
             try {
                 await document.documentElement.requestFullscreen();
@@ -296,20 +309,19 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         }
         setHasStarted(true);
         await persistToDB(answers, 0, false, false);
-    };
+    }, [isPreviewMode, isPracticeMode, answers, persistToDB]);
 
-    const returnToHome = () => {
+    const returnToHome = useCallback(() => {
         if (isPreviewMode && onExitPreview) onExitPreview();
         else window.location.href = '/';
-    };
+    }, [isPreviewMode, onExitPreview]);
 
     const countWords = (text: string) => text ? text.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
 
     const meetsRequirements = useMemo(() => {
         return !questions.some(q => {
             if (q.type !== 'essay' || !q.minWords) return false;
-            const wc = countWords(answers[q.id] || '');
-            return wc < q.minWords;
+            return countWords(answers[q.id] || '') < q.minWords;
         });
     }, [questions, answers]);
 
@@ -331,28 +343,10 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     const MemoizedActiveTest = React.memo(ActiveTest);
 
     return (
-        <ScreenshotGuard isEnabled={isGuardEnabled} username={userName}>
-            <div className="h-full relative">
-                <div className="absolute top-4 right-6 z-50 transition-opacity duration-300">
-                     {saveStatus === 'saving' && (
-                        <div className="flex items-center gap-2 text-yellow-500 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg">
-                            <Loader2 size={12} className="animate-spin" /> Saving...
-                        </div>
-                    )}
-                    {saveStatus === 'saved' && (
-                        <div className="flex items-center gap-2 text-green-400 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg animate-in fade-in zoom-in">
-                            <Cloud size={12} /> Progress saved
-                        </div>
-                    )}
-                    {saveStatus === 'error' && (
-                        <div className="flex items-center gap-2 text-red-400 bg-red-500/10 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-red-500/50 shadow-lg">
-                            <AlertCircle size={12} /> 
-                            <span>Sync Failed. <span className="font-bold underline cursor-pointer" onClick={handleManualSync}>Retry</span></span>
-                        </div>
-                    )}
-                </div>
-
-                <MemoizedActiveTest 
+        <div className="h-full relative">
+            <SaveStatusIndicator status={saveStatus} onRetry={handleManualSync} />
+            <ScreenshotGuard isEnabled={isGuardEnabled} username={userName}>
+                 <MemoizedActiveTest 
                     boardTitle={board.title}
                     questions={questions}
                     config={config}
@@ -369,7 +363,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     retryQuestions={retryQuestions}
                     onViolation={handleViolation}
                 />
-            </div>
-        </ScreenshotGuard>
+            </ScreenshotGuard>
+        </div>
     );
 };
