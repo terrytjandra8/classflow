@@ -184,7 +184,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.moveTo(x, y);
     };
 
-    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HIMLCanvasElement>) => {
+    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         e.preventDefault();
         if (!isDrawing) return;
         const ctx = getCtx();
