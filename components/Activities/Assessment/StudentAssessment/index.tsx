@@ -6,7 +6,7 @@ import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
 import { ScreenshotGuard } from '../../../Security/ScreenshotGuard';
-import { Cloud, Check, Loader2, AlertCircle, Save } from 'lucide-react';
+import { Cloud, Check, Loader2, AlertCircle, Save, RefreshCw } from 'lucide-react';
 
 interface StudentAssessmentProps {
     board: Board;
@@ -369,20 +369,21 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     return (
         <ScreenshotGuard isEnabled={isGuardEnabled} username={userName}>
             <div className="h-full relative">
-                <div className="absolute top-20 right-6 z-50 pointer-events-none transition-opacity duration-300">
-                    {saveStatus === 'saving' && (
+                <div className="absolute top-4 right-6 z-50 transition-opacity duration-300">
+                     {saveStatus === 'saving' && (
                         <div className="flex items-center gap-2 text-yellow-500 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg">
                             <Loader2 size={12} className="animate-spin" /> Saving...
                         </div>
                     )}
                     {saveStatus === 'saved' && (
                         <div className="flex items-center gap-2 text-green-400 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg animate-in fade-in zoom-in">
-                            <Cloud size={12} /> Saved
+                            <Cloud size={12} /> Progress saved
                         </div>
                     )}
                     {saveStatus === 'error' && (
-                        <div className="flex items-center gap-2 text-red-400 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-red-500/50 shadow-lg">
-                            <AlertCircle size={12} /> Saving to Cloud Failed (Local Backup Active)
+                        <div className="flex items-center gap-2 text-red-400 bg-red-500/10 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-red-500/50 shadow-lg">
+                            <AlertCircle size={12} /> 
+                            <span>Sync Failed. <span className="font-bold underline cursor-pointer" onClick={handleManualSync}>Retry</span></span>
                         </div>
                     )}
                 </div>
