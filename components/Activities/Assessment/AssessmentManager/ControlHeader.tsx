@@ -39,12 +39,12 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
     const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
 
     return (
-        <div className="h-16 bg-[#161616] border-b border-white/10 flex items-center justify-between px-6 shrink-0 no-print relative z-50">
-            <div className="flex items-center gap-4">
+        <div className="bg-[#161616] border-b border-white/10 flex flex-wrap items-center justify-between gap-y-3 gap-x-4 px-4 sm:px-6 py-3 shrink-0 no-print relative z-50">
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-2 min-w-0">
                 <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
                 <h1 className="font-bold text-lg flex items-center gap-2">
-                    <Lock size={16} className="text-red-500"/>
-                    {title}
+                    <Lock size={16} className="text-red-500 shrink-0"/>
+                    <span className="truncate">{title}</span>
                 </h1>
                 
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${status === 'active' ? 'bg-green-500/20 text-green-500 border-green-500/30' : (status === 'reading' ? 'bg-blue-500/20 text-blue-500 border-blue-500/30' : (status === 'practice' ? 'bg-teal-500/20 text-teal-400 border-teal-500/30' : 'bg-gray-800 text-gray-500 border-gray-700'))}`}>
@@ -87,8 +87,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                     )}
                 </div>
 
-                <div className="h-6 w-px bg-white/10"></div>
-
                 {/* Live Toggle */}
                 <button 
                     onClick={onTogglePublish}
@@ -115,7 +113,7 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
             </div>
 
             {/* CENTRAL TIMER DISPLAY FOR TEACHER */}
-            <div className="flex flex-col items-center">
+            <div className="flex-shrink-0 order-first w-full text-center md:w-auto md:order-none">
                 <div className={`text-2xl font-mono font-bold ${timeLeft !== null && timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                     {timeLeft !== null ? formatTime(timeLeft) : (status === 'practice' ? '∞' : '--:--')}
                 </div>
@@ -124,7 +122,7 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center flex-wrap justify-end gap-x-2 gap-y-3">
                 {/* View Switcher */}
                 <div className="flex bg-black/50 rounded-lg p-1 border border-white/10">
                     <button 
@@ -140,8 +138,6 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                         Monitor
                     </button>
                 </div>
-
-                <div className="h-6 w-px bg-white/10"></div>
                 
                 {/* Settings & Share & Preview */}
                 <div className="flex items-center gap-1">
@@ -181,11 +177,11 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                     </button>
                 </div>
 
-                <div className="h-6 w-px bg-white/10"></div>
                 
                 {/* CONTROL ACTIONS */}
+                <div className="flex items-center flex-wrap gap-2">
                 {config.status === 'setup' && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         {config.readingMinutes > 0 && (
                             <button 
                                 onClick={() => onTransition('reading')}
@@ -235,6 +231,7 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                         Reset
                     </button>
                 )}
+                </div>
             </div>
         </div>
     );
