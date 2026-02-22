@@ -174,6 +174,10 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
         );
     }
 
+    const handleUpdateTitle = (newTitle: string) => {
+        onUpdateBoard({ title: newTitle });
+    };
+
     return (
         <div className="h-full flex flex-col bg-[#111] text-white overflow-hidden">
             
@@ -207,6 +211,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                 classList={classList}
                 currentClass={board.targetGrade}
                 onUpdateClass={(cls) => onUpdateBoard({ targetGrade: cls })}
+                onUpdateTitle={handleUpdateTitle}
             />
 
             <div className="flex-1 overflow-hidden no-print">
