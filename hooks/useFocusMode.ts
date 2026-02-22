@@ -1,58 +1,76 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 
 export const useFocusMode = (isActive: boolean, onViolation: () => void) => {
-    const [isFocused, setIsFocused] = useState(true);
-    const [isFullscreen, setIsFullscreen] = useState(false);
 
-    // 1. Detect Tab Switching (Reliable Anti-Cheat)
-    useEffect(() => {
-        if (!isActive) return;
-
-        const handleVisibilityChange = () => {
-            // document.hidden is true when tab is switched or window minimized
-            if (document.hidden) {
-                setIsFocused(false);
-                console.log("Violation: Tab Hidden");
-                onViolation();
-            } else {
-                setIsFocused(true);
-            }
-        };
-
-        // NOTE: Removed 'blur' event listener to prevent disqualification on 
-        // system notifications (battery, updates, etc.) which steal focus 
-        // but keep the window visible.
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [isActive, onViolation]);
-
-    // 2. Fullscreen Management
     const enterFullscreen = useCallback(async () => {
         try {
-            if (!document.fullscreenElement) {
+            if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
                 await document.documentElement.requestFullscreen();
             }
         } catch (e) {
-            console.error("Fullscreen denied", e);
+            console.error("Could not enter fullscreen:", e);
+        }
+    }, []);
+
+    const exitFullscreen = useCallback(async () => {
+        try {
+            if (document.exitFullscreen && document.fullscreenElement) {
+                await document.exitFullscreen();
+            }
+        } catch (e) {
+            console.error("Could not exit fullscreen:", e);
         }
     }, []);
 
     useEffect(() => {
-        if (!isActive) return;
+        if (!isActive) {
+            exitFullscreen();
+            return;
+        }
 
-        const handleFsChange = () => {
-            const isFs = !!document.fullscreenElement;
-            setIsFullscreen(isFs);
+        enterFullscreen();
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                console.log("Violation: Tab Hidden");
+                onViolation();
+            }
         };
 
-        document.addEventListener('fullscreenchange', handleFsChange);
-        return () => document.removeEventListener('fullscreenchange', handleFsChange);
-    }, [isActive]);
+        const handleContextMenu = (e: MouseEvent) => {
+            console.log("Violation: Context Menu");
+            e.preventDefault();
+            onViolation();
+        };
 
-    return { isFocused, isFullscreen, enterFullscreen };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey)) { // Catches PrintScreen and Cmd+Shift+S/3/4
+                console.log("Violation: Screenshot Attempt");
+                onViolation();
+            }
+        };
+        
+        const handleFullscreenError = () => {
+            // If user manually exits fullscreen, we need to treat it as a violation.
+            if (!document.fullscreenElement) {
+                console.log("Violation: Exited Fullscreen");
+                onViolation();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('contextmenu', handleContextMenu);
+        window.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('fullscreenchange', handleFullscreenError);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener('contextmenu', handleContextMenu);
+            window.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('fullscreenchange', handleFullscreenError);
+            // Do NOT exit fullscreen here, as it can cause issues on component unmount.
+            // Let the parent component decide when to exit.
+        };
+    }, [isActive, onViolation, enterFullscreen, exitFullscreen]);
 };
