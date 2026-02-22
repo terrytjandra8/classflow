@@ -6,7 +6,7 @@ import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
 import { ScreenshotGuard } from '../../../Security/ScreenshotGuard';
-import { Cloud, Check, Loader2, AlertCircle, Save, RefreshCw } from 'lucide-react';
+import { Cloud, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface StudentAssessmentProps {
     board: Board;
@@ -53,14 +53,14 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const backupKey = useMemo(() => `assessment_backup_${board.id}_${userId}`, [board.id, userId]);
 
-    const saveToBackup = (data: any) => {
+    const saveToBackup = useCallback((data: any) => {
         try {
             localStorage.setItem(backupKey, JSON.stringify({
                 ...data,
                 timestamp: Date.now()
             }));
         } catch (e) { console.error("Backup failed", e); }
-    };
+    }, [backupKey]);
 
     const fetchSubmission = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -163,7 +163,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         if (Object.keys(finalAnswers).length > 0 || dbId) {
             setHasStarted(true);
         }
-    }, [board.id, userId, isClosed, backupKey]);
+    }, [board.id, userId, isClosed, backupKey, persistToDB]);
 
     useEffect(() => {
         if (!isPreviewMode) fetchSubmission();
@@ -246,8 +246,8 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         await fetchSubmission();
     };
 
-    const handleViolation = async () => {
-        if (isPracticeMode) return; 
+    const handleViolation = useCallback(async () => {
+        if (isPracticeMode) return;
 
         if ((!isTestActive && !isReadingMode) || submitted || isDisqualified) return;
 
@@ -266,7 +266,8 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         });
         
         await persistToDB(answersRef.current, newCount, true, true);
-    };
+    }, [isPracticeMode, isTestActive, isReadingMode, submitted, isDisqualified, saveToBackup, persistToDB]);
+
 
     const handleAnswerChange = useCallback((qId: string, value: string, immediate = false) => {
         if (isDisqualified || submitted || isClosed || isReadingMode) return;
@@ -294,7 +295,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 persistToDB(answersRef.current, violationCountRef.current, false, false);
             }, delay);
         }
-    }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB]);
+    }, [isDisqualified, submitted, isClosed, isReadingMode, persistToDB, saveToBackup]);
 
     const handleConfirmSubmit = async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
