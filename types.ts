@@ -245,6 +245,7 @@ export interface Board {
   colorScheme?: 'light' | 'dark';
   font?: string;
   postSize?: 'small' | 'medium' | 'large';
+  disableModalBlur?: boolean;
   
   // Layout
   sortOrder?: 'manual' | 'date_desc' | 'date_asc' | 'likes';
