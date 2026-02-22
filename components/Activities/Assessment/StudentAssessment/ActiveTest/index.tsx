@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../../types';
 import { useDrawing } from './hooks';
-import { useFocusMode } from '../../../../../hooks/useFocusMode';
+import { useGuard } from './useGuard'; // Corrected import path
 import { DrawingModal } from './DrawingModal';
 import { SubmitModal } from './SubmitModal';
 import { TestHeader } from './TestHeader';
@@ -35,9 +35,10 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const { activeDrawingQId, setActiveDrawingQId, drawingSaveStatus, setLiveDrawingBlob, handleCloseDrawingModal, activeDrawingInitialData } = useDrawing(answers, onAnswerChange);
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
-    const isSecureMode = !isPreviewMode && !isPracticeMode && !isReadingMode;
+    const isSecureMode = !isPreviewMode && !isPracticeMode;
 
-    useFocusMode(isSecureMode, onViolation);
+    // Replace useFocusMode with our new, dedicated security hook
+    useGuard(isSecureMode, onViolation);
 
     const handleConfirmSubmit = () => {
         setShowSubmitModal(false);

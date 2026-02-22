@@ -5,7 +5,6 @@ import { supabase } from '../../../../services/supabaseClient';
 import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
-import { ScreenshotGuard } from '../../../Security/ScreenshotGuard';
 import { Cloud, Loader2, AlertCircle } from 'lucide-react';
 
 interface StudentAssessmentProps {
@@ -264,6 +263,11 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const handleViolation = useCallback(async () => {
         if (isPracticeMode || (!isTestActive && !isReadingMode) || submitted || isDisqualified) return;
+        
+        if (document.fullscreenElement) {
+            await document.exitFullscreen();
+        }
+
         const newCount = violationCountRef.current + 1;
         violationCountRef.current = newCount;
         setViolationCount(newCount);
@@ -296,20 +300,44 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     const handleConfirmSubmit = useCallback(async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         if (retryQuestions.length > 0) setRetryQuestions([]);
+        if (document.fullscreenElement) {
+            await document.exitFullscreen();
+        }
         setSubmitted(true);
         saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, status: 'submitted' });
         await persistToDB(answersRef.current, violationCountRef.current, false, true);
     }, [retryQuestions, persistToDB, saveToBackup]);
 
     const startTest = useCallback(async () => {
-        if (!isPreviewMode && !isPracticeMode) {
+        const isSecure = !isPreviewMode && !isPracticeMode;
+
+        const beginTest = async () => {
+            setHasStarted(true);
+            await persistToDB(answersRef.current, violationCountRef.current, false, false);
+        };
+
+        if (isSecure) {
             try {
                 await document.documentElement.requestFullscreen();
-            } catch (e) { console.log("Fullscreen optional"); }
+                const onFullscreenChange = () => {
+                    if (document.fullscreenElement) {
+                        beginTest();
+                        document.removeEventListener('fullscreenchange', onFullscreenChange);
+                    }
+                };
+                document.addEventListener('fullscreenchange', onFullscreenChange);
+                if (document.fullscreenElement) {
+                   onFullscreenChange();
+                }
+
+            } catch (e) {
+                console.error("Fullscreen request failed:", e);
+                alert("Fullscreen is required to start the test. Please enable it and try again.");
+            }
+        } else {
+            beginTest();
         }
-        setHasStarted(true);
-        await persistToDB(answers, 0, false, false);
-    }, [isPreviewMode, isPracticeMode, answers, persistToDB]);
+    }, [isPreviewMode, isPracticeMode, persistToDB]);
 
     const returnToHome = useCallback(() => {
         if (isPreviewMode && onExitPreview) onExitPreview();
@@ -339,31 +367,28 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return <StatusViews type="intro" board={board} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onStartTest={startTest} config={config} />;
     }
 
-    const isGuardEnabled = !!board.blockScreenshots && (isTestActive || isReadingMode || isPracticeMode) && !isDisqualified && !submitted;
     const MemoizedActiveTest = React.memo(ActiveTest);
 
     return (
         <div className="h-full relative">
             <SaveStatusIndicator status={saveStatus} onRetry={handleManualSync} />
-            <ScreenshotGuard isEnabled={isGuardEnabled} username={userName}>
-                 <MemoizedActiveTest 
-                    boardTitle={board.title}
-                    questions={questions}
-                    config={config}
-                    timeLeft={timeLeft}
-                    answers={answers}
-                    onAnswerChange={handleAnswerChange}
-                    onSubmit={handleConfirmSubmit}
-                    onManualSync={handleManualSync}
-                    meetsRequirements={meetsRequirements}
-                    isPreviewMode={isPreviewMode}
-                    onExitPreview={onExitPreview}
-                    isReadingMode={isReadingMode}
-                    isPracticeMode={isPracticeMode}
-                    retryQuestions={retryQuestions}
-                    onViolation={handleViolation}
-                />
-            </ScreenshotGuard>
+            <MemoizedActiveTest 
+                boardTitle={board.title}
+                questions={questions}
+                config={config}
+                timeLeft={timeLeft}
+                answers={answers}
+                onAnswerChange={handleAnswerChange}
+                onSubmit={handleConfirmSubmit}
+                onManualSync={handleManualSync}
+                meetsRequirements={meetsRequirements}
+                isPreviewMode={isPreviewMode}
+                onExitPreview={onExitPreview}
+                isReadingMode={isReadingMode}
+                isPracticeMode={isPracticeMode}
+                retryQuestions={retryQuestions}
+                onViolation={handleViolation}
+            />
         </div>
     );
 };
