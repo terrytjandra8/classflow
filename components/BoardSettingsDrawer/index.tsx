@@ -71,7 +71,7 @@ export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board,
         </div>
 
         {!isStudent && (
-            <div className="flex overflow-x-auto px-2 md:px-4 border-b border-white/5 bg-[#1a1a1a] shrink-0 no-scrollbar touch-pan-x">
+            <div className="flex overflow-x-auto px-2 md:px-4 border-b border-white/5 bg-[#1a1a1a] shrink-0 custom-scrollbar touch-pan-x">
                 {visibleTabs.map(tab => (
                     <button
                         key={tab}

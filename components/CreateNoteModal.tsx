@@ -64,7 +64,7 @@ const ColorOrb: React.FC<{ color: NoteColor, selected: boolean, onClick: () => v
 // --- Main Component ---
 
 export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, onClose, onSubmit, initialImage, defaultAuthor, disablePaste, allowLinks, isStudent, noteToEdit }) => {
-  const { setTypingStatus } = useBoard();
+  const { board, setTypingStatus } = useBoard();
 
   // State management
   const [activeMode, setActiveMode] = useState<NoteType>('text');
@@ -252,7 +252,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center md:p-4 overflow-hidden">
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+        <div className={`absolute inset-0 bg-black/60 ${!board.disableModalBlur && 'backdrop-blur-sm'} animate-in fade-in duration-300`} onClick={onClose} />
         
         <div 
             ref={modalRef}
