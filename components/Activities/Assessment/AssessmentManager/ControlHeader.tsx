@@ -18,6 +18,7 @@ interface ControlHeaderProps {
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
     onPrint?: () => void;
+    onUpdateTitle: (newTitle: string) => void;
     // New Class Props
     classList?: string[];
     currentClass?: string;
@@ -34,18 +35,58 @@ const formatTime = (seconds: number) => {
 
 export const ControlHeader: React.FC<ControlHeaderProps> = ({ 
     title, status, timeLeft, config, isPublished, onBack, onTransition, onTogglePublish, view, setView, onPreview,
-    onOpenSettings, onOpenShare, onPrint, classList, currentClass, onUpdateClass
+    onOpenSettings, onOpenShare, onPrint, classList, currentClass, onUpdateClass, onUpdateTitle
 }) => {
     const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editedTitle, setEditedTitle] = useState(title);
+
+    const handleTitleDoubleClick = () => {
+        setEditedTitle(title);
+        setIsEditingTitle(true);
+    };
+
+    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditedTitle(e.target.value);
+    };
+
+    const handleTitleBlur = () => {
+        if (editedTitle.trim() && editedTitle.trim() !== title) {
+            onUpdateTitle(editedTitle.trim());
+        }
+        setIsEditingTitle(false);
+    };
+
+    const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleTitleBlur();
+        } else if (e.key === 'Escape') {
+            setIsEditingTitle(false);
+            setEditedTitle(title);
+        }
+    };
 
     return (
         <div className="bg-[#161616] border-b border-white/10 flex flex-wrap items-center justify-between gap-y-3 gap-x-4 px-4 sm:px-6 py-3 shrink-0 no-print relative z-50">
             <div className="flex items-center flex-wrap gap-x-4 gap-y-2 min-w-0">
                 <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
-                <h1 className="font-bold text-lg flex items-center gap-2">
-                    <Lock size={16} className="text-red-500 shrink-0"/>
-                    <span className="truncate">{title}</span>
-                </h1>
+                
+                {isEditingTitle ? (
+                    <input
+                        type="text"
+                        value={editedTitle}
+                        onChange={handleTitleChange}
+                        onBlur={handleTitleBlur}
+                        onKeyDown={handleTitleKeyDown}
+                        className="bg-transparent border-b border-white/50 text-lg font-bold focus:outline-none focus:border-blue-500 text-white"
+                        autoFocus
+                    />
+                ) : (
+                    <h1 onDoubleClick={handleTitleDoubleClick} className="font-bold text-lg flex items-center gap-2 cursor-pointer" title="Double-click to edit">
+                        <Lock size={16} className="text-red-500 shrink-0"/>
+                        <span className="truncate">{title}</span>
+                    </h1>
+                )}
                 
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${status === 'active' ? 'bg-green-500/20 text-green-500 border-green-500/30' : (status === 'reading' ? 'bg-blue-500/20 text-blue-500 border-blue-500/30' : (status === 'practice' ? 'bg-teal-500/20 text-teal-400 border-teal-500/30' : 'bg-gray-800 text-gray-500 border-gray-700'))}`}>
                     {status}
