@@ -81,13 +81,11 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const [author, setAuthor] = useState(defaultAuthor || 'Student');
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [drawingDims, setDrawingDims] = useState({ width: 500, height: 300 });
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<any>(null);
-  const drawingContainerRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef({ x: 0, y: 0 });
 
   const isEditing = !!noteToEdit;
@@ -95,28 +93,11 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
 
   // --- Effects ---
 
-  // Reset position on resize to handle mobile-desktop switching
   useEffect(() => {
     const handleResize = () => setPosition({ x: 0, y: 0 });
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Resize observer for responsive drawing canvas
-  useEffect(() => {
-    if (activeMode === 'drawing' && drawingContainerRef.current) {
-        const observer = new ResizeObserver(entries => {
-            if (entries[0]) {
-                const { width, height } = entries[0].contentRect;
-                if(width > 0 && height > 0) {
-                    setDrawingDims({ width, height });
-                }
-            }
-        });
-        observer.observe(drawingContainerRef.current);
-        return () => observer.disconnect();
-    }
-  }, [activeMode]);
 
   useEffect(() => {
       const fetchIdentity = async () => {
@@ -152,7 +133,10 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           setAttachmentUrl('');
           setActiveMode('text');
           setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)] || NoteColor.YELLOW);
-          if (initialImage) processImageFile(initialImage);
+          if (initialImage) {
+            processImageFile(initialImage);
+            setActiveMode('image');
+          }
       }
     } else {
         setTypingStatus(false);
@@ -195,10 +179,15 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
         let finalContent = content;
         let finalType: NoteType = activeMode;
 
-        if (activeMode === 'image' && imageFile) finalContent = await handleUploadFile(imageFile) || '';
-        else if (activeMode === 'image' && imageBase64) finalContent = imageBase64;
-        else if (activeMode === 'drawing' && drawingBlob) finalContent = await handleUploadFile(drawingBlob) || '';
-        else if (activeMode === 'drawing' && drawingUrl) finalContent = drawingUrl;
+        if (activeMode === 'image' && imageFile) {
+          finalContent = await handleUploadFile(imageFile) || ''
+        } else if (activeMode === 'image' && imageBase64) {
+          finalContent = imageBase64;
+        } else if (activeMode === 'drawing' && drawingBlob) {
+          finalContent = await handleUploadFile(drawingBlob) || ''
+        } else if (activeMode === 'drawing' && drawingUrl) {
+          finalContent = drawingUrl;
+        } 
         
         if (!finalContent && !title && !isEditing && activeMode !== 'link') return;
         if (activeMode === 'link' && !attachmentUrl && !isEditing) return;
@@ -233,7 +222,6 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
       handlePasteProtection(e);
   };
 
-  // Drag handlers with mobile check
   const handleMouseDown = (e: React.MouseEvent) => {
       if (window.innerWidth < 768 || (e.target as HTMLElement).closest('button')) return;
       setIsDragging(true);
@@ -307,11 +295,11 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
             </div>
 
-            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[250px] bg-black/20" onMouseDown={e => e.stopPropagation()}>
+            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[250px] bg-black/20 flex flex-col" onMouseDown={e => e.stopPropagation()}>
                 <input 
                     type="text" value={title} onChange={(e) => { setTitle(e.target.value); handleTyping(); }}
                     placeholder="Add a title..."
-                    className="w-full bg-transparent text-xl sm:text-2xl font-bold text-white placeholder-white/20 outline-none mb-4"
+                    className="w-full bg-transparent text-xl sm:text-2xl font-bold text-white placeholder-white/20 outline-none mb-4 shrink-0"
                     autoFocus={activeMode === 'text' && !isEditing}
                     onPaste={(e) => onPaste(e)}
                 />
@@ -334,8 +322,8 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 )}
 
                 {activeMode === 'drawing' && (
-                     <div ref={drawingContainerRef} className="h-full w-full relative min-h-[250px] md:min-h-[300px] touch-none">
-                        <DrawingCanvas onDrawEnd={setDrawingBlob} initialData={drawingUrl || undefined} onClear={() => { setDrawingBlob(null); setDrawingUrl(null); }} width={drawingDims.width} height={drawingDims.height} className="w-full h-full" strokeColor={selectedColor === NoteColor.TRANSPARENT ? '#ffffff' : '#000000'} />
+                     <div className="h-full w-full relative min-h-[250px] md:min-h-[300px] flex-1 flex flex-col touch-none">
+                        <DrawingCanvas onDrawEnd={setDrawingBlob} initialData={drawingUrl || undefined} onClear={() => { setDrawingBlob(null); setDrawingUrl(null); }} className="w-full h-full" strokeColor={selectedColor === NoteColor.TRANSPARENT ? '#ffffff' : '#000000'} />
                     </div>
                 )}
 
@@ -359,7 +347,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
 
                 <div className="px-4 md:px-6 pb-4 pt-2 border-t border-white/5 mt-[-1px]">
-                    <button onClick={handleSubmit} disabled={isUploading || (activeMode === 'text' && !content && !title) || (activeMode === 'image' && !imageBase64)} className="w-full sm:w-auto bg-white text-black hover:bg-indigo-50 px-8 py-3 rounded-full font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2">
+                    <button onClick={handleSubmit} disabled={isUploading || (activeMode === 'text' && !content && !title && !isEditing) || (activeMode === 'image' && !imageBase64)} className="w-full sm:w-auto bg-white text-black hover:bg-indigo-50 px-8 py-3 rounded-full font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2">
                         {isUploading ? (isEditing ? 'Updating...' : 'Posting...') : (isEditing ? 'Update Note' : 'Post Note')}
                     </button>
                 </div>

@@ -5,8 +5,6 @@ import { PenTool, Trash2, Undo, Redo, Eraser } from 'lucide-react';
 interface DrawingCanvasProps {
     onDrawEnd?: (blob: Blob) => void;
     onClear?: () => void;
-    width?: number;
-    height?: number;
     className?: string;
     style?: React.CSSProperties;
     strokeColor?: string;
@@ -19,14 +17,13 @@ const STROKE_SIZES = [3, 6, 12];
 export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
     onDrawEnd, 
     onClear, 
-    width = 500, 
-    height = 300, 
     className = "",
     style,
     strokeColor = '#000000',
     initialData
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasContent, setHasContent] = useState(!!initialData);
     const [activeColor, setActiveColor] = useState(strokeColor);
@@ -35,47 +32,73 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const [history, setHistory] = useState<ImageData[]>([]);
     const [historyStep, setHistoryStep] = useState(0);
 
+    const getCanvas = () => canvasRef.current;
+    const getCtx = () => getCanvas()?.getContext('2d', { willReadFrequently: true });
+
+    const redrawCanvasState = (imgData: ImageData) => {
+        const ctx = getCtx();
+        const canvas = getCanvas();
+        if (ctx && canvas) {
+            ctx.putImageData(imgData, 0, 0);
+        }
+    };
+
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            if(ctx) {
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                
-                const resetCanvas = () => {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, width, height);
-                    if (initialData) {
-                        const img = new Image();
-                        img.crossOrigin = "anonymous";
-                        img.onload = () => {
-                            ctx.drawImage(img, 0, 0, width, height);
-                            const initial = ctx.getImageData(0, 0, width, height);
-                            setHistory([initial]);
-                            setHistoryStep(0);
-                            setHasContent(true);
-                        };
-                        img.src = initialData;
-                    } else {
-                        const blank = ctx.getImageData(0, 0, width, height);
-                        setHistory([blank]);
-                        setHistoryStep(0);
-                        setHasContent(false);
-                    }
+        const container = containerRef.current;
+        if (!container) return;
+
+        const resizeObserver = new ResizeObserver(entries => {
+            if (!entries || entries.length === 0) return;
+            const { width, height } = entries[0].contentRect;
+            const canvas = getCanvas();
+            if (canvas && (canvas.width !== width || canvas.height !== height)) {
+                const lastState = history[historyStep];
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = getCtx();
+                if (ctx) {
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    if (lastState) redrawCanvasState(lastState);
                 }
-                resetCanvas();
+            }
+        });
+
+        resizeObserver.observe(container);
+        return () => resizeObserver.disconnect();
+    }, [history, historyStep]);
+
+
+    useEffect(() => {
+        const ctx = getCtx();
+        const canvas = getCanvas();
+        if (ctx && canvas) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (initialData) {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const initial = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    setHistory([initial]);
+                    setHistoryStep(0);
+                    setHasContent(true);
+                };
+                img.src = initialData;
+            } else {
+                const blank = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                setHistory([blank]);
+                setHistoryStep(0);
+                setHasContent(false);
             }
         }
         setActiveColor(strokeColor);
         setIsEraser(false);
-    }, [width, height, strokeColor, initialData]);
+    }, [strokeColor, initialData]);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = getCtx();
         if (ctx) {
             ctx.lineWidth = isEraser ? 20 : strokeWidth;
             ctx.strokeStyle = isEraser ? '#ffffff' : activeColor;
@@ -83,59 +106,50 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }, [strokeWidth, activeColor, isEraser]);
 
     const saveHistoryStep = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const canvas = getCanvas();
+        const ctx = getCtx();
         if (canvas && ctx) {
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            setHistory(prev => {
-                const newHistory = prev.slice(0, historyStep + 1);
-                newHistory.push(data);
-                if (newHistory.length > 20) newHistory.shift();
-                return newHistory;
-            });
-            setHistoryStep(prev => {
-                const anticipated = history.slice(0, prev + 1).length;
-                return anticipated > 19 ? 19 : anticipated;
-            });
+            const newHistory = history.slice(0, historyStep + 1);
+            newHistory.push(data);
+            if (newHistory.length > 20) newHistory.shift();
+            setHistory(newHistory);
+            setHistoryStep(newHistory.length - 1);
         }
     };
 
-    const notifyDrawEnd = () => {
-        const canvas = canvasRef.current;
+    const notifyDrawEnd = useCallback(() => {
+        const canvas = getCanvas();
         if (canvas && onDrawEnd) {
             canvas.toBlob((blob) => { if (blob) onDrawEnd(blob); });
         }
-    };
+    }, [onDrawEnd]);
 
     const handleUndo = useCallback(() => {
         if (historyStep > 0) {
             const newStep = historyStep - 1;
-            const canvas = canvasRef.current;
-            const ctx = canvas?.getContext('2d');
-            const previousState = history[newStep];
-            if (canvas && ctx && previousState) {
-                ctx.putImageData(previousState, 0, 0);
+            const prevState = history[newStep];
+            if (prevState) {
+                redrawCanvasState(prevState);
                 setHistoryStep(newStep);
                 setHasContent(newStep > 0 || !!initialData);
                 notifyDrawEnd();
             }
         }
-    }, [history, historyStep, onDrawEnd, initialData]);
+    }, [history, historyStep, notifyDrawEnd, initialData]);
 
     const handleRedo = useCallback(() => {
         if (historyStep < history.length - 1) {
             const newStep = historyStep + 1;
-            const canvas = canvasRef.current;
-            const ctx = canvas?.getContext('2d');
             const nextState = history[newStep];
-            if (canvas && ctx && nextState) {
-                ctx.putImageData(nextState, 0, 0);
+            if (nextState) {
+                redrawCanvasState(nextState);
                 setHistoryStep(newStep);
                 setHasContent(true);
                 notifyDrawEnd();
             }
         }
-    }, [history, historyStep, onDrawEnd]);
+    }, [history, historyStep, notifyDrawEnd]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -150,27 +164,19 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }, [handleUndo, handleRedo]);
 
     const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-        const canvas = canvasRef.current;
+        const canvas = getCanvas();
         if (!canvas) return { x: 0, y: 0 };
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        let clientX, clientY;
-        if ('touches' in e && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = (e as React.MouseEvent).clientX;
-            clientY = (e as React.MouseEvent).clientY;
-        }
+        const clientX = 'touches' in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
         return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
     };
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         e.preventDefault();
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const ctx = getCtx();
         if (!ctx) return;
         setIsDrawing(true);
         const { x, y } = getCanvasCoordinates(e);
@@ -178,12 +184,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         ctx.moveTo(x, y);
     };
 
-    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HIMLCanvasElement>) => {
         e.preventDefault();
         if (!isDrawing) return;
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const ctx = getCtx();
         if (!ctx) return;
         const { x, y } = getCanvasCoordinates(e);
         ctx.lineTo(x, y);
@@ -200,23 +204,21 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     };
 
     const clearCanvas = () => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                setHasContent(false);
-                saveHistoryStep();
-                notifyDrawEnd();
-                if (onClear) onClear();
-            }
+        const canvas = getCanvas();
+        const ctx = getCtx();
+        if (canvas && ctx) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            setHasContent(false);
+            saveHistoryStep();
+            notifyDrawEnd();
+            if (onClear) onClear();
         }
     };
 
     return (
         <div className={`flex flex-col gap-3 ${className}`} style={style}>
-            <div className="relative rounded-xl overflow-hidden shadow-inner border-2 border-black/5 dark:border-white/10 bg-white cursor-crosshair w-full flex-1 min-h-0">
+            <div ref={containerRef} className="relative rounded-xl overflow-hidden shadow-inner border-2 border-black/5 dark:border-white/10 bg-white cursor-crosshair w-full flex-1 min-h-0">
                 <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
@@ -234,8 +236,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ))}
                     <div className="w-px h-6 bg-gray-300 dark:bg-white/10 mx-1"></div>
                     <button onClick={() => setIsEraser(!isEraser)}
-                        className={`p-1.5 rounded-lg transition-colors flex flex-col items-center justify-center ${isEraser ? 'bg-pink-100 text-pink-600' : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10 dark:text-gray-400'}`}
-                    >
+                        className={`p-1.5 rounded-lg transition-colors flex flex-col items-center justify-center ${isEraser ? 'bg-pink-100 text-pink-600' : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10 dark:text-gray-400'}`}>
                         <Eraser size={16} />
                     </button>
                 </div>
@@ -250,18 +251,11 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                     ))}
                 </div>
                 <div className="flex justify-between items-center">
-                    <div className="text-xs text-gray-400 flex items-center gap-1 font-medium">
-                        <PenTool size={12} /> {isEraser ? 'Eraser' : 'Draw'}
-                    </div>
+                    <div className="text-xs text-gray-400 flex items-center gap-1 font-medium"><PenTool size={12} /> {isEraser ? 'Eraser' : 'Draw'}</div>
                     <div className="flex items-center gap-1">
                         <button type="button" onClick={handleUndo} disabled={historyStep <= 0} className="text-xs text-gray-500 hover:text-blue-500 font-bold px-2 py-1.5 rounded-lg disabled:opacity-30"><Undo size={14} /></button>
                         <button type="button" onClick={handleRedo} disabled={historyStep >= history.length - 1} className="text-xs text-gray-500 hover:text-blue-500 font-bold px-2 py-1.5 rounded-lg disabled:opacity-30"><Redo size={14} /></button>
-                        {hasContent && (
-                            <>
-                                <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-1"></div>
-                                <button type="button" onClick={clearCanvas} className="text-xs text-red-500 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"><Trash2 size={14} /> Clear</button>
-                            </>
-                        )}
+                        {hasContent && (<><div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-1"></div><button type="button" onClick={clearCanvas} className="text-xs text-red-500 font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"><Trash2 size={14} /> Clear</button></>)}
                     </div>
                 </div>
             </div>
