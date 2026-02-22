@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../../types';
 import { useDrawing } from './hooks';
 import { DrawingModal } from './DrawingModal';
@@ -35,6 +35,51 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
 
     const isRevision = retryQuestions && retryQuestions.length > 0;
 
+    useEffect(() => {
+        // Anti-cheat measures only apply in real test mode
+        const isRealTestMode = !isPreviewMode && !isPracticeMode && !isReadingMode;
+        if (!isRealTestMode) return;
+
+        const enterFullScreen = async () => {
+            try {
+                // Suppress navigation UI on some browsers
+                await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+            } catch (error) {
+                console.error("Could not enter fullscreen mode:", error);
+                // If fullscreen fails, we can consider it a violation
+                onViolation(); 
+            }
+        };
+
+        enterFullScreen();
+
+        const handleFullScreenChange = () => {
+            if (!document.fullscreenElement) {
+                onViolation();
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                onViolation();
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullScreenChange);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Cleanup function
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullScreenChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            // Try to exit fullscreen if the component unmounts for any reason
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => console.error("Could not exit fullscreen:", err));
+            }
+        };
+    }, [isPreviewMode, isPracticeMode, isReadingMode, onViolation]);
+
+
     const handleConfirmSubmit = () => {
         setShowSubmitModal(false);
         onSubmit();
@@ -49,7 +94,13 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     return (
         <div 
             className="h-full flex flex-col bg-[#111] text-white overflow-hidden relative" 
-            onContextMenu={e => { e.preventDefault(); onViolation(); }}
+            onContextMenu={e => { 
+                // Disable right-click only in real test mode
+                if (!isPreviewMode && !isPracticeMode && !isReadingMode) {
+                    e.preventDefault(); 
+                    onViolation();
+                }
+            }}
         >
             <TestHeader 
                 boardTitle={boardTitle}
