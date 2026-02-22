@@ -252,7 +252,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center md:p-4 overflow-hidden">
-        <div className={`absolute inset-0 bg-black/60 ${!board.disableModalBlur && 'backdrop-blur-sm'} animate-in fade-in duration-300`} onClick={onClose} />
+        <div className={`absolute inset-0 bg-black/60 ${!board.settings?.disableModalBlur && 'backdrop-blur-sm'} animate-in fade-in duration-300`} onClick={onClose} />
         
         <div 
             ref={modalRef}

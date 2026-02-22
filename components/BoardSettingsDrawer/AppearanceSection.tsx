@@ -339,11 +339,11 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
                 <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-gray-200">Disable Modal Blur</span>
                     <button
-                        onClick={() => onUpdate({ disableModalBlur: !board.disableModalBlur })}
-                        className={`relative inline-flex h-6 w-11 items-center flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${board.disableModalBlur ? 'bg-indigo-600' : 'bg-gray-600'}`}>
+                        onClick={() => onUpdate({ settings: { ...board.settings, disableModalBlur: !board.settings?.disableModalBlur } })}
+                        className={`relative inline-flex h-6 w-11 items-center flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${board.settings?.disableModalBlur ? 'bg-indigo-600' : 'bg-gray-600'}`}>
                         <span
                             aria-hidden="true"
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${board.disableModalBlur ? 'translate-x-5' : 'translate-x-0'}`}/>
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${board.settings?.disableModalBlur ? 'translate-x-5' : 'translate-x-0'}`}/>
                     </button>
                 </div>
             </div>
