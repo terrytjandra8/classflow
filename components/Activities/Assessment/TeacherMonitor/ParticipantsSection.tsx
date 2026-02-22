@@ -27,7 +27,7 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
             {teachers.length > 0 && (
                  <div className="mb-8">
                     <h2 className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Teachers ({teachers.length})</h2>
-                    <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+                    <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
                         {teachers.map(t => (
                            <div key={t.id} className="bg-[#1a1a1a] border border-white/5 rounded-lg p-4 flex items-center justify-between">
                                 <span className="font-bold text-sm text-gray-300">{t.name}</span>
@@ -44,7 +44,7 @@ export const ParticipantsSection: React.FC<ParticipantsSectionProps> = ({
             {/* Students Section */}
             <div>
                 <h2 className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Students ({students.length})</h2>
-                <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+                <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
                     {students.map(s => (
                         <ParticipantCard 
                             key={s.id}
