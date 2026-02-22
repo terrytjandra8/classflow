@@ -72,7 +72,7 @@ export const Home: React.FC<HomeProps> = ({
     const displayTitle = getDisplayTitle();
 
     const renderBoardGrid = (items: Board[]) => (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
             {items.map(board => (
                 <BoardCard 
                     key={board.id}
