@@ -137,7 +137,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 setViolationCount(finalViolations);
                 violationCountRef.current = finalViolations;
                 
-                persistToDB(finalAnswers, finalViolations, localBackup.status === 'disqualified', true);
+                // Removed incorrect persistToDB call
                 return;
             }
 
@@ -149,7 +149,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 finalAnswers = { ...finalAnswers, ...localBackup.answers };
                 finalViolations = Math.max(finalViolations, localBackup.violations || 0);
                 
-                persistToDB(finalAnswers, finalViolations, false, false);
+                // Removed incorrect persistToDB call
             }
         }
 
@@ -163,7 +163,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         if (Object.keys(finalAnswers).length > 0 || dbId) {
             setHasStarted(true);
         }
-    }, [board.id, userId, isClosed, backupKey, persistToDB]);
+    }, [board.id, userId, isClosed, backupKey]);
 
     useEffect(() => {
         if (!isPreviewMode) fetchSubmission();
@@ -243,7 +243,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
     const handleManualSync = async () => {
         await persistToDB(answersRef.current, violationCountRef.current, false, false);
-        await fetchSubmission();
     };
 
     const handleViolation = useCallback(async () => {
