@@ -67,7 +67,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 (payload) => {
                     if (payload.new) {
                         const updatedBoard = mapBoard(payload.new as any);
-                        setLiveBoard(prev => ({ ...prev, ...updatedBoard, updatedAt: payload.new.updated_at }));
+                        // Corrected: Trust the mapper and merge the result.
+                        setLiveBoard(prev => ({ ...prev, ...updatedBoard }));
                     }
                 }
             )
