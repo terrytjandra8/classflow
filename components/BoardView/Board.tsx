@@ -11,38 +11,14 @@ import { TimelineLayout } from './Layouts/TimelineLayout';
 import { MapLayout } from './Layouts/MapLayout';
 import { SandboxLayout } from './Sandbox';
 import { useBoard, BoardProvider } from './BoardContext';
-import { supabase } from '../../services/supabaseClient'; // Import supabase
 
 export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: boolean }> = (props) => {
     const parentContext = useBoard();
     const [isPresenting, setIsPresenting] = useState(false);
     
-    // Use state for the board object to allow real-time updates
-    const [board, setBoard] = useState(props.board || parentContext.board);
-
-    // Real-time listener for board updates
-    useEffect(() => {
-        if (!board?.id) return;
-
-        const channel = supabase
-            .channel(`board-update-${board.id}`)
-            .on('postgres_changes', { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'boards', 
-                filter: `id=eq.${board.id}`
-            }, (payload) => {
-                // When an update is received, update the board state
-                setBoard(prevBoard => ({ ...prevBoard, ...(payload.new as any) }));
-            })
-            .subscribe();
-
-        // Cleanup subscription on component unmount
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [board?.id]);
-
+    // Reverted: Simply get the board from context/props. No local state here.
+    const board = props.board || parentContext.board;
+    
     const isStudent = props.isStudent !== undefined ? props.isStudent : parentContext.isStudent;
     const sectionIdFilter = props.sectionIdFilter || parentContext.sectionIdFilter;
     const embeddedMode = props.embeddedMode !== undefined ? props.embeddedMode : parentContext.embeddedMode;
@@ -52,6 +28,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     
     const effectivePresentationMode = props.isPresentationMode || parentContext.isPresentationMode || isPresenting;
     
+    // The context value now correctly depends on the 'board' from the parent, ensuring updates propagate.
     const contextValue = useMemo(() => ({
         ...parentContext,
         board,
@@ -69,7 +46,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
         toggleSimulation: props.onToggleSimulation || parentContext.toggleSimulation,
         summarize: props.onSummarize || parentContext.summarize,
         isSimulating: props.isSimulating !== undefined ? props.isSimulating : parentContext.isSimulating,
-        isAiLoading: false,
+        isAiLoading: false, 
         onlineUsers: props.onlineUsers || parentContext.onlineUsers,
         classList: props.classList || parentContext.classList,
         isPresentationMode: effectivePresentationMode

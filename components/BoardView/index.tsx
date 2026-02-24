@@ -34,12 +34,7 @@ interface BoardViewProps {
 export const BoardView: React.FC<BoardViewProps> = ({ 
     board: initialBoard, onBack, onUpdateBoard, theme, onToggleTheme, username, userAvatar, userId, isStudent, userRole, isPresentationMode
 }) => {
-    // --- State ---
-    // We maintain a local live version of the board to handle realtime metadata updates (locks, settings)
-    // This allows instantaneous updates without refreshing the page
     const [liveBoard, setLiveBoard] = useState<Board>(initialBoard);
-    
-    // Force re-render state for timers
     const [, setTick] = useState(0);
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -56,33 +51,23 @@ export const BoardView: React.FC<BoardViewProps> = ({
     
     const [editingNote, setEditingNote] = useState<Note | null>(null);
 
-    // --- 1. Sync with Parent Props (Initial Load) ---
     useEffect(() => {
         setLiveBoard(initialBoard);
     }, [initialBoard]);
 
-    // --- 2. Real-time Board Settings Listener ---
-    // This is efficient: It opens ONE socket connection. It does NOT poll the database.
-    // It only receives data when the 'boards' table actually changes.
     useEffect(() => {
         const channel = supabase.channel(`board_meta:${initialBoard.id}`)
             .on('postgres_changes',
                 { 
-                    event: 'UPDATE', 
+                    event: '*'
                     schema: 'public', 
                     table: 'boards', 
                     filter: `id=eq.${initialBoard.id}` 
                 },
                 (payload) => {
                     if (payload.new) {
-                        // When teacher updates settings, map the DB row to our Board object
-                        // and update the local state immediately.
                         const updatedBoard = mapBoard(payload.new as any);
-                        setLiveBoard(prev => ({
-                            ...updatedBoard,
-                            // Preserve local UI state that isn't in DB if necessary,
-                            // though usually mapBoard covers everything important.
-                        }));
+                        setLiveBoard(prev => ({ ...prev, ...updatedBoard, updatedAt: payload.new.updated_at }));
                     }
                 }
             )
@@ -91,26 +76,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return () => { supabase.removeChannel(channel); };
     }, [initialBoard.id]);
 
-    // --- 2.5. Timer Sync for Auto-Lock/Live ---
-    // Ensure component re-renders exactly when a timer expires
-    useEffect(() => {
-        const timers = [liveBoard.autoLockTime, liveBoard.autoLiveTime].filter(t => t && t > Date.now()) as number[];
-        
-        if (timers.length > 0) {
-            const nextTime = Math.min(...timers);
-            const delay = Math.max(0, nextTime - Date.now()) + 500; // 500ms buffer
-            
-            const timerId = setTimeout(() => {
-                setTick(t => t + 1); // Force re-render
-            }, delay);
-            
-            return () => clearTimeout(timerId);
-        }
-    }, [liveBoard.autoLockTime, liveBoard.autoLiveTime]);
-
-    // --- 3. Derived Board State (Auto Lock & Merging) ---
-    // If autoLockTime is reached, we force the UI to treat it as ReadOnly immediately
-    // This is a client-side check that runs on top of the DB state
     const isExpired = liveBoard.autoLockTime && Date.now() >= liveBoard.autoLockTime;
     
     const board = useMemo(() => ({
@@ -118,8 +83,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         lockMode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
     }), [liveBoard, isExpired]);
 
-    // --- Hooks ---
-    // Pass userRole here
     const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
     
     const { 
@@ -131,7 +94,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         userAvatar,
         userRole,
         setNotes,
-        onTouchBoard: () => {} 
+        onTouchBoard: () => onUpdateBoard({ updatedAt: Date.now() }) 
     });
 
     const { isDragOver, handleDragOver, handleDragLeave, handleDrop } = useBoardInteractions(
@@ -162,13 +125,9 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const canManageBoard = !isStudent && !isSimulatingStudent && !isPresentationMode;
     
-    // --- AUTO LOCK / AUTO LIVE LOGIC (Teacher Only) ---
-    // Only the teacher's client needs to write to the DB to finalize the state.
-    // Students just obey the checks until the DB update hits.
     useEffect(() => {
         if (!canManageBoard) return;
         
-        // Optimize: If no timers are active, don't run the interval
         const hasAutoLock = liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly';
         const hasAutoLive = liveBoard.autoLiveTime && !liveBoard.isPublished;
 
@@ -177,19 +136,17 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const checkTimers = () => {
             const now = Date.now();
             
-            // Auto Lock Logic
             if (liveBoard.autoLockTime && liveBoard.lockMode !== 'readonly' && now >= liveBoard.autoLockTime) {
                 onUpdateBoard({ lockMode: 'readonly' });
             }
 
-            // Auto Live Logic
             if (liveBoard.autoLiveTime && !liveBoard.isPublished && now >= liveBoard.autoLiveTime) {
-                onUpdateBoard({ isPublished: true, autoLiveTime: null }); // Clear timer so it doesn't fire again
+                onUpdateBoard({ isPublished: true, autoLiveTime: null });
             }
         };
 
-        const interval = setInterval(checkTimers, 5000); // Check every 5s
-        checkTimers(); // Immediate check
+        const interval = setInterval(checkTimers, 5000);
+        checkTimers();
 
         return () => clearInterval(interval);
     }, [liveBoard.autoLockTime, liveBoard.autoLiveTime, liveBoard.lockMode, liveBoard.isPublished, canManageBoard, onUpdateBoard]);
@@ -218,8 +175,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const backgroundStyle = resolveBackgroundStyle(board.wallpaper, theme);
     const fontClass = board.font === 'serif' ? 'font-serif' : board.font === 'mono' ? 'font-mono' : board.font === 'hand' ? 'font-hand' : 'font-sans';
-
-    // --- Actions ---
 
     const openAddNoteModal = useCallback((location?: string | { x: number; y: number }) => {
         if (isPresentationMode) return;
@@ -270,13 +225,11 @@ export const BoardView: React.FC<BoardViewProps> = ({
         setEditingNote(null);
     };
 
-    // --- Centralized Management Logic ---
     const launchProjectorMode = useCallback(() => {
         const url = `${window.location.origin}/?board=${board.id}&present=true`;
         window.open(url, 'ClassBoardProjector', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no');
     }, [board.id]);
 
-    // Helper: Ensure sections exist before modifying. Handles default virtual sections.
     const getEffectiveSections = useCallback(() => {
         if (board.sections && board.sections.length > 0) return board.sections;
         return [{ 
@@ -413,9 +366,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         highlightedUserId
     ]);
 
-    // WRAPPER FOR STUDENT VIEW PROTECTION
     const renderProtectedContent = (content: React.ReactNode) => {
-        // Only enforce protection if the setting is ON and the user is effectively a student (or simulating one)
         const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
         
         return (
@@ -558,7 +509,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return (
             <BoardProvider value={contextValue}>
                 <div className="h-screen w-full relative bg-[#111]">
-                    {/* Assessment manages its own protections */}
                     <AssessmentManager 
                         board={board}
                         notes={notes}
