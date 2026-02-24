@@ -59,7 +59,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const channel = supabase.channel(`board_meta:${initialBoard.id}`)
             .on('postgres_changes',
                 { 
-                    event: '*'
+                    event: '*',
                     schema: 'public', 
                     table: 'boards', 
                     filter: `id=eq.${initialBoard.id}` 
