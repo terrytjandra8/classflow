@@ -200,7 +200,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               }
 
               const isQuizActive = board.format === 'quiz' && board.quizState && (board.quizState as string) !== 'setup';
-              const isAssessmentActive = board.format === 'assessment' && board.assessmentState === 'active';
+              const isAssessmentActive = board.format === 'assessment' && board.assessmentState && board.assessmentState !== 'setup';
 
               if (board.isPublished || isQuizActive || isAssessmentActive) {
                   onSelectBoard(board.id);
@@ -247,7 +247,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           if (b.isTrashed) return false;
           
           const isQuizActive = b.format === 'quiz' && b.quizState && (b.quizState as string) !== 'setup';
-          const isAssessmentActive = b.format === 'assessment' && b.assessmentState === 'active';
+          const isAssessmentActive = b.format === 'assessment' && b.assessmentState && b.assessmentState !== 'setup';
           
           if (!b.isPublished && !isQuizActive && !isAssessmentActive) return false;
 
@@ -544,7 +544,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           <div className="relative w-full md:max-w-md">
                               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                               <input 
-                                  type="text"
+                                  type="text" 
                                   placeholder="Search your boards..."
                                   value={filter}
                                   onChange={(e) => setFilter(e.target.value)}
