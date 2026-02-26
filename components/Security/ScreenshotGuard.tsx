@@ -101,7 +101,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             }
         };
 
-        const handleCopy = (e: ClipboardEvent) => {
+        const handleBlock = (e: Event) => {
             e.preventDefault();
             triggerShield('integrity');
             poisonClipboard();
@@ -126,19 +126,19 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         };
         
         window.addEventListener('keydown', handleKeyDown, true);
-        window.addEventListener('copy', handleCopy, true);
+        window.addEventListener('copy', handleBlock, true);
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
-        window.addEventListener('beforeprint', handleCopy); // Treat printing like copying
+        window.addEventListener('beforeprint', handleBlock);
 
         return () => {
             clearInterval(intervalId);
             clearTimeout(timeoutRef.current);
             window.removeEventListener('keydown', handleKeyDown, true);
-            window.removeEventListener('copy', handleCopy, true);
+            window.removeEventListener('copy', handleBlock, true);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
-            window.removeEventListener('beforeprint', handleCopy);
+            window.removeEventListener('beforeprint', handleBlock);
             releaseShield(true); 
         };
     }, [isEnabled]);
