@@ -7,8 +7,6 @@ interface ScreenshotGuardProps {
 }
 
 export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children }) => {
-    // This state is ONLY for rendering the correct text content inside the overlay.
-    // It is NOT used for showing/hiding the overlay itself.
     const [lockType, setLockType] = useState<'integrity' | 'focus' | 'devtools' | null>(null);
     
     const overlayRef = useRef<HTMLDivElement>(null);
@@ -16,7 +14,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const timeoutRef = useRef<any>(null);
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
 
-    // The core imperative style functions. These bypass React's render cycle to prevent delays.
     const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools', isInstant: boolean) => {
         if (!overlayRef.current || !contentRef.current) return;
 
@@ -91,7 +88,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
             if (key === 'printscreen') {
                 e.preventDefault();
-                triggerShield('integrity', true); // The key is to pass 'true' for instant
+                triggerShield('integrity', true);
                 poisonClipboard();
                 
                 if(timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -160,8 +157,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     if (!isEnabled) return <>{children}</>;
 
     const getOverlayContent = () => {
-        // This part remains declarative, which is fine.
-        // It just provides the content, not the transition logic.
         switch(lockType) {
             case 'integrity':
                 return (
@@ -206,8 +201,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             </div>
             <div 
                 ref={overlayRef}
-                className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8"
-                style={{ opacity: 0, pointerEvents: 'none'}} // Initial styles are minimal.
+                className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 flex flex-col items-center justify-center text-center p-8"
+                style={{ opacity: 0, pointerEvents: 'none'}}
             >
                 {getOverlayContent()}
             </div>
