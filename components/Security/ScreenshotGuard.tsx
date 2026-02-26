@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 
 interface ScreenshotGuardProps {
     isEnabled: boolean;
-    username: string;
     children: React.ReactNode;
 }
 
@@ -13,7 +12,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
 
-    // Use a ref to get the latest lockType value inside intervals/closures without re-triggering useEffect.
     const lockTypeRef = useRef(lockType);
     lockTypeRef.current = lockType;
 
@@ -23,10 +21,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             return;
         }
 
-        const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
+        const triggerShield = (type: 'integrity' | 'focus' | 'devtools', isProactive = false) => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            
-            // More severe locks should take precedence.
+
             const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
             setLockType(prev => {
                 if (!prev || severity[type] >= severity[prev]) return type;
@@ -34,21 +31,19 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             });
             
             if (overlayRef.current) {
-                overlayRef.current.style.transition = 'none';
-                overlayRef.current.style.opacity = '1';
+                overlayRef.current.style.transition = isProactive ? 'none' : 'opacity 0.1s ease-in';
+                overlayRef.current.style.opacity = isProactive ? '0.5' : '1'; // Proactive shield is semi-transparent
                 overlayRef.current.style.pointerEvents = 'auto';
+                document.body.style.pointerEvents = 'none'; 
             }
             if (contentRef.current) {
                 contentRef.current.style.transition = 'none';
-                contentRef.current.style.filter = 'blur(15px) grayscale(100%)';
+                contentRef.current.style.filter = isProactive ? 'blur(5px)' : 'blur(15px) grayscale(100%)';
             }
         };
 
         const releaseShield = (force = false) => {
-            // Devtools lock is special: it should only be released when forced.
-            if (lockTypeRef.current === 'devtools' && !force) {
-                return;
-            }
+            if (lockTypeRef.current === 'devtools' && !force) return;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             
             setLockType(null);
@@ -57,145 +52,111 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 overlayRef.current.style.transition = 'opacity 0.1s ease-out';
                 overlayRef.current.style.opacity = '0';
                 overlayRef.current.style.pointerEvents = 'none';
+                document.body.style.pointerEvents = 'auto';
             }
             if (contentRef.current) {
-                contentRef.current.style.transition = 'none';
+                contentRef.current.style.transition = 'filter 0.1s ease-out';
                 contentRef.current.style.filter = 'none';
             }
         };
 
-        // --- Event Listeners (Layered Approach) ---
-
-        // Layer 1: Catch-all for window focus loss (e.g., system-level screenshot tools)
         const handleBlur = () => triggerShield('focus');
         const handleFocus = () => releaseShield();
-        
-        // Layer 2: Redundant mouse check
-        const handleMouseLeave = () => triggerShield('focus');
-        const handleMouseEnter = () => releaseShield();
 
-        // Layer 3: Specific keyboard shortcuts
         const handleKeyDown = (e: KeyboardEvent) => {
-            const key = e.key.toLowerCase();
-            // DevTools shortcuts
-            const devToolsShortcuts = (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) || key === 'f12';
+            // --- Proactive Shielding --- 
+            // On any key press, instantly trigger a light shield to win the race condition.
+            if (!lockTypeRef.current) {
+                triggerShield('focus', true);
+            }
 
+            const key = e.key.toLowerCase();
+            const devToolsShortcuts = (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) || key === 'f12';
             if (devToolsShortcuts) {
                 e.preventDefault();
                 triggerShield('devtools');
+                return; 
             }
             
-            // Screenshot shortcuts
-            const macScreenshot = e.metaKey && e.shiftKey && ['3', '4', '5'].includes(key);
-            const windowsScreenshot = e.metaKey && e.shiftKey && key === 's';
-            const chromebookScreenshot = e.ctrlKey && e.shiftKey && e.code === 'Select';
-            const chromebookPartial = e.ctrlKey && e.shiftKey && key === 's';
+            const macScreenshot = e.metaKey && e.shiftKey && ['3', '4', '5', '6'].includes(key);
+            const windowsScreenshot = e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && key === 's');
+            const chromebookScreenshot = e.ctrlKey && e.code === 'F5';
 
-            if (e.key === 'PrintScreen' || macScreenshot || windowsScreenshot || chromebookScreenshot || chromebookPartial) {
+            if (macScreenshot || windowsScreenshot || chromebookScreenshot) {
                 e.preventDefault();
+                // Upgrade the proactive shield to the full integrity lock
                 triggerShield('integrity');
                 if (navigator.clipboard?.writeText) {
-                    navigator.clipboard.writeText('Screenshots are disabled.');
+                    navigator.clipboard.writeText('Screenshots are disabled.').catch(err => console.error('Failed to write to clipboard:', err));
                 }
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(releaseShield, 2000); 
-            }
+            } 
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'PrintScreen') {
-                triggerShield('integrity');
+            // If the key was safe, release the light proactive shield.
+            // We only do this if the lock is still the light 'focus' one.
+            if (lockTypeRef.current === 'focus') {
+                if(timeoutRef.current) clearTimeout(timeoutRef.current);
+                // A tiny delay prevents flickering during normal typing.
+                timeoutRef.current = setTimeout(releaseShield, 50); 
             }
         };
         
-        // Layer 4: DevTools detection via interval check
         const devToolsDetector = () => {
             const threshold = 160;
             const devToolsOpen = (window.outerWidth - window.innerWidth > threshold) || (window.outerHeight - window.innerHeight > threshold);
-            if (devToolsOpen) {
-                if (lockTypeRef.current !== 'devtools') {
-                    triggerShield('devtools');
-                }
-            } else {
-                if (lockTypeRef.current === 'devtools') {
-                    releaseShield(true); // Force release the shield
-                }
+            if (devToolsOpen && lockTypeRef.current !== 'devtools') {
+                triggerShield('devtools');
             }
         };
         const intervalId = setInterval(devToolsDetector, 500);
 
-        // Layer 5: Disable other actions
         const preventDefault = (e: Event) => {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
+            if(lockTypeRef.current) {
+                 e.preventDefault();
+                 e.stopPropagation();
+            }
         };
 
-        const mediaQueryList = window.matchMedia('print');
-        const handlePrintChange = (mql: MediaQueryListEvent) => {
-            if (mql.matches) triggerShield('integrity');
-        };
+        const handlePrint = (e: Event) => {
+             triggerShield('integrity');
+             e.preventDefault();
+        }
 
         // Add all listeners
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
-        document.addEventListener('mouseleave', handleMouseLeave);
-        document.addEventListener('mouseenter', handleMouseEnter);
         window.addEventListener('keydown', handleKeyDown, true);
         window.addEventListener('keyup', handleKeyUp, true);
-        document.addEventListener('contextmenu', preventDefault);
-        document.addEventListener('copy', preventDefault);
-        document.addEventListener('cut', preventDefault);
-        document.addEventListener('dragstart', preventDefault);
-        mediaQueryList.addEventListener('change', handlePrintChange);
+        document.addEventListener('contextmenu', preventDefault, true);
+        document.addEventListener('copy', preventDefault, true);
+        document.addEventListener('cut', preventDefault, true);
+        document.addEventListener('dragstart', preventDefault, true);
+        window.addEventListener('beforeprint', handlePrint);
 
         // Cleanup
         return () => {
             clearInterval(intervalId);
+            clearTimeout(timeoutRef.current);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
-            document.removeEventListener('mouseleave', handleMouseLeave);
-            document.removeEventListener('mouseenter', handleMouseEnter);
             window.removeEventListener('keydown', handleKeyDown, true);
             window.removeEventListener('keyup', handleKeyUp, true);
-            document.removeEventListener('contextmenu', preventDefault);
-            document.removeEventListener('copy', preventDefault);
-            document.removeEventListener('cut', preventDefault);
-            document.removeEventListener('dragstart', preventDefault);
-            mediaQueryList.removeEventListener('change', handlePrintChange);
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            document.removeEventListener('contextmenu', preventDefault, true);
+            document.removeEventListener('copy', preventDefault, true);
+            document.removeEventListener('cut', preventDefault, true);
+            document.removeEventListener('dragstart', preventDefault, true);
+            window.removeEventListener('beforeprint', handlePrint);
+            releaseShield(true); 
         };
     }, [isEnabled]);
 
     if (!isEnabled) return <>{children}</>;
 
-    return (
-        <div className="relative h-full w-full overflow-hidden select-none">
-            <style>{`
-                @media print {
-                    html, body { display: none !important; height: 0 !important; overflow: hidden !important; }
-                    * { display: none !important; }
-                }
-                body {
-                    -webkit-user-select: none;
-                    -moz-user-select: none;
-                    -ms-user-select: none;
-                    user-select: none;
-                }
-            `}</style>
-            <div ref={contentRef} className="h-full w-full will-change-filter" style={{ transition: 'filter 0.1s ease-out' }}>
-                {children}
-            </div>
-            <div 
-                ref={overlayRef}
-                className="absolute inset-0 z-[10000] bg-white dark:bg-black flex flex-col items-center justify-center text-center p-8"
-                style={{ 
-                    opacity: lockType ? 1 : 0, 
-                    pointerEvents: lockType ? 'auto' : 'none',
-                    transition: 'opacity 0.1s ease-out'
-                }}
-            >
-                {lockType === 'integrity' ? (
+    const getOverlayContent = () => {
+        switch(lockType) {
+            case 'integrity':
+                return (
                     <>
                         <div className="text-6xl mb-6 animate-bounce">🧠</div>
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Academic Integrity</h2>
@@ -205,7 +166,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                         </p>
                         <p className="text-gray-400 dark:text-gray-600 text-xs mt-8 font-bold uppercase tracking-widest">ClassBoard Focus Guard</p>
                     </>
-                ) : lockType === 'devtools' ? (
+                );
+            case 'devtools':
+                 return (
                      <>
                         <div className="text-6xl mb-6">⚠️</div>
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Developer Tools Detected</h2>
@@ -213,7 +176,12 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                             Please close the developer console to continue. Accessing the inspector is not permitted.
                         </p>
                     </>
-                ) : ( // 'focus'
+                );
+            case 'focus':
+            default:
+                // The proactive shield shows a minimal UI so it's less intrusive
+                if (overlayRef.current && overlayRef.current.style.opacity === '0.5') return null;
+                return (
                     <>
                         <div className="text-6xl mb-6 animate-pulse">🎯</div>
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Get Back to It!</h2>
@@ -221,7 +189,26 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                             This activity requires your full attention. Please return to this window to continue.
                         </p>
                     </>
-                )}
+                );
+        }
+    }
+
+    return (
+        <div className="relative h-full w-full overflow-hidden select-none">
+            <style>{`@media print { html, body, * { display: none !important; } }`}</style>
+            <div ref={contentRef} className="h-full w-full will-change-filter" style={{ transition: 'filter 0.1s ease-out' }}>
+                {children}
+            </div>
+            <div 
+                ref={overlayRef}
+                className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8"
+                style={{ 
+                    opacity: lockType ? 1 : 0, 
+                    pointerEvents: lockType ? 'auto' : 'none',
+                    transition: 'opacity 0.05s ease-in-out'
+                }}
+            >
+                {getOverlayContent()}
             </div>
         </div>
     );
