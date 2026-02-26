@@ -11,9 +11,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const overlayRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
-
-    const lockTypeRef = useRef(lockType);
-    lockTypeRef.current = lockType;
+    
+    // This ref is the source of truth, managed synchronously to avoid race conditions.
+    const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
 
     useEffect(() => {
         if (!isEnabled) {
@@ -23,7 +23,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const showInstantShield = () => {
             if (overlayRef.current && contentRef.current) {
-                setLockType('integrity');
+                lockTypeRef.current = 'integrity'; // Synchronously update the ref
+                setLockType('integrity'); // Update state for React to render the right content
+
                 overlayRef.current.style.transition = 'none';
                 overlayRef.current.style.opacity = '1';
                 overlayRef.current.style.pointerEvents = 'auto';
@@ -36,27 +38,20 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
             const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
-            setLockType(prev => {
-                if (!prev || severity[type] >= severity[prev]) return type;
-                return prev;
-            });
+            const currentType = lockTypeRef.current;
+
+            if (!currentType || severity[type] >= severity[currentType]) {
+                lockTypeRef.current = type; // Synchronously update the ref
+                setLockType(type); // Update state for React
+            }
         };
 
         const releaseShield = (force = false) => {
             if (lockTypeRef.current === 'devtools' && !force) return;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             
-            setLockType(null);
-            
-            if (overlayRef.current) {
-                overlayRef.current.style.transition = 'opacity 0.2s ease-out';
-                overlayRef.current.style.opacity = '0';
-                overlayRef.current.style.pointerEvents = 'none';
-            }
-            if (contentRef.current) {
-                contentRef.current.style.transition = 'filter 0.2s ease-out';
-                contentRef.current.style.filter = 'none';
-            }
+            lockTypeRef.current = null; // Synchronously update the ref
+            setLockType(null); // Update state for React
         };
 
         const poisonClipboard = () => {
@@ -115,8 +110,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const handleBlur = () => triggerShield('focus');
         const handleFocus = () => {
-            // Only release the shield if it was a 'focus' lock.
-            // This prevents releasing the shield after a screenshot attempt.
             if(lockTypeRef.current === 'focus') {
                 releaseShield();
             }
@@ -146,14 +139,16 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 overlayRef.current.style.opacity = '1';
                 overlayRef.current.style.pointerEvents = 'auto';
                 contentRef.current.style.filter = (lockType === 'focus') ? 'blur(5px)' : 'blur(15px) grayscale(100%)';
+                overlayRef.current.style.transition = 'opacity 0.1s ease-in';
+                contentRef.current.style.transition = 'filter 0.1s ease-in';
             }
         } else {
-             if (overlayRef.current) {
+             if (overlayRef.current && contentRef.current) {
                 overlayRef.current.style.opacity = '0';
                 overlayRef.current.style.pointerEvents = 'none';
-             }
-             if (contentRef.current) {
                 contentRef.current.style.filter = 'none';
+                overlayRef.current.style.transition = 'opacity 0.2s ease-out';
+                contentRef.current.style.transition = 'filter 0.2s ease-out';
              }
         }
     }, [lockType]);
@@ -200,7 +195,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     return (
         <div className="relative h-full w-full overflow-hidden select-none">
             <style>{`@media print { html, body, * { display: none !important; } }`}</style>
-            <div ref={contentRef} className="h-full w-full will-change-filter" style={{ transition: 'filter 0.2s ease-out' }}>
+            <div ref={contentRef} className="h-full w-full will-change-filter">
                 {children}
             </div>
             <div 
@@ -209,7 +204,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 style={{ 
                     opacity: 0, 
                     pointerEvents: 'none',
-                    transition: 'opacity 0.2s ease-in-out'
                 }}
             >
                 {getOverlayContent()}
