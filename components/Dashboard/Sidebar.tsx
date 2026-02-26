@@ -5,6 +5,7 @@ import { Avatar } from '../ui/Avatar';
 import { ClassGroup } from '../../types';
 import { useSortableList } from '../../src/logic/dnd/useSortableList';
 import { classService } from '../../services/classService';
+import { useAuth } from '../../src/hooks/useAuth';
 
 interface SidebarProps {
     username: string;
@@ -28,7 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onJoinBoard, onOpenSetup, filter, setFilter, randomQuote, isSuperAdmin
 }) => {
     
-    // Hook implementation
+    const { user } = useAuth(); // ADDED: Get the current user
+
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem } = useSortableList({
         items: classes,
         onReorder: (newItems: any) => {
@@ -36,11 +38,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
     });
 
-    // We persist on drag end to save DB writes
     const onDropPersist = (e: React.DragEvent) => {
         handleDragEnd(e);
         classService.reorderClasses(classes);
     };
+
+    // ADDED: Filter classes to only show ones owned by the current user
+    const myClasses = classes.filter(cls => cls.owner_id === user?.id);
 
     return (
         <>
@@ -80,7 +84,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <nav className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-2">
-                {/* Default Categories */}
                 {(['recents', 'made_by_me', 'favourites', 'trashed'] as const).map(f => (
                     <button 
                         key={f}
@@ -99,7 +102,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                 ))}
 
-                {/* Super Admin Section */}
                 {isSuperAdmin && (
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
                         <div className="px-3 mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-500">
@@ -132,8 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 )}
 
-                {/* Divider & Class Groups (Draggable) */}
-                {classes.length > 0 && (
+                {myClasses.length > 0 && (
                     <>
                         <div className={`h-px my-4 ${theme === 'light' ? 'bg-slate-200' : 'bg-white/10'}`}></div>
                         <div className="flex items-center justify-between px-3 mb-2 group/label">
@@ -142,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                         
                         <div className="space-y-1 relative">
-                            {classes.map(cls => (
+                            {myClasses.map(cls => ( // CHANGED: Use the filtered `myClasses` array
                                 <div
                                     key={cls.id}
                                     draggable
