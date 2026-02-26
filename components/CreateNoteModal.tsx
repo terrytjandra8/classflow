@@ -251,15 +251,18 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center md:p-4 overflow-hidden">
-        <div className={`absolute inset-0 bg-black/60 ${!board.settings?.disableModalBlur && 'backdrop-blur-sm'} animate-in fade-in duration-300`} onClick={onClose} />
-        
-        <div 
-            ref={modalRef}
-            style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-            className="relative w-full h-full md:h-auto md:max-w-2xl bg-[#0a0a0a]/90 backdrop-blur-2xl border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow"
-        >
-            
+    <>
+      <div
+        className={`fixed inset-0 z-[999] bg-black/60 ${!board.settings?.disableModalBlur && 'backdrop-blur-sm'} animate-in fade-in duration-300`}
+        onClick={onClose}
+      />
+      <div
+        ref={modalRef}
+        style={{ 
+            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`
+        }}
+        className="fixed top-1/2 left-1/2 z-[1000] w-full h-full md:h-auto md:max-w-2xl bg-[#0a0a0a]/90 backdrop-blur-2xl border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow"
+      >
             <div className="absolute inset-0 pointer-events-none z-0 md:rounded-3xl overflow-hidden">
                 <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] animate-blob"></div>
                 <div className="absolute bottom-[-50%] right-[-20%] w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
@@ -353,6 +356,6 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
             </div>
         </div>
-    </div>
+    </>
   );
 });
