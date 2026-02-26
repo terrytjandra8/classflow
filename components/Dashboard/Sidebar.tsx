@@ -5,7 +5,7 @@ import { Avatar } from '../ui/Avatar';
 import { ClassGroup } from '../../types';
 import { useSortableList } from '../../src/logic/dnd/useSortableList';
 import { classService } from '../../services/classService';
-import { useAuth } from '../../src/hooks/useAuth';
+import { useAdminData } from '../../hooks/useAdminData'; // CORRECTED IMPORT
 
 interface SidebarProps {
     username: string;
@@ -29,7 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onJoinBoard, onOpenSetup, filter, setFilter, randomQuote, isSuperAdmin
 }) => {
     
-    const { user } = useAuth(); // ADDED: Get the current user
+    const { userId } = useAdminData(); // CORRECTED: Use the existing hook to get userId
 
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem } = useSortableList({
         items: classes,
@@ -43,8 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         classService.reorderClasses(classes);
     };
 
-    // ADDED: Filter classes to only show ones owned by the current user
-    const myClasses = classes.filter(cls => cls.owner_id === user?.id);
+    // Filter classes to only show ones owned by the current user
+    const myClasses = classes.filter(cls => cls.owner_id === userId);
 
     return (
         <>
