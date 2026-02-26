@@ -184,9 +184,9 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
 
     const submissionStats = useMemo(() => {
         const total = students.length;
-        const submitted = students.filter(s => grades[s.id] !== null && grades[s.id] !== undefined).length;
+        const submitted = students.filter(s => participatingStudents.has(s.id)).length;
         return { total, submitted };
-    }, [students, grades]);
+    }, [students, participatingStudents]);
 
     if (isStudent) return null;
 
