@@ -191,21 +191,16 @@ export const PostEditor: React.FC<PostEditorProps> = ({
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99] pointer-events-none"
         />
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-            onMouseDown={handleClose}
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               key="modal"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className={`relative bg-[#202020] border border-white/10 rounded-2xl shadow-2xl w-full flex flex-col ${
+              className={`pointer-events-auto relative bg-[#202020] border border-white/10 rounded-2xl shadow-2xl w-full flex flex-col ${
                 isDrawingFullScreen ? 'h-[95vh] max-w-6xl' : 'max-w-xl'
-              }`}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
+              }`}>
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Brush size={20} className="text-pink-400"/>
