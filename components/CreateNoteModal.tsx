@@ -85,11 +85,19 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null); // Ref for the content area to protect
   const typingTimeoutRef = useRef<any>(null);
   const dragStart = useRef({ x: 0, y: 0 });
 
   const isEditing = !!noteToEdit;
-  const { handlePasteProtection, pasteWarning } = usePasteProtection(isStudent, disablePaste, allowLinks);
+  
+  // Apply the advanced paste protection
+  const { pasteWarning, onPaste: honeypotPasteHandler } = usePasteProtection({
+      isStudent,
+      disablePaste,
+      allowLinks,
+      targetRef: contentRef // The real listener watches this element
+  });
 
   // --- Effects ---
 
@@ -204,8 +212,9 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
         setIsUploading(false);
     }
   };
-
+  
   const onPaste = (e: React.ClipboardEvent, sourceInput?: 'link-url') => {
+      // 1. Handle image pasting first
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {
           if (items[i].type.indexOf('image') !== -1) {
@@ -214,12 +223,19 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                   e.preventDefault();
                   processImageFile(file);
                   setActiveMode('image');
-                  return;
+                  return; // Stop processing
               }
           }
       }
-      if (activeMode === 'link' && sourceInput === 'link-url') return;
-      handlePasteProtection(e);
+
+      // 2. Allow pasting in the link URL field
+      if (activeMode === 'link' && sourceInput === 'link-url') {
+          return;
+      }
+
+      // 3. If no special case matched, call the decoy paste handler.
+      // The REAL protection is happening globally from the hook.
+      honeypotPasteHandler(e);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -293,7 +309,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
             </div>
 
-            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[250px] bg-black/20 flex flex-col" onMouseDown={e => e.stopPropagation()}>
+            <div ref={contentRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[250px] bg-black/20 flex flex-col" onMouseDown={e => e.stopPropagation()}>
                 <input 
                     type="text" value={title} onChange={(e) => { setTitle(e.target.value); handleTyping(); }}
                     placeholder="Add a title..."
