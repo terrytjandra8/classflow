@@ -11,7 +11,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const overlayRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
-    const modifierKeyPressed = useRef(false);
 
     const lockTypeRef = useRef(lockType);
     lockTypeRef.current = lockType;
@@ -22,7 +21,21 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             return;
         }
 
-        const triggerShield = (type: 'integrity' | 'focus' | 'devtools', isProactive = false) => {
+        // --- The Instantaneous Shield --- 
+        // This function bypasses React's async state to show the shield instantly.
+        const showInstantShield = () => {
+            if (overlayRef.current && contentRef.current) {
+                setLockType('integrity'); // Set the content for the shield
+                // Directly manipulate style to win the race condition
+                overlayRef.current.style.transition = 'none';
+                overlayRef.current.style.opacity = '1';
+                overlayRef.current.style.pointerEvents = 'auto';
+                contentRef.current.style.transition = 'none';
+                contentRef.current.style.filter = 'blur(15px) grayscale(100%)';
+            }
+        }
+
+        const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
             const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
@@ -30,18 +43,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 if (!prev || severity[type] >= severity[prev]) return type;
                 return prev;
             });
-            
-            if (overlayRef.current) {
-                overlayRef.current.style.transition = isProactive ? 'none' : 'opacity 0.1s ease-in';
-                overlayRef.current.style.opacity = isProactive ? '0.5' : '1';
-                overlayRef.current.style.pointerEvents = 'auto';
-            }
-            if (contentRef.current) {
-                contentRef.current.style.transition = isProactive ? 'none' : 'blur(5px)';
-                if (type === 'integrity' || type === 'devtools') {
-                     contentRef.current.style.filter = 'blur(15px) grayscale(100%)';
-                }
-            }
         };
 
         const releaseShield = (force = false) => {
@@ -49,9 +50,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             
             setLockType(null);
-            modifierKeyPressed.current = false;
             
             if (overlayRef.current) {
+                // Ensure transitions are re-enabled for a smooth fade-out
                 overlayRef.current.style.transition = 'opacity 0.2s ease-out';
                 overlayRef.current.style.opacity = '0';
                 overlayRef.current.style.pointerEvents = 'none';
@@ -73,23 +74,15 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
 
+            // --- Primary defense against PrintScreen --- 
             if (key === 'printscreen') {
                 e.preventDefault();
-                triggerShield('integrity');
+                showInstantShield(); // Use the synchronous shield
                 poisonClipboard();
-                // Keep shield up for a moment to signal that the action was blocked.
+                
                 if(timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => releaseShield(), 1500);
+                timeoutRef.current = setTimeout(releaseShield, 1500);
                 return;
-            }
-
-            const isModifier = e.ctrlKey || e.metaKey || e.altKey;
-            if (isModifier && !modifierKeyPressed.current) {
-                modifierKeyPressed.current = true;
-                // Only trigger the proactive shield if it's not already up.
-                if (!lockTypeRef.current) {
-                    triggerShield('focus', true);
-                }
             }
             
             const devToolsShortcuts = (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) || key === 'f12';
@@ -103,19 +96,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             const windowsScreenshot = e.metaKey && e.shiftKey && key === 's';
             if (macScreenshot || windowsScreenshot) {
                 e.preventDefault();
-                triggerShield('integrity');
+                triggerShield('integrity'); 
                 poisonClipboard();
-            }
-        };
-
-        const handleKeyUp = (e: KeyboardEvent) => {
-            const isModifier = !e.ctrlKey && !e.metaKey && !e.altKey;
-            if (isModifier) {
-                modifierKeyPressed.current = false;
-                // Only release the shield if it was the light 'focus' one.
-                if (lockTypeRef.current === 'focus') {
-                    releaseShield();
-                }
             }
         };
 
@@ -124,7 +106,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             triggerShield('integrity');
             poisonClipboard();
             if(timeoutRef.current) clearTimeout(timeoutRef.current);
-            timeoutRef.current = setTimeout(() => releaseShield(), 1500);
+            timeoutRef.current = setTimeout(releaseShield, 1500);
         }
 
         const devToolsDetector = () => {
@@ -137,25 +119,49 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         const intervalId = setInterval(devToolsDetector, 500);
 
         const handleBlur = () => triggerShield('focus');
-        const handleFocus = () => releaseShield(lockTypeRef.current !== 'devtools');
+        const handleFocus = () => {
+            if(lockTypeRef.current !== 'devtools') {
+                releaseShield();
+            }
+        };
         
         window.addEventListener('keydown', handleKeyDown, true);
-        window.addEventListener('keyup', handleKeyUp, true);
         window.addEventListener('copy', handleCopy, true);
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
+        window.addEventListener('beforeprint', handleCopy); // Treat printing like copying
 
         return () => {
             clearInterval(intervalId);
             clearTimeout(timeoutRef.current);
             window.removeEventListener('keydown', handleKeyDown, true);
-            window.removeEventListener('keyup', handleKeyUp, true);
             window.removeEventListener('copy', handleCopy, true);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('beforeprint', handleCopy);
             releaseShield(true); 
         };
     }, [isEnabled]);
+
+    useEffect(() => {
+        // This effect ensures that when lockType changes via React state, the styles are correct.
+        // This is for non-instantaneous triggers like blur or devtools.
+        if (lockType) {
+            if (overlayRef.current && contentRef.current) {
+                overlayRef.current.style.opacity = '1';
+                overlayRef.current.style.pointerEvents = 'auto';
+                contentRef.current.style.filter = (lockType === 'focus') ? 'blur(5px)' : 'blur(15px) grayscale(100%)';
+            }
+        } else {
+             if (overlayRef.current) {
+                overlayRef.current.style.opacity = '0';
+                overlayRef.current.style.pointerEvents = 'none';
+             }
+             if (contentRef.current) {
+                contentRef.current.style.filter = 'none';
+             }
+        }
+    }, [lockType]);
 
     if (!isEnabled) return <>{children}</>;
 
@@ -184,8 +190,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 );
             case 'focus':
             default:
-                 // Proactive shield has no text, it's just a blur and dark overlay.
-                if (modifierKeyPressed.current) return null;
                 return (
                     <>
                         <div className="text-6xl mb-6 animate-pulse">🎯</div>
@@ -208,9 +212,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 ref={overlayRef}
                 className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8"
                 style={{ 
-                    opacity: lockType ? 1 : 0, 
-                    pointerEvents: lockType ? 'auto' : 'none',
-                    transition: 'opacity 0.05s ease-in-out, backdrop-filter 0.05s ease-in-out'
+                    opacity: 0, // Start as hidden
+                    pointerEvents: 'none',
+                    transition: 'opacity 0.2s ease-in-out'
                 }}
             >
                 {getOverlayContent()}
