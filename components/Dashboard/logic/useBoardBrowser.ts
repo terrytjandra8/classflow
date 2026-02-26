@@ -105,10 +105,7 @@ export const useBoardBrowser = (
             result = boards.filter(b => 
                 !b.isTrashed && 
                 b.isPublished &&
-                // Condition 1: Board is not assigned to any class (meant for everyone)
-                (!b.targetGrade || b.targetGrade.trim() === '' || 
-                // Condition 2: Board is assigned to a class the student is in
-                viewableClasses.includes(b.targetGrade))
+                b.targetGrade && viewableClasses.includes(b.targetGrade)
             );
         } else {
             // Teacher/Admin View
