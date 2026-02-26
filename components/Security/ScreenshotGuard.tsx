@@ -14,21 +14,21 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const timeoutRef = useRef<any>(null);
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
 
+    // --- Imperative Style & State Functions ---
+
     const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools') => {
-        if (!overlayRef.current) return;
+        if (!overlayRef.current || !contentRef.current) return;
         const overlay = overlayRef.current;
         overlay.style.transition = 'opacity 0.1s ease-in';
         overlay.style.opacity = '1';
         overlay.style.pointerEvents = 'auto';
 
-        if (contentRef.current) {
-            const content = contentRef.current;
-            content.style.transition = 'filter 0.1s ease-in';
-            if (type === 'integrity' || type === 'devtools') {
-                content.style.filter = 'blur(15px) grayscale(100%)';
-            } else { // focus
-                content.style.filter = 'blur(5px)';
-            }
+        const content = contentRef.current;
+        content.style.transition = 'filter 0.1s ease-in';
+        if (type === 'integrity' || type === 'devtools') {
+            content.style.filter = 'blur(15px) grayscale(100%)';
+        } else { // focus
+            content.style.filter = 'blur(5px)';
         }
     };
 
@@ -39,11 +39,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             overlayRef.current.style.pointerEvents = 'none';
         }
         if (contentRef.current) {
-            const content = contentRef.current;
-            content.style.filter = 'none';
-            content.style.transition = 'filter 0.2s ease-out';
-            // Restore the content's visibility
-            content.style.display = '';
+            contentRef.current.style.filter = 'none';
+            contentRef.current.style.transition = 'filter 0.2s ease-out';
         }
     };
 
@@ -55,10 +52,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
             const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
             const currentType = lockTypeRef.current;
-
             if (!currentType || severity[type] >= severity[currentType]) {
                 lockTypeRef.current = type;
                 setLockType(type);
@@ -69,47 +64,45 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         const releaseShield = (force = false) => {
             if (lockTypeRef.current === 'devtools' && !force) return;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            
             lockTypeRef.current = null;
             setLockType(null);
             releaseShieldStyles();
         };
 
-        const poisonClipboard = () => {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText('Copying and screenshots are disabled.').catch(err => {
-                    console.error("Could not poison clipboard:", err);
-                });
-            }
-        }
+        // --- NEW STRATEGY: PRINT HIJACK ---
+        const handleAfterPrint = () => {
+            document.body.classList.remove('screenshot-blocking');
+            releaseShield(true); // Force release the shield after printing is done.
+        };
+
+        window.addEventListener('afterprint', handleAfterPrint);
 
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
             const isPrintScreen = key === 'printscreen';
-            const isWinScreenshot = !isMac && e.metaKey && e.shiftKey && key === 's';
-            const isMacScreenshot = isMac && e.metaKey && e.shiftKey && ['3', '4', '5', '6'].includes(key);
+            // Note: Win+Shift+S does not trigger keydown in many browsers, so we focus on PrintScreen.
+            const isMacScreenshot = isMac && e.metaKey && e.shiftKey && ['3', '4'].includes(key); 
 
-            if (isPrintScreen || isWinScreenshot || isMacScreenshot) {
+            if (isPrintScreen || isMacScreenshot) {
                 e.preventDefault();
-
-                // **ADDED LOGIC**: Immediately hide content before showing the shield.
-                if (contentRef.current) {
-                    contentRef.current.style.display = 'none';
-                }
-
-                triggerShield('integrity');
-                poisonClipboard();
                 
-                if(timeoutRef.current) clearTimeout(timeoutRef.current);
-                // For printscreen, we set a timeout. For others, the shield stays until focus is regained.
-                if(isPrintScreen) {
-                    timeoutRef.current = setTimeout(releaseShield, 1500);
-                }
+                // 1. Add a class to the body. This class is used by our new @media print style.
+                document.body.classList.add('screenshot-blocking');
+                
+                // 2. Trigger the shield overlay for user feedback.
+                triggerShield('integrity');
+                
+                // 3. Call window.print(). This is a blocking action.
+                // The browser will now apply @media print styles BEFORE the OS can take a screenshot.
+                window.print();
+                
+                // 4. The `afterprint` event listener will handle all the cleanup.
                 return;
             }
-            
+
+            // --- Existing DevTools and other shortcut blocks ---
             const devToolsShortcuts = (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) || key === 'f12';
             if (devToolsShortcuts) {
                 e.preventDefault();
@@ -117,14 +110,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 return; 
             }
         };
-
-        const handleBlock = (e: Event) => {
-            e.preventDefault();
-            triggerShield('integrity');
-            poisonClipboard();
-            if(timeoutRef.current) clearTimeout(timeoutRef.current);
-            timeoutRef.current = setTimeout(releaseShield, 1500);
-        }
 
         const devToolsDetector = () => {
             const threshold = 160;
@@ -137,26 +122,22 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const handleBlur = () => triggerShield('focus');
         const handleFocus = () => {
-             // Only release shield if it was a simple focus lock or an integrity lock from a non-printscreen shortcut
-            if (lockTypeRef.current === 'focus' || (lockTypeRef.current === 'integrity' && !timeoutRef.current)) {
+            if(lockTypeRef.current === 'focus') {
                 releaseShield();
             }
         };
         
         window.addEventListener('keydown', handleKeyDown, true);
-        window.addEventListener('copy', handleBlock, true);
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
-        window.addEventListener('beforeprint', handleBlock);
 
         return () => {
             clearInterval(intervalId);
             clearTimeout(timeoutRef.current);
             window.removeEventListener('keydown', handleKeyDown, true);
-            window.removeEventListener('copy', handleBlock, true);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
-            window.removeEventListener('beforeprint', handleBlock);
+            window.removeEventListener('afterprint', handleAfterPrint);
             releaseShield(true); 
         };
     }, [isEnabled]);
@@ -164,6 +145,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     if (!isEnabled) return <>{children}</>;
 
     const getOverlayContent = () => {
+        // ... (this remains the same)
         switch(lockType) {
             case 'integrity':
                 return (
@@ -171,9 +153,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                         <div className="text-6xl mb-6 animate-bounce">🧠</div>
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">No Distractions, Please</h2>
                         <p className="text-gray-500 dark:text-gray-400 text-lg font-medium max-w-lg leading-relaxed">
-                            Please focus on the task. Screenshots and copying are disabled to encourage original thinking.
+                            Printing and screenshots are disabled for this activity.
                         </p>
-                        <p className="text-gray-400 dark:text-gray-600 text-xs mt-8 font-bold uppercase tracking-widest">ClassBoard Focus Guard</p>
                     </>
                 );
             case 'devtools':
@@ -202,7 +183,20 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
     return (
         <div className="relative h-full w-full overflow-hidden select-none">
-            <style>{`@media print { html, body, * { display: none !important; } }`}</style>
+            {/* --- THIS IS THE CORE OF THE NEW SOLUTION --- */}
+            <style>{`
+                @media print {
+                    /* When the body has this class, hide everything during the print process */
+                    body.screenshot-blocking * {
+                        display: none !important;
+                    }
+                    /* Ensure the body itself is also blank */
+                    body.screenshot-blocking {
+                        background: none !important;
+                    }
+                }
+            `}</style>
+
             <div ref={contentRef} className="h-full w-full will-change-filter">
                 {children}
             </div>
