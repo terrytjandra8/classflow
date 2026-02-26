@@ -371,7 +371,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
         
         return (
-            <ScreenshotGuard isEnabled={protectionEnabled} username={username}>
+            <ScreenshotGuard isEnabled={protectionEnabled}>
                 {content}
             </ScreenshotGuard>
         );
