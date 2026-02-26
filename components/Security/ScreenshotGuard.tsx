@@ -7,42 +7,65 @@ interface ScreenshotGuardProps {
 }
 
 export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children }) => {
+    // This state is ONLY for rendering the correct text content inside the overlay.
+    // It is NOT used for showing/hiding the overlay itself.
     const [lockType, setLockType] = useState<'integrity' | 'focus' | 'devtools' | null>(null);
+    
     const overlayRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
-    
-    // This ref is the source of truth, managed synchronously to avoid race conditions.
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
+
+    // The core imperative style functions. These bypass React's render cycle to prevent delays.
+    const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools', isInstant: boolean) => {
+        if (!overlayRef.current || !contentRef.current) return;
+
+        const overlay = overlayRef.current;
+        const content = contentRef.current;
+
+        overlay.style.transition = isInstant ? 'none' : 'opacity 0.1s ease-in';
+        content.style.transition = isInstant ? 'none' : 'filter 0.1s ease-in';
+
+        overlay.style.opacity = '1';
+        overlay.style.pointerEvents = 'auto';
+        
+        if (type === 'integrity' || type === 'devtools') {
+            content.style.filter = 'blur(15px) grayscale(100%)';
+        } else { // focus
+            content.style.filter = 'blur(5px)';
+        }
+    };
+
+    const releaseShieldStyles = () => {
+        if (!overlayRef.current || !contentRef.current) return;
+
+        const overlay = overlayRef.current;
+        const content = contentRef.current;
+
+        overlay.style.transition = 'opacity 0.2s ease-out';
+        content.style.transition = 'filter 0.2s ease-out';
+        
+        overlay.style.opacity = '0';
+        overlay.style.pointerEvents = 'none';
+        content.style.filter = 'none';
+    };
 
     useEffect(() => {
         if (!isEnabled) {
-            if (contentRef.current) contentRef.current.style.filter = 'none';
+            releaseShieldStyles();
             return;
         }
 
-        const showInstantShield = () => {
-            if (overlayRef.current && contentRef.current) {
-                lockTypeRef.current = 'integrity'; // Synchronously update the ref
-                setLockType('integrity'); // Update state for React to render the right content
-
-                overlayRef.current.style.transition = 'none';
-                overlayRef.current.style.opacity = '1';
-                overlayRef.current.style.pointerEvents = 'auto';
-                contentRef.current.style.transition = 'none';
-                contentRef.current.style.filter = 'blur(15px) grayscale(100%)';
-            }
-        }
-
-        const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
+        const triggerShield = (type: 'integrity' | 'focus' | 'devtools', isInstant = false) => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
             const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
             const currentType = lockTypeRef.current;
 
             if (!currentType || severity[type] >= severity[currentType]) {
-                lockTypeRef.current = type; // Synchronously update the ref
-                setLockType(type); // Update state for React
+                lockTypeRef.current = type;
+                setLockType(type);
+                applyShieldStyles(type, isInstant);
             }
         };
 
@@ -50,13 +73,14 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             if (lockTypeRef.current === 'devtools' && !force) return;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             
-            lockTypeRef.current = null; // Synchronously update the ref
-            setLockType(null); // Update state for React
+            lockTypeRef.current = null;
+            setLockType(null);
+            releaseShieldStyles();
         };
 
         const poisonClipboard = () => {
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText('Copying and screenshots are disabled for this activity.').catch(err => {
+                navigator.clipboard.writeText('Copying and screenshots are disabled.').catch(err => {
                     console.error("Could not poison clipboard:", err);
                 });
             }
@@ -67,7 +91,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
             if (key === 'printscreen') {
                 e.preventDefault();
-                showInstantShield();
+                triggerShield('integrity', true); // The key is to pass 'true' for instant
                 poisonClipboard();
                 
                 if(timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -133,29 +157,11 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         };
     }, [isEnabled]);
 
-    useEffect(() => {
-        if (lockType) {
-            if (overlayRef.current && contentRef.current) {
-                overlayRef.current.style.opacity = '1';
-                overlayRef.current.style.pointerEvents = 'auto';
-                contentRef.current.style.filter = (lockType === 'focus') ? 'blur(5px)' : 'blur(15px) grayscale(100%)';
-                overlayRef.current.style.transition = 'opacity 0.1s ease-in';
-                contentRef.current.style.transition = 'filter 0.1s ease-in';
-            }
-        } else {
-             if (overlayRef.current && contentRef.current) {
-                overlayRef.current.style.opacity = '0';
-                overlayRef.current.style.pointerEvents = 'none';
-                contentRef.current.style.filter = 'none';
-                overlayRef.current.style.transition = 'opacity 0.2s ease-out';
-                contentRef.current.style.transition = 'filter 0.2s ease-out';
-             }
-        }
-    }, [lockType]);
-
     if (!isEnabled) return <>{children}</>;
 
     const getOverlayContent = () => {
+        // This part remains declarative, which is fine.
+        // It just provides the content, not the transition logic.
         switch(lockType) {
             case 'integrity':
                 return (
@@ -201,10 +207,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             <div 
                 ref={overlayRef}
                 className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8"
-                style={{ 
-                    opacity: 0, 
-                    pointerEvents: 'none',
-                }}
+                style={{ opacity: 0, pointerEvents: 'none'}} // Initial styles are minimal.
             >
                 {getOverlayContent()}
             </div>

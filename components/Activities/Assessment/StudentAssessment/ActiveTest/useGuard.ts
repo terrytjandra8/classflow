@@ -81,17 +81,6 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
                  handleViolation();
                  return;
             }
-            
-            // Block standard screenshot shortcuts
-            if (
-                (e.metaKey && e.shiftKey && ['s', '3', '4'].includes(e.key.toLowerCase())) || // Win+Shift+S, Cmd+Shift+3/4
-                (e.key === 'PrintScreen')
-            ) {
-                e.preventDefault();
-                console.log(`Violation: Screenshot shortcut detected`);
-                handleViolation();
-                return;
-            }
 
             // Block window switching via Alt+Tab or Cmd+Tab
             if ((e.altKey || e.metaKey) && e.key === 'Tab') {
