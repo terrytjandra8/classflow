@@ -2,15 +2,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { Board, ClassGroup } from '../../../types';
-import { classService } from '../../../services/classService';
 
+// This function remains the same
 const getDateCategory = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
-    
     const d = new Date(date); d.setHours(0,0,0,0);
     const n = new Date(now); n.setHours(0,0,0,0);
-    
     const diffTime = n.getTime() - d.getTime();
     const diffDays = Math.floor(diffTime / (86400000));
 
@@ -50,7 +48,7 @@ export const useBoardBrowser = (
     onDuplicateBoard: (id: string) => void,
     onToggleFavorite: (id: string) => void,
     isStudent: boolean,
-    studentClasses: string[] = [] // Default to empty array
+    studentClasses: string[] = []
 ) => {
     const [sidebarFilter, setSidebarFilterState] = useState<string>(() => {
         const key = isStudent ? 'cb_student_sidebar_filter' : 'cb_teacher_sidebar_filter';
@@ -64,9 +62,37 @@ export const useBoardBrowser = (
     };
 
     const [filter, setFilter] = useState('');
-    const [sortBy, setSortBy] = useState<'created' | 'updated'>('created'); 
-    const [classes, setClasses] = useState<ClassGroup[]>([]);
+    const [sortBy, setSortBy] = useState<'created' | 'updated'>('created');
     
+    // --- FIX STARTS HERE ---
+    // 1. Derive the classes directly from the boards prop.
+    // This ensures the sidebar is always in sync with the main content.
+    const classes = useMemo<ClassGroup[]>(() => {
+      if (!boards || isStudent) return [];
+      
+      // Create a list of classes from the 'targetGrade' property of each board.
+      const allClasses = boards
+        .filter(b => b.targetGrade) // Only consider boards that have a class assigned
+        .map(b => ({ 
+            // Use the class name as the ID for uniqueness
+            id: b.targetGrade!,
+            name: b.targetGrade!,
+            owner_id: b.owner_id 
+        }));
+      
+      // Filter out duplicate class names to create a unique list.
+      const uniqueClasses = Array.from(new Map(allClasses.map(item => [item.name, item])).values());
+      
+      return uniqueClasses;
+    }, [boards, isStudent]);
+
+    // 2. The local state for classes now just mirrors the derived list.
+    const [localClasses, setClasses] = useState<ClassGroup[]>(classes);
+    useEffect(() => {
+        setClasses(classes);
+    }, [classes]);
+    // --- FIX ENDS HERE ---
+
     const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; boardId: string | null }>({ visible: false, x: 0, y: 0, boardId: null });
     const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
     const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -81,26 +107,13 @@ export const useBoardBrowser = (
     const menuRef = useRef<HTMLDivElement>(null);
     const sortMenuRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (isStudent) return;
-        const fetchClasses = async () => {
-            try {
-                const data = await classService.getClasses();
-                setClasses(data);
-            } catch (err) { console.error("Failed to load classes", err); }
-        };
-        fetchClasses();
-        const channel = supabase.channel('classes_updates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, fetchClasses)
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [isStudent]);
+    // This useEffect is now REMOVED, as we no longer fetch classes separately.
+    // useEffect(() => { ... }, [isStudent]);
 
     const filteredBoards = useMemo(() => {
         let result = boards;
 
         if (isStudent) {
-            // Student View: Filter by their enrolled classes
             const viewableClasses = selectedClass === 'All My Classes' ? studentClasses : [selectedClass];
             result = boards.filter(b => 
                 !b.isTrashed && 
@@ -108,7 +121,6 @@ export const useBoardBrowser = (
                 b.targetGrade && viewableClasses.includes(b.targetGrade)
             );
         } else {
-            // Teacher/Admin View
             if (sidebarFilter === 'trashed') {
                 result = result.filter(b => b.isTrashed && b.owner_id === userId);
             } else if (sidebarFilter === 'global_trash') {
@@ -225,7 +237,7 @@ export const useBoardBrowser = (
     };
 
     return {
-        sidebarFilter, setSidebarFilter, filter, setFilter, sortBy, setSortBy, classes, setClasses,
+        sidebarFilter, setSidebarFilter, filter, setFilter, sortBy, setSortBy, classes: localClasses, setClasses,
         menu, isSortMenuOpen, setIsSortMenuOpen, renamingId, setRenamingId, exitingBoardId, confirmModal, setConfirmModal,
         menuRef, sortMenuRef, filteredBoards, groupedBoards, handleMenuOpen, handleRestore, 
         openConfirmModal, handleConfirmAction, handleMenuAction
