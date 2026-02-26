@@ -251,11 +251,6 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   if (!isOpen) return null;
 
   return (
-    <>
-      <div
-        className={`fixed inset-0 z-[999] bg-black/60 ${!board.settings?.disableModalBlur && 'backdrop-blur-sm'} animate-in fade-in duration-300`}
-        onClick={onClose}
-      />
       <div
         ref={modalRef}
         style={{ 
@@ -356,6 +351,5 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
             </div>
         </div>
-    </>
   );
 });
