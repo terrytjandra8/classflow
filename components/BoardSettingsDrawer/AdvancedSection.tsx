@@ -1,8 +1,7 @@
 
-import React, { useState, useRef } from 'react';
-import { Unlock, MessageSquare, Lock, Eye, Database, RefreshCw, CheckCircle, AlertTriangle, CalendarClock, Radio } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Unlock, MessageSquare, Lock, Eye, CalendarClock, Radio } from 'lucide-react';
 import { Board } from '../../types';
-import { boardService } from '../../services/boardService';
 
 interface AdvancedSectionProps {
     board: Board;
@@ -10,31 +9,9 @@ interface AdvancedSectionProps {
 }
 
 export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdate }) => {
-    const [isRepairing, setIsRepairing] = useState(false);
-    const [repairStatus, setRepairStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [fixedCount, setFixedCount] = useState(0);
-
     const autoLiveInputRef = useRef<HTMLInputElement>(null);
     const autoLockInputRef = useRef<HTMLInputElement>(null);
 
-    const handleRepair = async () => {
-        if (!confirm("This will scan all notes and attempt to fix missing assessment data types. Continue?")) return;
-        
-        setIsRepairing(true);
-        setRepairStatus('idle');
-        try {
-            const count = await boardService.repairAssessmentData(board.id);
-            setFixedCount(count || 0);
-            setRepairStatus('success');
-        } catch (e) {
-            console.error(e);
-            setRepairStatus('error');
-        } finally {
-            setIsRepairing(false);
-        }
-    };
-
-    // Helper to handle the local timezone shift for datetime-local input
     const getLocalISOString = (timestamp: number) => {
         const date = new Date(timestamp);
         const offset = date.getTimezoneOffset() * 60000;
@@ -67,7 +44,6 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </div>
                 )}
 
-                {/* Custom Slug */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-200">Custom URL Slug</label>
                     <div className="flex bg-[#111] border border-white/10 rounded-lg overflow-hidden">
@@ -81,7 +57,6 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </div>
                 </div>
 
-                {/* Auto Live Timer */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-200 flex items-center gap-2">
                         <Radio size={16} className="text-green-500"/> Schedule Auto-Live
@@ -109,7 +84,6 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </p>
                 </div>
 
-                {/* Auto Lock Timer */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-200 flex items-center gap-2">
                         <CalendarClock size={16} className="text-red-500"/> Schedule Auto-Lock
@@ -137,7 +111,6 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </p>
                 </div>
 
-                {/* Lock State */}
                 <div className="space-y-2">
                      <label className="text-sm font-bold text-gray-200">Board Status</label>
                      <div className="grid grid-cols-1 gap-2">
@@ -172,38 +145,6 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                              </div>
                          </button>
                      </div>
-                </div>
-
-                {/* REPAIR SECTION */}
-                <div className="pt-6 border-t border-white/5">
-                    <label className="text-sm font-bold text-gray-200 flex items-center gap-2 mb-3">
-                        <Database size={16} className="text-blue-400"/> Data Management
-                    </label>
-                    
-                    <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4">
-                        <p className="text-xs text-gray-400 mb-3">
-                            If old assessments are not showing as "Submitted", try repairing legacy data types.
-                        </p>
-                        <button 
-                            onClick={handleRepair}
-                            disabled={isRepairing}
-                            className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                            {isRepairing ? <RefreshCw size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
-                            {isRepairing ? 'Scanning...' : 'Repair Legacy Data'}
-                        </button>
-                        
-                        {repairStatus === 'success' && (
-                            <div className="mt-3 flex items-center gap-2 text-green-400 text-xs font-bold animate-in fade-in">
-                                <CheckCircle size={14} /> Fixed {fixedCount} records. Please refresh page.
-                            </div>
-                        )}
-                        {repairStatus === 'error' && (
-                            <div className="mt-3 flex items-center gap-2 text-red-400 text-xs font-bold animate-in fade-in">
-                                <AlertTriangle size={14} /> Repair failed. Check console.
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

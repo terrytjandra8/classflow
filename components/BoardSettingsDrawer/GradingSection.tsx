@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Award, Check, X, Sliders, Hash, Percent, Filter, Search, Eye } from 'lucide-react';
+
+import React, { useEffect, useState, useMemo } from 'react';
+import { Award, Check, X, Sliders, Hash, Percent, Filter, Search, Eye, UserCheck } from 'lucide-react';
 import { Board } from '../../types';
 import { supabase } from '../../services/supabaseClient';
 import { SUPER_ADMIN_EMAIL } from '../Dashboard/constants';
@@ -14,7 +15,7 @@ interface GradingSectionProps {
 export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate, isStudent }) => {
     const { highlightedUserId, setHighlightedUserId } = useBoard();
     const [students, setStudents] = useState<any[]>([]);
-    const [grades, setGrades] = useState<Record<string, number>>({});
+    const [grades, setGrades] = useState<Record<string, number | null>>({});
     const [participatingStudents, setParticipatingStudents] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [availableClasses, setAvailableClasses] = useState<string[]>(['General']);
@@ -38,7 +39,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
         
         let query = supabase.from('classes').select('name, owner_id').order('name');
         
-        // Strict Isolation: Only my classes (unless Super Admin)
         if (!isSuperAdmin) {
             query = query.eq('owner_id', user.id);
         }
@@ -46,7 +46,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
         const { data } = await query;
 
         if (data) {
-            // Deduplicate and filter empty
             const rawNames = data.map((c: any) => c.name);
             const validNames: string[] = rawNames.filter((n: any): n is string => typeof n === 'string' && n.trim().length > 0).map((n: string) => n.trim());
             const uniqueNames: string[] = Array.from(new Set(validNames));
@@ -60,8 +59,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Identify Participants (Source of Truth)
-            // Fetch author details directly from notes to handle Guests/Cross-class users
             const { data: boardNotes } = await supabase
                 .from('notes')
                 .select('author_id, author, author_avatar')
@@ -79,7 +76,7 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                                 id: n.author_id,
                                 full_name: n.author || 'Unknown',
                                 avatar_url: n.author_avatar,
-                                is_guest: true // Assume guest until proven otherwise by profile fetch
+                                is_guest: true
                             });
                         }
                     }
@@ -87,13 +84,12 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
             }
             setParticipatingStudents(activeIds);
 
-            // 2. Fetch Existing Grades
             const { data: boardGrades } = await supabase
                 .from('grades')
                 .select('student_id, score')
                 .eq('board_id', board.id);
 
-            const gradeMap: Record<string, number> = {};
+            const gradeMap: Record<string, number | null> = {};
             if (boardGrades) {
                 boardGrades.forEach((g: any) => {
                     gradeMap[g.student_id] = g.score;
@@ -101,8 +97,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                 setGrades(gradeMap);
             }
 
-            // 3. Fetch Registered Profiles
-            // We fetch essentially all students to check for enrollment
             const { data: profiles } = await supabase
                 .from('profiles')
                 .select('id, full_name, email, enrolled_classes, role, avatar_url')
@@ -113,14 +107,12 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
 
             if (profiles) {
                 finalList = profiles.filter((p: any) => {
-                    // CONDITION A: Always include if they participated or have a grade
                     if (activeIds.has(p.id) || gradeMap[p.id] !== undefined) {
                         return true;
                     }
 
-                    // CONDITION B: If they haven't participated, check Class Enrollment
                     const target = board.targetGrade || 'General';
-                    if (target === 'General') return true; // Show all if General (or apply teacher filtering if needed)
+                    if (target === 'General') return true;
 
                     const studentClasses = (Array.isArray(p.enrolled_classes) ? p.enrolled_classes : [])
                         .map((c: string) => c.trim().toLowerCase());
@@ -129,12 +121,10 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                 });
             }
 
-            // 4. Handle Guests (Participants who are NOT in the profiles list)
             const registeredIds = new Set(profiles?.map(p => p.id) || []);
             
             activeIds.forEach(id => {
                 if (!registeredIds.has(id)) {
-                    // This ID participated but isn't in profiles -> It's a Guest or Deleted User
                     const guestInfo = participantsMap.get(id);
                     if (guestInfo) {
                         finalList.push({
@@ -149,7 +139,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                 }
             });
 
-            // Final Sort
             finalList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
             setStudents(finalList);
 
@@ -164,21 +153,17 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
         let score: number | null = null;
         
         if (gradingConfig.mode === 'binary') {
-            // Binary mode: value is '1' (Pass) or '0' (Fail) or '' (Clear)
-            // We map 'Pass' to maxScore and 'Fail' to 0 internally for stats
             if (value === 'pass') score = gradingConfig.maxScore;
             else if (value === 'fail') score = 0;
             else score = null;
         } else {
-            // Numeric mode
             const parsed = parseInt(value);
-            if (!isNaN(parsed)) score = parsed;
+            score = isNaN(parsed) ? null : parsed;
         }
 
-        // Update Local State
-        setGrades(prev => ({ ...prev, [studentId]: score || 0 }));
+        const newGrades = { ...grades, [studentId]: score };
+        setGrades(newGrades);
 
-        // Persist
         await supabase.from('grades').upsert({
             student_id: studentId,
             board_id: board.id,
@@ -191,11 +176,15 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
         onUpdate({ gradingConfig: updated });
     };
 
-    const displayedStudents = students.filter(student => {
+    const displayedStudents = useMemo(() => students.filter(student => {
         const matchesSearch = (student.full_name || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesParticipation = !filterParticipants || participatingStudents.has(student.id) || grades[student.id] !== undefined;
         return matchesSearch && matchesParticipation;
-    });
+    }), [students, searchTerm, filterParticipants, participatingStudents, grades]);
+
+    const submittedCount = useMemo(() => {
+        return displayedStudents.filter(s => grades[s.id] !== null && grades[s.id] !== undefined).length;
+    }, [displayedStudents, grades]);
 
     if (isStudent) return null;
 
@@ -205,7 +194,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
             
             <div className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5 space-y-6">
                 
-                {/* 1. Class Association */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-200">Assigned Class</label>
                     <select 
@@ -220,7 +208,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                     <p className="text-[10px] text-gray-500">Links this board to a class roster.</p>
                 </div>
 
-                {/* 2. Grading Configuration */}
                 <div className="space-y-3 pt-4 border-t border-white/5">
                     <label className="text-sm font-bold text-gray-200 flex items-center gap-2"><Sliders size={16}/> Grade Scale</label>
                     
@@ -254,11 +241,18 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                     </div>
                 </div>
 
-                {/* 3. Mini Gradebook */}
                 <div className="pt-4 border-t border-white/5 space-y-3">
                     <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
-                            <label className="text-sm font-bold text-gray-200">Student Scores</label>
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-bold text-gray-200">Student Scores</label>
+                                { !loading && (
+                                    <span className="text-xs font-mono px-2 py-0.5 bg-yellow-900/50 text-yellow-300 rounded-md border border-yellow-500/30 flex items-center gap-1.5">
+                                        <UserCheck size={12}/>
+                                        {submittedCount} / {displayedStudents.length} Submitted
+                                    </span>
+                                )}
+                            </div>
                             <button 
                                 onClick={() => setFilterParticipants(!filterParticipants)}
                                 className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 border transition-colors ${filterParticipants ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
@@ -269,7 +263,6 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                             </button>
                         </div>
 
-                        {/* Search Input */}
                         <div className="relative">
                             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input 
@@ -292,7 +285,9 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                         ) : (
                             displayedStudents.map(student => {
                                 const score = grades[student.id];
-                                const isPass = score === gradingConfig.maxScore; 
+                                const isPass = score !== null && score !== undefined && score >= gradingConfig.maxScore;
+                                const isFail = score !== null && score !== undefined && score === 0;
+
                                 const isHighlighted = highlightedUserId === student.id;
 
                                 return (
@@ -328,8 +323,8 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                                                         <Check size={12} strokeWidth={3} />
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleUpdateGrade(student.id, score === 0 ? 'reset' : 'fail')}
-                                                        className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${score === 0 ? 'bg-red-500 text-white shadow-md' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                                                        onClick={() => handleUpdateGrade(student.id, isFail ? 'reset' : 'fail')}
+                                                        className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${isFail ? 'bg-red-500 text-white shadow-md' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
                                                         title="Fail"
                                                     >
                                                         <X size={12} strokeWidth={3} />
@@ -345,9 +340,9 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                                                         onChange={(e) => handleUpdateGrade(student.id, e.target.value)}
                                                         placeholder="-"
                                                         className={`w-12 bg-black/20 border rounded px-1 py-0.5 text-center text-xs outline-none transition-colors ${
-                                                            score >= (gradingConfig.maxScore * 0.75) 
+                                                            score !== null && score >= (gradingConfig.maxScore * 0.75) 
                                                             ? 'border-green-500/50 text-green-400' 
-                                                            : (score ? 'border-white/20 text-white' : 'border-white/10 text-gray-500')
+                                                            : (score !== null ? 'border-white/20 text-white' : 'border-white/10 text-gray-500')
                                                         }`}
                                                     />
                                                 </div>

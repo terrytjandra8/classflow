@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { Note, Board } from '../../../types';
 import { mapNote } from '../../../utils/mappers';
+import { boardService } from '../../../services/boardService'; // Import the service
 
 export const useBoardData = (board: Board, username?: string, userAvatar?: string | null, userId?: string, userRole?: string) => {
     const [notes, setNotes] = useState<Note[]>([]);
@@ -12,27 +13,18 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
     const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
     const [typingUsers, setTypingUsers] = useState<string[]>([]);
     
-    // Local state to track what we are broadcasting
-    const [presenceState, setPresenceState] = useState({
-        status: 'online',
-        isTyping: false
-    });
+    const [presenceState, setPresenceState] = useState({ status: 'online', isTyping: false });
     
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-    
-    // THROTTLE REFS
-    // We use a buffer to store incoming updates and only flush them to React state periodically
-    // This prevents the "30 students typing at once" crash.
     const notesBufferRef = useRef<Note[]>([]);
     const isThrottleActive = useRef(false);
     const hasPendingUpdates = useRef(false);
+    const hasRepaired = useRef(false); // Ref to track if repair has run
 
-    // Initialize buffer with initial data
     useEffect(() => {
         notesBufferRef.current = notes;
     }, [notes]);
 
-    // Idle Timer logic
     useEffect(() => {
         let timeoutId: any;
         const goAway = () => setPresenceState(prev => ({ ...prev, status: 'away' }));
@@ -42,7 +34,7 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
                 setPresenceState(prev => ({ ...prev, status: 'online' }));
             }
             clearTimeout(timeoutId);
-            timeoutId = setTimeout(goAway, 60000); // 1 minute idle
+            timeoutId = setTimeout(goAway, 60000); 
         };
 
         window.addEventListener('mousemove', resetTimer);
@@ -58,10 +50,12 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
         };
     }, [presenceState.status]);
 
-    // Initial Note Fetch
+    // Initial Note Fetch & Auto-Repair
     useEffect(() => {
         setIsLoading(true);
-        const fetchNotes = async () => {
+        hasRepaired.current = false; // Reset on board change
+
+        const fetchAndRepair = async () => {
             const { data, error } = await supabase
                 .from('notes')
                 .select('*')
@@ -74,31 +68,44 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
                  } else {
                      console.error("Error fetching notes:", error);
                  }
+                 setNotes([]); // Clear notes on error
+                 notesBufferRef.current = [];
             } else if (data) {
                 setPermissionError(null);
                 const mapped = data.map(mapNote);
                 setNotes(mapped);
                 notesBufferRef.current = mapped;
+
+                // --- AUTOMATED REPAIR --- 
+                // Run once after initial fetch, if the user can manage the board
+                const canManage = userRole === 'teacher' || userRole === 'superadmin';
+                if (!hasRepaired.current && canManage) {
+                    console.log('Running automatic data repair...');
+                    try {
+                        await boardService.repairAssessmentData(board.id);
+                        hasRepaired.current = true; 
+                    } catch (repairError) {
+                        console.error('Automatic data repair failed:', repairError);
+                    }
+                }
             }
             setIsLoading(false);
         };
 
-        fetchNotes();
-    }, [board.id]);
+        fetchAndRepair();
+    }, [board.id, userRole]);
 
-    // Throttled Update Flusher
     useEffect(() => {
         const interval = setInterval(() => {
             if (hasPendingUpdates.current) {
                 setNotes([...notesBufferRef.current]);
                 hasPendingUpdates.current = false;
             }
-        }, 1000); // Only update React state once per second max
+        }, 1000); 
 
         return () => clearInterval(interval);
     }, []);
 
-    // Realtime Subscription
     useEffect(() => {
         const channel = supabase.channel(`room:${board.id}`);
         channelRef.current = channel;
@@ -107,7 +114,6 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'notes', filter: `board_id=eq.${board.id}` }, 
                 (payload) => {
-                    // Update the BUFFER immediately, but set flag for the Throttle interval to pick up
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                          try {
                              const freshNote = mapNote(payload.new as any);
@@ -115,10 +121,8 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
                              const idx = currentBuffer.findIndex(n => n.id === freshNote.id);
                              
                              if (idx > -1) {
-                                 // Update existing in buffer
                                  currentBuffer[idx] = freshNote;
                              } else {
-                                 // Add new to buffer
                                  currentBuffer.unshift(freshNote);
                              }
                              hasPendingUpdates.current = true;
@@ -149,7 +153,6 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
         };
     }, [board.id]); 
 
-    // Presence Tracking
     useEffect(() => {
         const channel = channelRef.current;
         if (channel && isConnected && username) {
@@ -176,7 +179,7 @@ export const useBoardData = (board: Board, username?: string, userAvatar?: strin
 
     return {
         notes,
-        setNotes, // Direct setter still available if needed for optimistic updates
+        setNotes, 
         isLoading,
         isConnected,
         permissionError,
