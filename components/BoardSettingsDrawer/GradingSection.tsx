@@ -182,9 +182,11 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
         return matchesSearch && matchesParticipation;
     }), [students, searchTerm, filterParticipants, participatingStudents, grades]);
 
-    const submittedCount = useMemo(() => {
-        return displayedStudents.filter(s => grades[s.id] !== null && grades[s.id] !== undefined).length;
-    }, [displayedStudents, grades]);
+    const submissionStats = useMemo(() => {
+        const total = students.length;
+        const submitted = students.filter(s => grades[s.id] !== null && grades[s.id] !== undefined).length;
+        return { total, submitted };
+    }, [students, grades]);
 
     if (isStudent) return null;
 
@@ -246,10 +248,10 @@ export const GradingSection: React.FC<GradingSectionProps> = ({ board, onUpdate,
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-bold text-gray-200">Student Scores</label>
-                                { !loading && (
+                                { !loading && submissionStats.total > 0 && (
                                     <span className="text-xs font-mono px-2 py-0.5 bg-yellow-900/50 text-yellow-300 rounded-md border border-yellow-500/30 flex items-center gap-1.5">
                                         <UserCheck size={12}/>
-                                        {submittedCount} / {displayedStudents.length} Submitted
+                                        {submissionStats.submitted} / {submissionStats.total} Submitted
                                     </span>
                                 )}
                             </div>
