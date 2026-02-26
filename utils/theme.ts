@@ -22,36 +22,32 @@ export const WALLPAPERS_MAP: Record<string, string> = {
   'blue': 'linear-gradient(to bottom right, #93c5fd, #60a5fa)',
   
   // --- Fun & Games ---
-  'anime': 'url("https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=2000&q=80")',
-  'clash': 'url("https://images.unsplash.com/photo-1533158326339-7f3cf2404354?auto=format&fit=crop&w=2000&q=80")',
+  'anime': "url('https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=2000&q=80')",
+  'clash': "url('https://images.unsplash.com/photo-1533158326339-7f3cf2404354?auto=format&fit=crop&w=2000&q=80')",
 
   // --- Economics & Data (Fixed) ---
-  // Financial Charts / Analysis
-  'economics': 'url("https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=2000&q=80")',
-  // Stock Market Board
-  'market': 'url("https://images.unsplash.com/photo-1611974765270-ca1258634369?auto=format&fit=crop&w=2000&q=80")',
-  // Growth Graph
-  'growth': 'url("https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=2000&q=80")',
-  // Math / Equilibrium
-  'calculus': 'url("https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=2000&q=80")',
+  'economics': "url('https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=2000&q=80')",
+  'market': "url('https://images.unsplash.com/photo-1611974765270-ca1258634369?auto=format&fit=crop&w=2000&q=80')",
+  'growth': "url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=2000&q=80')",
+  'calculus': "url('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=2000&q=80')",
 
   // --- Education & Culture ---
-  'mandarin': 'url("https://images.unsplash.com/photo-1535025639604-9a804c092faa?auto=format&fit=crop&w=2000&q=80")',
-  'science': 'url("https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=2000&q=80")',
-  'history': 'url("https://images.unsplash.com/photo-1461360370896-922624d12aa1?auto=format&fit=crop&w=2000&q=80")',
-  'literature': 'url("https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=2000&q=80")',
-  'chalkboard': 'url("https://images.unsplash.com/photo-1581093583449-ed25213444e9?auto=format&fit=crop&w=2000&q=80")',
+  'mandarin': "url('https://images.unsplash.com/photo-1535025639604-9a804c092faa?auto=format&fit=crop&w=2000&q=80')",
+  'science': "url('https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=2000&q=80')",
+  'history': "url('https://images.unsplash.com/photo-1461360370896-922624d12aa1?auto=format&fit=crop&w=2000&q=80')",
+  'literature': "url('https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=2000&q=80')",
+  'chalkboard': "url('https://images.unsplash.com/photo-1581093583449-ed25213444e9?auto=format&fit=crop&w=2000&q=80')",
   
   // --- Space & Nature ---
-  'space': 'url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?auto=format&fit=crop&w=2000&q=80")',
-  'galaxy': 'url("https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=2000&q=80")',
-  'nebula': 'url("https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=2000&q=80")',
-  'sky': 'url("https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=2000&q=80")',
-  'leaves': 'url("https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=2000&q=80")',
-  'desert': 'url("https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?auto=format&fit=crop&w=2000&q=80")',
-  'mountains': 'url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80")',
-  'ocean': 'url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2000&q=80")',
-  'abstract': 'url("https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=2000&q=80")',
+  'space': "url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5980?auto=format&fit=crop&w=2000&q=80')",
+  'galaxy': "url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=2000&q=80')",
+  'nebula': "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=2000&q=80')",
+  'sky': "url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=2000&q=80')",
+  'leaves': "url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=2000&q=80')",
+  'desert': "url('https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?auto=format&fit=crop&w=2000&q=80')",
+  'mountains': "url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80')",
+  'ocean': "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2000&q=80')",
+  'abstract': "url('https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=2000&q=80')",
 };
 
 // Specific background colors for transparent textures to ensure visibility
