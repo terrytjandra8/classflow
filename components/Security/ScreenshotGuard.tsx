@@ -21,12 +21,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             return;
         }
 
-        // --- The Instantaneous Shield --- 
-        // This function bypasses React's async state to show the shield instantly.
         const showInstantShield = () => {
             if (overlayRef.current && contentRef.current) {
-                setLockType('integrity'); // Set the content for the shield
-                // Directly manipulate style to win the race condition
+                setLockType('integrity');
                 overlayRef.current.style.transition = 'none';
                 overlayRef.current.style.opacity = '1';
                 overlayRef.current.style.pointerEvents = 'auto';
@@ -52,7 +49,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             setLockType(null);
             
             if (overlayRef.current) {
-                // Ensure transitions are re-enabled for a smooth fade-out
                 overlayRef.current.style.transition = 'opacity 0.2s ease-out';
                 overlayRef.current.style.opacity = '0';
                 overlayRef.current.style.pointerEvents = 'none';
@@ -74,10 +70,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
 
-            // --- Primary defense against PrintScreen --- 
             if (key === 'printscreen') {
                 e.preventDefault();
-                showInstantShield(); // Use the synchronous shield
+                showInstantShield();
                 poisonClipboard();
                 
                 if(timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -120,7 +115,9 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const handleBlur = () => triggerShield('focus');
         const handleFocus = () => {
-            if(lockTypeRef.current !== 'devtools') {
+            // Only release the shield if it was a 'focus' lock.
+            // This prevents releasing the shield after a screenshot attempt.
+            if(lockTypeRef.current === 'focus') {
                 releaseShield();
             }
         };
@@ -144,8 +141,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     }, [isEnabled]);
 
     useEffect(() => {
-        // This effect ensures that when lockType changes via React state, the styles are correct.
-        // This is for non-instantaneous triggers like blur or devtools.
         if (lockType) {
             if (overlayRef.current && contentRef.current) {
                 overlayRef.current.style.opacity = '1';
@@ -212,7 +207,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 ref={overlayRef}
                 className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8"
                 style={{ 
-                    opacity: 0, // Start as hidden
+                    opacity: 0, 
                     pointerEvents: 'none',
                     transition: 'opacity 0.2s ease-in-out'
                 }}
