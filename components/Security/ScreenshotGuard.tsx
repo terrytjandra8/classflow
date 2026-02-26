@@ -13,7 +13,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
-    const passwordInputRef = useRef<HTMLInputElement | null>(null);
 
     const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools') => {
         if (!overlayRef.current) return;
@@ -40,13 +39,11 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             overlayRef.current.style.pointerEvents = 'none';
         }
         if (contentRef.current) {
-            contentRef.current.style.filter = 'none';
-            contentRef.current.style.transition = 'filter 0.2s ease-out';
-        }
-        // Clean up the password input if it exists
-        if (passwordInputRef.current) {
-            document.body.removeChild(passwordInputRef.current);
-            passwordInputRef.current = null;
+            const content = contentRef.current;
+            content.style.filter = 'none';
+            content.style.transition = 'filter 0.2s ease-out';
+            // Restore the content's visibility
+            content.style.display = '';
         }
     };
 
@@ -88,31 +85,28 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-            if (key === 'printscreen') {
+            const isPrintScreen = key === 'printscreen';
+            const isWinScreenshot = !isMac && e.metaKey && e.shiftKey && key === 's';
+            const isMacScreenshot = isMac && e.metaKey && e.shiftKey && ['3', '4', '5', '6'].includes(key);
+
+            if (isPrintScreen || isWinScreenshot || isMacScreenshot) {
                 e.preventDefault();
 
-                // --- THE PASSWORD FIELD TRICK ---
-                if (!passwordInputRef.current) {
-                    const input = document.createElement('input');
-                    input.type = 'password';
-                    input.style.position = 'fixed';
-                    input.style.top = '0';
-                    input.style.left = '0';
-                    input.style.width = '1px';
-                    input.style.height = '1px';
-                    input.style.opacity = '0';
-                    document.body.appendChild(input);
-                    passwordInputRef.current = input;
+                // **ADDED LOGIC**: Immediately hide content before showing the shield.
+                if (contentRef.current) {
+                    contentRef.current.style.display = 'none';
                 }
-                passwordInputRef.current.focus();
-                // ---
 
                 triggerShield('integrity');
                 poisonClipboard();
                 
                 if(timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(releaseShield, 1500);
+                // For printscreen, we set a timeout. For others, the shield stays until focus is regained.
+                if(isPrintScreen) {
+                    timeoutRef.current = setTimeout(releaseShield, 1500);
+                }
                 return;
             }
             
@@ -121,14 +115,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
                 e.preventDefault();
                 triggerShield('devtools');
                 return; 
-            }
-
-            const macScreenshot = e.metaKey && e.shiftKey && ['3', '4', '5', '6'].includes(key);
-            const windowsScreenshot = e.metaKey && e.shiftKey && key === 's';
-            if (macScreenshot || windowsScreenshot) {
-                e.preventDefault();
-                triggerShield('integrity'); 
-                poisonClipboard();
             }
         };
 
@@ -151,7 +137,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         const handleBlur = () => triggerShield('focus');
         const handleFocus = () => {
-            if(lockTypeRef.current === 'focus') {
+             // Only release shield if it was a simple focus lock or an integrity lock from a non-printscreen shortcut
+            if (lockTypeRef.current === 'focus' || (lockTypeRef.current === 'integrity' && !timeoutRef.current)) {
                 releaseShield();
             }
         };
