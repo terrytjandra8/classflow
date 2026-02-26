@@ -13,38 +13,41 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const contentRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<any>(null);
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
+    const passwordInputRef = useRef<HTMLInputElement | null>(null);
 
-    const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools', isInstant: boolean) => {
-        if (!overlayRef.current || !contentRef.current) return;
-
+    const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools') => {
+        if (!overlayRef.current) return;
         const overlay = overlayRef.current;
-        const content = contentRef.current;
-
-        overlay.style.transition = isInstant ? 'none' : 'opacity 0.1s ease-in';
-        content.style.transition = isInstant ? 'none' : 'filter 0.1s ease-in';
-
+        overlay.style.transition = 'opacity 0.1s ease-in';
         overlay.style.opacity = '1';
         overlay.style.pointerEvents = 'auto';
-        
-        if (type === 'integrity' || type === 'devtools') {
-            content.style.filter = 'blur(15px) grayscale(100%)';
-        } else { // focus
-            content.style.filter = 'blur(5px)';
+
+        if (contentRef.current) {
+            const content = contentRef.current;
+            content.style.transition = 'filter 0.1s ease-in';
+            if (type === 'integrity' || type === 'devtools') {
+                content.style.filter = 'blur(15px) grayscale(100%)';
+            } else { // focus
+                content.style.filter = 'blur(5px)';
+            }
         }
     };
 
     const releaseShieldStyles = () => {
-        if (!overlayRef.current || !contentRef.current) return;
-
-        const overlay = overlayRef.current;
-        const content = contentRef.current;
-
-        overlay.style.transition = 'opacity 0.2s ease-out';
-        content.style.transition = 'filter 0.2s ease-out';
-        
-        overlay.style.opacity = '0';
-        overlay.style.pointerEvents = 'none';
-        content.style.filter = 'none';
+        if (overlayRef.current) {
+            overlayRef.current.style.transition = 'opacity 0.2s ease-out';
+            overlayRef.current.style.opacity = '0';
+            overlayRef.current.style.pointerEvents = 'none';
+        }
+        if (contentRef.current) {
+            contentRef.current.style.filter = 'none';
+            contentRef.current.style.transition = 'filter 0.2s ease-out';
+        }
+        // Clean up the password input if it exists
+        if (passwordInputRef.current) {
+            document.body.removeChild(passwordInputRef.current);
+            passwordInputRef.current = null;
+        }
     };
 
     useEffect(() => {
@@ -53,7 +56,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             return;
         }
 
-        const triggerShield = (type: 'integrity' | 'focus' | 'devtools', isInstant = false) => {
+        const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
             const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
@@ -62,7 +65,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             if (!currentType || severity[type] >= severity[currentType]) {
                 lockTypeRef.current = type;
                 setLockType(type);
-                applyShieldStyles(type, isInstant);
+                applyShieldStyles(type);
             }
         };
 
@@ -88,7 +91,24 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
             if (key === 'printscreen') {
                 e.preventDefault();
-                triggerShield('integrity', true);
+
+                // --- THE PASSWORD FIELD TRICK ---
+                if (!passwordInputRef.current) {
+                    const input = document.createElement('input');
+                    input.type = 'password';
+                    input.style.position = 'fixed';
+                    input.style.top = '0';
+                    input.style.left = '0';
+                    input.style.width = '1px';
+                    input.style.height = '1px';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    passwordInputRef.current = input;
+                }
+                passwordInputRef.current.focus();
+                // ---
+
+                triggerShield('integrity');
                 poisonClipboard();
                 
                 if(timeoutRef.current) clearTimeout(timeoutRef.current);
