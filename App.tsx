@@ -503,20 +503,16 @@ function AppContent() {
     }
 
     await fetchProfile();
-    await fetchBoards();
+    const accessibleBoards = await boardService.getBoards();
+    setBoards(accessibleBoards);
 
-    const { data: board, error: boardError } = await supabase
-        .from('boards')
-        .select('id')
-        .eq('class_code', code)
-        .single();
+    const boardToNavigate = accessibleBoards.find(b => b.classCode === code);
 
-    if (board && !boardError) {
-        selectBoard(board.id);
-        return true;
-    } else {
-        return true; 
+    if (boardToNavigate) {
+        selectBoard(boardToNavigate.id);
     }
+
+    return true;
   };
 
   const handleGuestLogin = (name: string, avatarUrl: string) => {

@@ -1,41 +1,28 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Sun, Moon, Hash, Clock, LogOut, Search, ArrowRight, Layout, BookOpen, User, Home, Grid, Filter, X, Quote, Sparkles, Trophy, Calendar, Folder, ChevronDown, ListFilter, GripVertical, Menu, GraduationCap } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Sun, Moon, Hash, Clock, LogOut, Search, Layout, BookOpen, User, Home, Grid, Filter, X, Quote, Sparkles, Trophy, Calendar, Folder, ChevronDown, ListFilter, GraduationCap, Menu, GripVertical } from 'lucide-react';
 import { Board } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { Tooltip } from './Tooltip';
 import { QUOTES } from './Dashboard/constants';
 import { resolveBackgroundStyle } from '../utils/theme';
-import { classService } from '../services/classService';
-import { profileService } from '../services/profileService';
 import { Avatar } from './ui/Avatar';
-import { useSortableList } from '../src/logic/dnd/useSortableList';
 import { Documentation } from './Documentation';
 import { StudentGrades } from './StudentGrades';
 
-interface StudentDashboardProps {
-  boards: Board[];
-  onSelectBoard: (boardId: string) => void;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
-  username: string;
-  userAvatar: string | null;
-  userClasses: string[];
-  onJoinByCode: (code: string) => Promise<boolean>;
-}
-
+// This utility function determines the time-based category for a board.
 const getDateCategory = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
-    const d = new Date(date); d.setHours(0,0,0,0);
-    const n = new Date(now); n.setHours(0,0,0,0);
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    const n = new Date(now); n.setHours(0, 0, 0, 0);
     const diffTime = n.getTime() - d.getTime();
     const diffDays = Math.floor(diffTime / (86400000));
 
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
     
-    const day = d.getDay(); 
+    const day = d.getDay();
     const diffToSunday = d.getDate() - day;
     const weekStart = new Date(d);
     weekStart.setDate(diffToSunday);
@@ -56,71 +43,110 @@ const getDateCategory = (timestamp: number) => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
-  boards: initialBoards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode
-}) => {
-  const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
-  const [selectedClassFilter, setSelectedClassFilterState] = useState<string>(() => localStorage.getItem('cb_student_class_filter') || 'All');
-  const [joinCode, setJoinCode] = useState('');
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'created' | 'updated'>('created');
-  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [localClasses, setLocalClasses] = useState<{id: string, name: string}[]>([]);
+interface StudentDashboardProps {
+  boards: Board[];
+  onSelectBoard: (boardId: string) => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+  username: string;
+  userAvatar: string | null;
+  userClasses: string[];
+  onJoinByCode: (code: string) => Promise<boolean>;
+}
 
-  const sortMenuRef = useRef<HTMLDivElement>(null);
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
+  boards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode 
+}) => {
+  // === STATE MANAGEMENT ===
+  // Active tab for navigation (home, grades, etc.)
+  const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
+  // Currently selected class for filtering the board list
+  const [selectedClassFilter, setSelectedClassFilterState] = useState<string>(() => localStorage.getItem('cb_student_class_filter') || 'All Boards');
+  // Search input text
+  const [filter, setFilter] = useState('');
+  // State for the "Join a Class" modal
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  // Other UI states
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  
   const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
 
+  // Persist active tab and class filter to localStorage
   const setActiveTab = (tab: 'home' | 'join' | 'documentation' | 'grades') => {
       setActiveTabState(tab);
       localStorage.setItem('cb_student_tab', tab);
   };
-
   const setSelectedClassFilter = (filter: string) => {
       setSelectedClassFilterState(filter);
       localStorage.setItem('cb_student_class_filter', filter);
   };
 
   useEffect(() => {
-    const fetchUser = async () => {
+    // Get the current user's ID once
+    const fetchUserId = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            setCurrentUserId(user.id);
-        }
+        if (user) setCurrentUserId(user.id);
     };
-    fetchUser();
+    fetchUserId();
   }, []);
 
-  useEffect(() => {
-      setLocalClasses(userClasses.map(c => ({ id: c, name: c })));
-  }, [userClasses]);
+  // === FILTERING LOGIC (Inspired by useBoardBrowser) ===
+  const filteredBoards = useMemo(() => {
+    // Start with all boards passed as props
+    let result = boards;
 
-  useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-          if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
-              setIsSortMenuOpen(false);
-          }
-      };
-      window.addEventListener('mousedown', handleClickOutside);
-      return () => window.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    // 1. Filter out any trashed boards and only include published boards.
+    // This is the core visibility rule for students.
+    result = result.filter(b => 
+        !b.isTrashed && 
+        (
+            b.isPublished || 
+            b.quizState !== 'setup' || 
+            b.assessmentState === 'active'
+        )
+    );
 
-  const handleJoin = async (e: React.FormEvent) => {
+    // 2. Filter by the selected class in the sidebar.
+    if (selectedClassFilter !== 'All Boards') {
+        result = result.filter(b => b.targetGrade === selectedClassFilter);
+    }
+    
+    // 3. Filter by the search input text.
+    if (filter.trim()) {
+        result = result.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
+    }
+
+    // 4. Sort the results by creation date (newest first).
+    return result.sort((a, b) => b.createdAt - a.createdAt);
+  }, [boards, selectedClassFilter, filter]);
+
+  const groupedBoards = useMemo(() => {
+      // Only group if there's no active search or class filter
+      if (filter.trim() || selectedClassFilter !== 'All Boards') return null; 
+      
+      const getTimestamp = (b: Board) => b.createdAt;
+      const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
+      
+      return categories.map(category => ({
+          title: category,
+          items: filteredBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
+      }));
+  }, [filteredBoards, filter, selectedClassFilter]);
+
+  // === EVENT HANDLERS ===
+  const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setJoinError('');
     setIsJoining(true);
-    const code = joinCode.trim();
-
-    const success = await onJoinByCode(code);
-
-    if (!success) {
-      setError('Board not found. Please check the code.');
-    } else {
+    const success = await onJoinByCode(joinCode.trim());
+    if (success) {
       setJoinCode('');
-      setActiveTab('home'); // Switch back to home on success
+      setActiveTab('home'); // Switch back to home view on success
+    } else {
+      setJoinError('Invalid code or you already joined this class.');
     }
     setIsJoining(false);
   };
@@ -131,147 +157,103 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       await supabase.auth.signOut();
   };
 
-  const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem } = useSortableList({ items: localClasses, onReorder: setLocalClasses });
-
-  const onDropPersist = async (e: React.DragEvent) => {
-      handleDragEnd(e);
-      if (currentUserId) {
-          const newClassStrings = localClasses.map(c => c.name);
-          await profileService.updateClasses(currentUserId, newClassStrings);
-      }
-  };
-
-  const accessibleBoards = useMemo(() => {
-    return initialBoards.filter(b => {
-        if (b.isTrashed) return false;
-
-        const isQuizActive = b.format === 'quiz' && b.quizState !== 'setup';
-        const isAssessmentActive = b.format === 'assessment' && b.assessmentState !== 'setup';
-        const isLive = b.isPublished || isQuizActive || isAssessmentActive;
-        if (!isLive) return false;
-
-        const target = b.targetGrade || 'General';
-        const isAssigned = userClasses.includes(target);
-
-        return isAssigned;
-    });
-  }, [initialBoards, userClasses]);
-
-  const filteredBoards = accessibleBoards.filter(b => {
-      const target = b.targetGrade || 'General';
-      const matchesSearch = b.title.toLowerCase().includes(filter.toLowerCase());
-      if (selectedClassFilter === 'All') return matchesSearch;
-      return matchesSearch && target === selectedClassFilter;
-  }).sort((a, b) => {
-      const timeA = sortBy === 'created' ? a.createdAt : (a.updatedAt || a.createdAt);
-      const timeB = sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
-      return timeB - timeA;
-  });
-
-  const groupedBoards = useMemo(() => {
-      if (filter.trim() || selectedClassFilter !== 'All') return null; 
-      const getTimestamp = (b: Board) => sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);
-      const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
-      return categories.map(category => ({
-          title: category,
-          items: filteredBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
-      }));
-  }, [filteredBoards, filter, selectedClassFilter, sortBy]);
-
+  // === RENDER COMPONENTS ===
   const BoardGrid = ({ items }: { items: Board[] }) => (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {items.map(board => {
-              const showClassBadge = board.targetGrade && board.targetGrade !== 'General';
-              const bgStyle = resolveBackgroundStyle(board.wallpaper, theme);
-              return (
-                  <div key={board.id} onClick={() => onSelectBoard(board.id)} className={`group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1a1a1a] border-white/5'}`}>
-                      <div className={`h-32 relative overflow-hidden`} style={bgStyle}>
-                          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                          {board.icon && <div className="absolute -bottom-5 left-4 text-5xl drop-shadow-xl font-emoji group-hover:scale-110 transition-transform duration-300">{board.icon}</div>}
-                          {showClassBadge && <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md rounded-lg px-2.5 py-1 text-[10px] font-bold text-white shadow-sm border border-white/10 uppercase tracking-wide">{board.targetGrade}</div>}
-                      </div>
-                      <div className="p-5 pt-6 flex-1 flex flex-col justify-between">
-                          <div>
-                              <h4 className={`font-bold text-base truncate mb-1 ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{board.title}</h4>
-                              <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{board.description || 'No description provided.'}</p>
-                          </div>
-                      </div>
-                  </div>
-              );
-          })}
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {items.map(board => {
+            const bgStyle = resolveBackgroundStyle(board.wallpaper, theme);
+            return (
+                <div key={board.id} onClick={() => onSelectBoard(board.id)} className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border bg-white dark:bg-[#1a1a1a] border-slate-200 dark:border-white/5">
+                    <div className="h-32 relative overflow-hidden" style={bgStyle}>
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                        {board.icon && <div className="absolute -bottom-5 left-4 text-5xl drop-shadow-xl font-emoji group-hover:scale-110 transition-transform duration-300">{board.icon}</div>}
+                    </div>
+                    <div className="p-5 pt-6 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 className="font-bold text-base truncate mb-1 text-slate-800 dark:text-white">{board.title}</h4>
+                            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{board.description || 'No description provided.'}</p>
+                        </div>
+                         {board.targetGrade && <div className="mt-2 bg-black/60 backdrop-blur-md rounded-lg px-2.5 py-1 text-[10px] font-bold text-white shadow-sm border border-white/10 uppercase tracking-wide w-fit">{board.targetGrade}</div>}
+                    </div>
+                </div>
+            );
+        })}
+    </div>
   );
 
   const SidebarNav = ({ isMobile }: { isMobile: boolean }) => {
     const buttonClass = (tab: string, filter?: string) => `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
         activeTab === tab && (filter === undefined || selectedClassFilter === filter)
-        ? (theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-[#222] text-white')
-        : (theme === 'light' ? 'text-slate-500 hover:bg-slate-50' : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]')
+        ? 'bg-slate-100 dark:bg-[#222] text-slate-900 dark:text-white'
+        : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-[#1a1a1a]'
     }`;
 
-    const handleClassFilterClick = (className: string) => {
+    const handleFilterClick = (filterName: string) => {
         setActiveTab('home');
-        setSelectedClassFilter(className);
+        setSelectedClassFilter(filterName);
         if(isMobile) setIsMobileMenuOpen(false);
     }
 
     return (
         <nav className={`space-y-1 flex-1 overflow-y-auto custom-scrollbar ${isMobile ? 'px-4' : 'pr-2'}`}>
-            <button onClick={() => handleClassFilterClick('All')} className={buttonClass('home', 'All')}><Home size={16} /> All Boards</button>
+            <button onClick={() => handleFilterClick('All Boards')} className={buttonClass('home', 'All Boards')}><Home size={16} /> All Boards</button>
             <button onClick={() => { setActiveTab('grades'); if(isMobile) setIsMobileMenuOpen(false); }} className={buttonClass('grades')}><GraduationCap size={16} /> Grades</button>
             <button onClick={() => { setActiveTab('documentation'); if(isMobile) setIsMobileMenuOpen(false); }} className={buttonClass('documentation')}><BookOpen size={16} /> Guide</button>
             
-            <div className={`h-px my-4 ${theme === 'light' ? 'bg-slate-200' : 'bg-white/10'}`}></div>
-            <div className={`flex items-center justify-between ${isMobile ? 'px-3' : 'px-3'} mb-2 group/label`}>
-                <p className="text-[10px] uppercase font-bold text-gray-500">My Classes</p>
-                {!isMobile && <span className="text-[9px] text-gray-400 opacity-0 group-hover/label:opacity-100 transition-opacity">Drag to sort</span>}
-            </div>
+            <div className="h-px my-4 bg-slate-200 dark:bg-white/10"></div>
+            <p className="px-3 mb-2 text-[10px] uppercase font-bold text-gray-500">My Classes</p>
 
-            {localClasses.length > 0 ? (
+            {userClasses.length > 0 ? (
                 <div className="space-y-1">
-                    {localClasses.map((cls) => (
-                        <div key={cls.id} draggable={!isMobile} onDragStart={(e) => handleDragStart(e, cls)} onDragEnter={(e) => handleDragEnter(e, cls)} onDragEnd={onDropPersist} onDragOver={(e) => e.preventDefault()} className={`group flex items-center rounded-lg transition-all ${!isMobile ? 'cursor-move' : ''} ${draggedItem?.id === cls.id ? 'opacity-30 bg-blue-500/20 border border-blue-500/50' : 'border border-transparent'} ${selectedClassFilter === cls.name ? (theme === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-900/20 text-blue-400') : 'hover:bg-gray-100 dark:hover:bg-[#1a1a1a]'}`}>
-                            {!isMobile && <div className="pl-2 pr-1 text-gray-400 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity"><GripVertical size={12} /></div>}
-                            <button onClick={() => handleClassFilterClick(cls.name)} className={`flex-1 flex items-center gap-3 py-2 ${isMobile ? 'px-3' : 'pr-2'} text-sm font-bold text-left overflow-hidden`}><Folder size={16} className="shrink-0" /> <span className="truncate">{cls.name}</span></button>
-                        </div>
+                    {userClasses.map((className) => (
+                        <button key={className} onClick={() => handleFilterClick(className)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-left overflow-hidden transition-colors ${selectedClassFilter === className ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-[#1a1a1a]'}`}>
+                            <Folder size={16} className="shrink-0" /> <span className="truncate">{className}</span>
+                        </button>
                     ))}
                 </div>
             ) : <div className="px-3 py-4 text-center border-2 border-dashed border-gray-500/10 rounded-lg"><p className="text-xs text-gray-500">No classes yet</p></div>}
         </nav>
     );
   };
-
+  
   const Sidebar = ({ isMobile = false }) => (
-    <div className={`flex-col h-full ${isMobile ? 'flex w-full' : 'hidden md:flex w-64 shrink-0'} ${theme === 'light' ? 'bg-white' : 'bg-[#111]'} ${!isMobile ? 'py-6 pr-4 pl-6 border-r border-slate-200 dark:border-white/5' : ''}`}>
+    <div className={`flex flex-col h-full ${isMobile ? 'flex w-full' : 'hidden md:flex w-64 shrink-0'} bg-white dark:bg-[#111] ${!isMobile ? 'py-6 pr-4 pl-6 border-r border-slate-200 dark:border-white/5' : ''}`}>
         <div className={isMobile ? 'px-6 pt-6' : ''}>
             <div className="flex mb-8 items-center gap-3">
                 <Avatar src={userAvatar} name={username} size="lg" className="shrink-0" />
                 <div>
-                    <h2 className={`font-bold truncate max-w-[140px] ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{username}</h2>
+                    <h2 className="font-bold truncate max-w-[140px] text-slate-800 dark:text-white">{username}</h2>
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
                 </div>
             </div>
-            <button onClick={() => { setActiveTab('join'); if (isMobile) setIsMobileMenuOpen(false); }} className={`w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 ${theme === 'light' ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-black hover:bg-gray-200'}`}><Hash size={16} /> Join a Class</button>
+            <button onClick={() => { setActiveTab('join'); if (isMobile) setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+              <Hash size={16} /> Join a Class
+            </button>
         </div>
         <SidebarNav isMobile={isMobile} />
-        <div className={`mt-auto pt-4 space-y-3 ${isMobile ? 'px-6 pb-6' : ''} border-t ${theme === 'light' ? 'border-slate-200' : 'border-white/5'}`}>
-             <button onClick={onToggleTheme} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${theme === 'light' ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]'}`}><Sun size={16} /><span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>
+        <div className={`mt-auto pt-4 space-y-3 ${isMobile ? 'px-6 pb-6' : ''} border-t border-slate-200 dark:border-white/5`}>
+            <button onClick={onToggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-[#1a1a1a]"><Sun size={16} /><span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>
             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"><LogOut size={16} /> Sign Out</button>
         </div>
     </div>
   );
 
+  // === MAIN RENDER ===
   return (
-    <div className={`h-screen flex ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-[#050505] text-white'} transition-colors duration-300 font-sans overflow-hidden`}>
+    <div className="h-screen flex bg-slate-50 text-slate-900 dark:bg-[#050505] dark:text-white transition-colors duration-300 font-sans overflow-hidden">
+      {/* Mobile Sidebar */}
       <div className={`md:hidden fixed inset-0 bg-black/50 z-30 transition-opacity ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}></div>
       <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}><Sidebar isMobile={true} /></div>
       
+      {/* Desktop Sidebar */}
       <Sidebar />
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+          {/* Mobile Header */}
           <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-10">
               <div className="flex items-center gap-2"><Layout size={24} className="text-pink-600" /><span className="font-bold text-lg">ClassBoard</span></div>
-              <button onClick={() => setIsMobileMenuOpen(true)} className={`p-2 rounded-full ${theme === 'light' ? 'text-slate-600' : 'text-gray-400'} hover:bg-slate-100 dark:hover:bg-white/5`}><Menu size={20} /></button>
+              <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5"><Menu size={20} /></button>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8">
@@ -284,15 +266,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                            <div className="w-20 h-20 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3 border border-blue-500/20 shadow-lg"><Hash size={40} /></div>
                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Join a Class</h2>
                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 px-4">Enter the 6-digit code provided by your teacher.</p>
-                           <form onSubmit={handleJoin} className="space-y-6">
-                               <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6} className="w-full bg-slate-100 dark:bg-black/30 border-2 border-slate-200 dark:border-white/10 rounded-2xl py-5 text-3xl font-mono tracking-[0.5em] text-center text-slate-900 dark:text-white focus:border-blue-500 outline-none uppercase transition-colors placeholder:text-slate-400 dark:placeholder-white/10" autoFocus />
-                               {error && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{error}</p>}
-                               <button type="submit" disabled={!joinCode || isJoining} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">{isJoining ? 'Joining...' : 'Join Board'}</button>
+                           <form onSubmit={handleJoinSubmit} className="space-y-6">
+                               <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6} className="w-full bg-slate-100 dark:bg-black/30 border-2 border-slate-200 dark:border-white/10 rounded-2xl py-5 text-3xl font-mono tracking-[0.5em] text-center text-slate-900 dark:text-white focus:border-blue-500 outline-one uppercase transition-colors placeholder:text-slate-400 dark:placeholder-white/10" autoFocus />
+                               {joinError && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{joinError}</p>}
+                               <button type="submit" disabled={!joinCode || isJoining} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">{isJoining ? 'Joining...' : 'Join Class'}</button>
                            </form>
                        </div>
                   </div>
               ) : (
                   <>
+                      {/* Header */}
                       <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-2xl animate-in fade-in slide-in-from-top-4 shrink-0">
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600"></div>
                           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
@@ -303,22 +286,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           </div>
                       </div>
 
-                      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                      {/* Search Bar */}
+                      <div className="flex">
                           <div className="relative w-full md:max-w-md">
                               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                              <input type="text" placeholder="Search your boards..." value={filter} onChange={(e) => setFilter(e.target.value)} className={`w-full pl-12 pr-4 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all ${theme === 'light' ? 'bg-white border border-slate-200' : 'bg-[#1a1a1a] border border-white/10 text-white'}`} />
-                          </div>
-                          <div className="flex items-center gap-2 self-end md:self-auto relative" ref={sortMenuRef}>
-                              <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${theme === 'light' ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-[#1a1a1a] border-white/10 text-gray-300 hover:bg-white/5'}`}><ListFilter size={14} />{sortBy === 'created' ? 'Created Date' : 'Last Active'}<ChevronDown size={12} className={`transition-transform ${isSortMenuOpen ? 'rotate-180' : ''}`} /></button>
-                              {isSortMenuOpen && (
-                                  <div className={`absolute right-0 top-full mt-2 w-48 rounded-xl shadow-xl border overflow-hidden animate-in fade-in zoom-in-95 z-50 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1a1a1a] border-white/10'}`}>
-                                      <button onClick={() => { setSortBy('created'); setIsSortMenuOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2"><Calendar size={14} /> Created Date</button>
-                                      <button onClick={() => { setSortBy('updated'); setIsSortMenuOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2"><Clock size={14} /> Last Active</button>
-                                  </div>
-                              )}
+                              <input type="text" placeholder="Search your boards..." value={filter} onChange={(e) => setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all bg-white border border-slate-200 dark:bg-[#1a1a1a] dark:border-white/10 dark:text-white" />
                           </div>
                       </div>
 
+                      {/* Board Display */}
                       {filteredBoards.length === 0 ? (
                           <div className="text-center py-20 opacity-60 border-2 border-dashed border-gray-500/20 rounded-3xl bg-gray-50 dark:bg-white/5">
                               <Trophy size={48} className="mx-auto mb-4 text-gray-400" />
@@ -329,7 +305,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           <div className="space-y-12 pb-20">
                               {groupedBoards ? groupedBoards.map((group) => (
                                   <div key={group.title} className="animate-fade-in">
-                                      <div className="flex items-center gap-4 mb-4"><h3 className={`text-sm font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>{group.title}</h3><div className={`h-px flex-1 ${theme === 'light' ? 'bg-slate-200' : 'bg-white/5'}`}></div></div>
+                                      <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
                                       <BoardGrid items={group.items} />
                                   </div>
                               )) : <BoardGrid items={filteredBoards} />}
