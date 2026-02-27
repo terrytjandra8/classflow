@@ -21,6 +21,7 @@ interface StudentDashboardProps {
   username: string;
   userAvatar: string | null;
   userClasses: string[];
+  onJoinByCode: (code: string) => Promise<boolean>;
 }
 
 const getDateCategory = (timestamp: number) => {
@@ -56,7 +57,7 @@ const getDateCategory = (timestamp: number) => {
 };
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
-  boards: initialBoards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses 
+  boards: initialBoards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode
 }) => {
   const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
   const [selectedClassFilter, setSelectedClassFilterState] = useState<string>(() => localStorage.getItem('cb_student_class_filter') || 'All');
@@ -69,7 +70,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [isJoining, setIsJoining] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [localClasses, setLocalClasses] = useState<{id: string, name: string}[]>([]);
-  const [allBoards, setAllBoards] = useState<Board[]>(initialBoards);
 
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
@@ -85,50 +85,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   useEffect(() => {
-    const fetchUserAndJoinedBoards = async () => {
+    const fetchUser = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             setCurrentUserId(user.id);
-            
-            // Fetch user profile to get manually joined boards
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('joined_boards')
-                .eq('id', user.id)
-                .single();
-
-            if (profileError) {
-                console.error("Error fetching user profile for joined boards:", profileError);
-                setAllBoards(initialBoards);
-                return;
-            }
-
-            const joinedBoardIds = profile?.joined_boards || [];
-            const initialBoardIds = new Set(initialBoards.map(b => b.id));
-            const missingBoardIds = joinedBoardIds.filter((id: string) => !initialBoardIds.has(id));
-
-            if (missingBoardIds.length > 0) {
-                const { data: missingBoards, error: boardsError } = await supabase
-                    .from('boards')
-                    .select('*')
-                    .in('id', missingBoardIds);
-
-                if (boardsError) {
-                    console.error("Error fetching missing joined boards:", boardsError);
-                    setAllBoards(initialBoards);
-                } else if (missingBoards) {
-                    // Combine and deduplicate
-                    const combined = [...initialBoards, ...missingBoards.filter(mb => !initialBoardIds.has(mb.id))];
-                    setAllBoards(combined);
-                }
-            } else {
-                setAllBoards(initialBoards);
-            }
         }
     };
-
-    fetchUserAndJoinedBoards();
-  }, [initialBoards]);
+    fetchUser();
+  }, []);
 
   useEffect(() => {
       setLocalClasses(userClasses.map(c => ({ id: c, name: c })));
@@ -145,61 +109,20 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }, []);
 
   const handleJoin = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setError('');
-      setIsJoining(true);
-      
-      try {
-          const code = joinCode.trim().toUpperCase();
-          if (!currentUserId) throw new Error("User not found");
+    e.preventDefault();
+    setError('');
+    setIsJoining(true);
+    const code = joinCode.trim();
 
-          let board: Board | null = allBoards.find(b => b.classCode === code) || null;
-          if (!board) {
-              const { data, error } = await supabase.from('boards').select('*').eq('class_code', code).single();
-              if (data && !error) board = data as Board;
-          }
-          
-          if (board) {
-              const shouldAutoEnroll = board.targetGrade && board.targetGrade !== 'General' && board.settings?.autoEnroll !== false;
+    const success = await onJoinByCode(code);
 
-              if (shouldAutoEnroll) {
-                  if (!userClasses.includes(board.targetGrade!)) {
-                      const newClasses = [...userClasses, board.targetGrade!];
-                      await profileService.updateClasses(currentUserId, newClasses);
-                  }
-              } else {
-                  // Not auto-enrolling, so save it to the user's personal list of joined boards
-                  const { data: profile } = await supabase.from('profiles').select('joined_boards').eq('id', currentUserId).single();
-                  const currentJoined = profile?.joined_boards || [];
-                  if (!currentJoined.includes(board.id)) {
-                      const newJoined = [...currentJoined, board.id];
-                      await supabase.from('profiles').update({ joined_boards: newJoined }).eq('id', currentUserId);
-                  }
-              }
-
-              // Add to local state immediately for instant feedback
-              if (!allBoards.some(b => b.id === board!.id)) {
-                setAllBoards(prev => [...prev, board!]);
-              }
-
-              const isQuizActive = board.format === 'quiz' && board.quizState !== 'setup';
-              const isAssessmentActive = board.format === 'assessment' && board.assessmentState !== 'setup';
-
-              if (board.isPublished || isQuizActive || isAssessmentActive) {
-                  onSelectBoard(board.id);
-              } else {
-                  setError('Board joined, but it is currently hidden by the teacher.');
-                  setJoinCode(''); // Clear input on "soft" error
-              }
-          } else {
-              setError('Board not found. Please check the code.');
-          }
-      } catch (err: any) {
-          console.error(err);
-          setError(err.message || 'Failed to join. Please try again.');
-      } finally {
-          setIsJoining(false);
-      }
+    if (!success) {
+      setError('Board not found. Please check the code.');
+    } else {
+      setJoinCode('');
+      setActiveTab('home'); // Switch back to home on success
+    }
+    setIsJoining(false);
   };
 
   const handleLogout = async () => {
@@ -219,24 +142,26 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   const accessibleBoards = useMemo(() => {
-      return allBoards.filter(b => {
-          if (b.isTrashed) return false;
-          const isQuizActive = b.format === 'quiz' && b.quizState !== 'setup';
-          const isAssessmentActive = b.format === 'assessment' && b.assessmentState !== 'setup';
-          if (!b.isPublished && !isQuizActive && !isAssessmentActive) return false;
-          const target = b.targetGrade || 'General';
-          const isAssigned = userClasses.includes(target);
-          // We don't need to check a separate `joinedBoards` state anymore, as `allBoards` contains them.
-          // This logic simplifies to just checking if the board is present.
-          return true;
-      });
-  }, [allBoards, userClasses]);
+    return initialBoards.filter(b => {
+        if (b.isTrashed) return false;
+
+        const isQuizActive = b.format === 'quiz' && b.quizState !== 'setup';
+        const isAssessmentActive = b.format === 'assessment' && b.assessmentState !== 'setup';
+        const isLive = b.isPublished || isQuizActive || isAssessmentActive;
+        if (!isLive) return false;
+
+        const target = b.targetGrade || 'General';
+        const isAssigned = userClasses.includes(target);
+
+        return isAssigned;
+    });
+  }, [initialBoards, userClasses]);
 
   const filteredBoards = accessibleBoards.filter(b => {
       const target = b.targetGrade || 'General';
       const matchesSearch = b.title.toLowerCase().includes(filter.toLowerCase());
-      const matchesClass = selectedClassFilter === 'All' || target === selectedClassFilter || userClasses.includes(target);
-      return matchesSearch && (selectedClassFilter === 'All' ? true : matchesClass);
+      if (selectedClassFilter === 'All') return matchesSearch;
+      return matchesSearch && target === selectedClassFilter;
   }).sort((a, b) => {
       const timeA = sortBy === 'created' ? a.createdAt : (a.updatedAt || a.createdAt);
       const timeB = sortBy === 'created' ? b.createdAt : (b.updatedAt || b.createdAt);

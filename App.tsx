@@ -499,13 +499,12 @@ function AppContent() {
 
     if (error || !success) {
         console.error("Failed to join class:", error);
-        return false; // Indicates the code was wrong or an error occurred
+        return false;
     }
 
-    // If successful, the user is now enrolled. We can now fetch the board they have access to.
-    await fetchBoards(); // This will refresh the dashboard list
+    await fetchProfile();
+    await fetchBoards();
 
-    // Find the specific board to navigate to it directly.
     const { data: board, error: boardError } = await supabase
         .from('boards')
         .select('id')
@@ -513,11 +512,9 @@ function AppContent() {
         .single();
 
     if (board && !boardError) {
-        selectBoard(board.id); // This function already handles navigation
+        selectBoard(board.id);
         return true;
     } else {
-        // This is an edge case (join worked, but couldn't immediately find the board).
-        // Returning true is fine, as the dashboard has been refreshed.
         return true; 
     }
   };
@@ -669,6 +666,7 @@ function AppContent() {
                   username={isGuest ? guestName : username}
                   userAvatar={isGuest ? guestAvatar : userAvatar}
                   userClasses={userClasses}
+                  onJoinByCode={handleJoinByCode}
               />
           ) : (
               <Dashboard 
