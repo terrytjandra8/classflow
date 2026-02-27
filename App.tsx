@@ -495,21 +495,31 @@ function AppContent() {
   };
 
   const handleJoinByCode = async (code: string) => {
-      const { data: board, error } = await supabase
-          .from('boards')
-          .select('*')
-          .eq('class_code', code)
-          .single();
-      
-      if (error || !board) return false;
+    const { data: success, error } = await supabase.rpc('join_class', { p_class_code: code });
 
-      setActiveBoardId(board.id);
-      setView('board');
-      
-      const newUrl = `${window.location.pathname}?board=${board.id}`;
-      window.history.pushState({ path: newUrl }, '', newUrl);
-      
-      return true;
+    if (error || !success) {
+        console.error("Failed to join class:", error);
+        return false; // Indicates the code was wrong or an error occurred
+    }
+
+    // If successful, the user is now enrolled. We can now fetch the board they have access to.
+    await fetchBoards(); // This will refresh the dashboard list
+
+    // Find the specific board to navigate to it directly.
+    const { data: board, error: boardError } = await supabase
+        .from('boards')
+        .select('id')
+        .eq('class_code', code)
+        .single();
+
+    if (board && !boardError) {
+        selectBoard(board.id); // This function already handles navigation
+        return true;
+    } else {
+        // This is an edge case (join worked, but couldn't immediately find the board).
+        // Returning true is fine, as the dashboard has been refreshed.
+        return true; 
+    }
   };
 
   const handleGuestLogin = (name: string, avatarUrl: string) => {
