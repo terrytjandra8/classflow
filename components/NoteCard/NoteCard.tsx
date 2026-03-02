@@ -1,7 +1,7 @@
 
-import React, { useRef, memo, useState, useMemo } from 'react';
-import { EyeOff, X } from 'lucide-react';
-import { Note, CommentAttachment, NoteColor } from '../../types';
+import React, { useRef, memo, useState, useMemo, useEffect } from 'react';
+import { EyeOff, X, Clock } from 'lucide-react';
+import { Note, CommentAttachment, NoteColor, Board } from '../../types';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
 
@@ -45,11 +45,48 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
     commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote
 }) => {
-  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId } = useBoard();
+  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId, userRole } = useBoard();
   
   const effectiveUserId = userId || contextUserId;
   const [showMenu, setShowMenu] = useState(false);
   const localRef = useRef<HTMLDivElement | null>(null);
+
+  const [isStillEditable, setIsStillEditable] = useState(true);
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const editTimeLimit = board.settings?.editTimeLimit;
+    const isAuthor = note.authorId === effectiveUserId;
+
+    if (userRole === 'teacher' || !isAuthor || editTimeLimit === undefined || editTimeLimit === null || editTimeLimit <= 0) {
+        setIsStillEditable(true);
+        setRemainingTime(null);
+        return;
+    }
+
+    let intervalId: NodeJS.Timeout;
+
+    const checkTime = () => {
+        const limitInSeconds = editTimeLimit * 60;
+        const updatedAt = new Date(note.updatedAt || note.createdAt).getTime();
+        const diffSeconds = (Date.now() - updatedAt) / 1000;
+
+        if (diffSeconds < limitInSeconds) {
+            setIsStillEditable(true);
+            setRemainingTime(limitInSeconds - diffSeconds);
+        } else {
+            setIsStillEditable(false);
+            setRemainingTime(null);
+            if (intervalId) clearInterval(intervalId);
+        }
+    };
+
+    intervalId = setInterval(checkTime, 1000);
+    checkTime();
+
+    return () => clearInterval(intervalId);
+
+}, [board.settings, note.authorId, note.createdAt, note.updatedAt, effectiveUserId, userRole]);
 
   // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;
@@ -64,7 +101,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const repliesEnabledBool = !!board.repliesEnabled;
 
   // --- Logic & Permissions (using BoardRules) ---
-  const canEdit = BoardRules.canEditNote(note, effectiveUserId, isStudentBool, isLockedBool);
+  const originalCanEdit = BoardRules.canEditNote(note, effectiveUserId, isStudentBool, isLockedBool);
+  const canEdit = originalCanEdit && isStillEditable;
   const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, isStudentBool, isLockedBool);
   const canCopy = BoardRules.canCopyContent(board, note.sectionId, isStudentBool);
   
@@ -114,11 +152,12 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     ${!isTransparent ? 'transition-all duration-300' : ''}
     ${!isTransparent && !isStickyNote ? 'shadow-sm hover:shadow-lg rounded-xl sm:rounded-2xl' : ''}
     ${!isCustomColor ? note.color : ''} flex flex-col group animate-fade-in note-card
-    ${isStickyNote ? 'overflow-hidden resize-both min-h-[150px] sm:min-h-[200px] rounded-none' : 'overflow-visible'}
+    ${isStickyNote ? 'overflow-hidden resize-both min-h-[150px] sm:min-h-[200px] rounded-none' : ''}
     ${!canCopy ? 'select-none' : ''}
     ${isHighlighted ? 'ring-2 sm:ring-4 ring-yellow-400 z-50 shadow-lg !opacity-100' : ''}
     ${isDimmed ? 'opacity-20 grayscale blur-[1px] scale-95 pointer-events-none' : 'opacity-100'}
-  `, [isCanvasModeBool, isTransparent, isStickyNote, note.color, canCopy, isHighlighted, isDimmed, isCustomColor]);
+    ${!isStillEditable && userRole === 'student' ? 'opacity-80' : ''}
+  `, [isCanvasModeBool, isTransparent, isStickyNote, note.color, canCopy, isHighlighted, isDimmed, isCustomColor, isStillEditable, userRole]);
 
   const style: React.CSSProperties = useMemo(() => ({
       backgroundColor: isCustomColor ? note.color : undefined,
@@ -178,6 +217,12 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
       {!isTransparent && !isStickyNote && (
           <div className="relative z-10">
+               {remainingTime !== null && (
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-yellow-800 px-3 py-1 bg-yellow-400/20 border-t border-yellow-500/20">
+                        <Clock size={12} />
+                        <span>{`Time to edit: ${Math.floor(remainingTime / 60)}m ${Math.floor(remainingTime % 60)}s`}</span>
+                    </div>
+                )}
               <NoteFooter note={note} userId={effectiveUserId} onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }} commentsEnabled={commentsEnabledBool} reactionsEnabled={reactionsEnabledBool} />
               
               {commentsEnabledBool && !isBlurActive && (

@@ -20,7 +20,7 @@ export interface Database {
           format: string
           class_code: string | null
           wallpaper: string | null
-          settings: Json
+          settings: Json & { editTimeLimit?: number }
           is_published: boolean
           is_public: boolean
           is_favorite: boolean
@@ -41,7 +41,7 @@ export interface Database {
           format?: string
           class_code?: string | null
           wallpaper?: string | null
-          settings?: Json
+          settings?: Json & { editTimeLimit?: number }
           is_published?: boolean
           is_public?: boolean
           is_favorite?: boolean
@@ -62,7 +62,7 @@ export interface Database {
           format?: string
           class_code?: string | null
           wallpaper?: string | null
-          settings?: Json
+          settings?: Json & { editTimeLimit?: number }
           is_published?: boolean
           is_public?: boolean
           is_favorite?: boolean
@@ -101,6 +101,7 @@ export interface Database {
           comments: Json
           liked_by: string[]
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -127,6 +128,7 @@ export interface Database {
           comments?: Json
           liked_by?: string[]
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -153,6 +155,7 @@ export interface Database {
           comments?: Json
           liked_by?: string[]
           created_at?: string
+          updated_at?: string
         }
       }
       profiles: {

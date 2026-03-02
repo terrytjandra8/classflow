@@ -1,10 +1,11 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Note, Comment } from '../types';
+import { Note, Comment, Board } from '../types';
 import { mapNote } from '../utils/mappers';
 
 interface UseNoteActionsProps {
+    board: Board;
     boardId: string;
     userId?: string;
     username?: string;
@@ -22,7 +23,7 @@ type HistoryAction =
     | { type: 'UPDATE_COMMENT'; noteId: string; previousComments: Comment[] };
 
 export const useNoteActions = ({ 
-    boardId, userId, username, userAvatar, userRole, setNotes, onTouchBoard 
+    board, boardId, userId, username, userAvatar, userRole, setNotes, onTouchBoard 
 }: UseNoteActionsProps) => {
 
     // History Stack for Undo
@@ -230,6 +231,8 @@ export const useNoteActions = ({
             delete dbUpdates.comments;
         }
 
+        dbUpdates.updated_at = new Date().toISOString();
+
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
         if (error) console.error("Error updating note:", error);
         
@@ -354,12 +357,34 @@ export const useNoteActions = ({
         }
     }, [boardId, username, userRole, userAvatar, setNotes, onTouchBoard, userId, updateBoardTimestamp]);
 
+    const isEditable = useCallback((note: Note): boolean => {
+        if (userRole === 'teacher') return true;
+        if (note.authorId !== userId) return false;
+
+        const editTimeLimit = board.settings?.editTimeLimit;
+
+        if (editTimeLimit === undefined || editTimeLimit === null) {
+            return true; // No limit set
+        }
+
+        if (editTimeLimit <= 0) { // 0 or less means cannot edit
+            return false;
+        }
+
+        const now = Date.now();
+        const updatedAt = new Date(note.updatedAt || note.createdAt).getTime();
+        const diffInMinutes = (now - updatedAt) / (1000 * 60);
+
+        return diffInMinutes < editTimeLimit;
+    }, [userId, userRole, board.settings]);
+
     return {
         createNote,
         updateNote,
         deleteNote,
         likeNote,
         addComment,
-        duplicateNote
+        duplicateNote,
+        isEditable,
     };
 };
