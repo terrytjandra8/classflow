@@ -223,4 +223,358 @@ export const BoardView: React.FC<BoardViewProps> = ({
             };
             await createNote(payload);
         }
-        setIsModalOpe
+        setIsModalOpen(false);
+        setEditingNote(null);
+    };
+
+    const launchProjectorMode = useCallback(() => {
+        const url = `${window.location.origin}/?board=${board.id}&present=true`;
+        window.open(url, 'ClassBoardProjector', 'width=1024,height=768,menubar=no,toolbar=no,location=no,status=no');
+    }, [board.id]);
+
+    const getEffectiveSections = useCallback(() => {
+        if (board.sections && board.sections.length > 0) return board.sections;
+        return [{ 
+            id: 'default', 
+            title: 'Group 1',
+            locked: false,
+            isContentBlurred: false,
+            isHidden: false,
+            isAnonymous: false,
+            commentsEnabled: true,
+            repliesEnabled: true,
+            studentsCanDrag: false
+        }];
+    }, [board.sections]);
+
+    const toggleSectionLock = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, locked: !s.locked } : s);
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionContentBlur = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => {
+            if (s.id === sectionId) {
+                const current = s.isContentBlurred !== undefined ? s.isContentBlurred : s.isTitleBlurred;
+                return { ...s, isContentBlurred: !current, isTitleBlurred: !current };
+            }
+            return s;
+        });
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionVisibility = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isHidden: !s.isHidden } : s);
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionAnonymous = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isAnonymous: !s.isAnonymous } : s);
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionComments = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => {
+            if (s.id === sectionId) {
+                const currentVal = s.commentsEnabled !== false; 
+                return { ...s, commentsEnabled: !currentVal };
+            }
+            return s;
+        });
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionReplies = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => {
+            if (s.id === sectionId) {
+                const currentVal = s.repliesEnabled !== false;
+                return { ...s, repliesEnabled: !currentVal };
+            }
+            return s;
+        });
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionRearrange = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => {
+            if (s.id === sectionId) {
+                const currentVal = s.studentsCanDrag !== undefined ? s.studentsCanDrag : (board.studentsCanDrag ?? false);
+                return { ...s, studentsCanDrag: !currentVal };
+            }
+            return s;
+        });
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, board.studentsCanDrag, onUpdateBoard]);
+
+    const contextValue: BoardContextType = useMemo(() => ({
+        board,
+        notes: sortedNotes,
+        setNotes,
+        userId,
+        username, 
+        userRole,
+        isStudent: isStudent || isSimulatingStudent, 
+        canManageBoard, 
+        isLoadingNotes,
+        updateBoard: onUpdateBoard,
+        deleteNote,
+        likeNote: (id) => board.reactionsEnabled && likeNote(id),
+        addComment,
+        updateNote,
+        duplicateNote,
+        openAddNote: openAddNoteModal,
+        openEditNote: openEditNoteModal,
+        goBack: onBack,
+        openSettings: () => setIsSettingsOpen(true),
+        openShare: () => setIsShareModalOpen(true),
+        openBoardAnalysis: () => {}, 
+        isSimulating,
+        toggleSimulation: () => setIsSimulating(!isSimulating),
+        isSimulatingStudent,
+        toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
+        isAiLoading: false,
+        summarize: () => {},
+        backgroundStyle,
+        fontClass,
+        userAvatar,
+        onlineUsers,
+        typingUsers,
+        setTypingStatus,
+        isPresentationMode,
+        classList,
+        launchProjectorMode,
+        toggleSectionLock,
+        toggleSectionContentBlur,
+        toggleSectionVisibility,
+        toggleSectionAnonymous,
+        toggleSectionComments,
+        toggleSectionReplies,
+        toggleSectionRearrange,
+        highlightedUserId,
+        setHighlightedUserId
+    }), [
+        board, sortedNotes, userId, username, userRole, isStudent, isSimulatingStudent, canManageBoard, isLoadingNotes,
+        onUpdateBoard, deleteNote, likeNote, addComment, updateNote, duplicateNote,
+        openAddNoteModal, openEditNoteModal, onBack, isSimulating,
+        backgroundStyle, fontClass, userAvatar, onlineUsers, isPresentationMode, classList,
+        launchProjectorMode, toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous,
+        toggleSectionComments, toggleSectionReplies, toggleSectionRearrange, typingUsers, setTypingStatus,
+        highlightedUserId
+    ]);
+
+    const renderProtectedContent = (content: React.ReactNode) => {
+        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
+        
+        return (
+            <ScreenshotGuard isEnabled={protectionEnabled}>
+                {content}
+            </ScreenshotGuard>
+        );
+    };
+
+    if (board.format === 'lesson') {
+        return (
+            <BoardProvider value={contextValue}>
+                {renderProtectedContent(
+                    <>
+                    <LessonLayout 
+                        board={board}
+                        isStudent={isStudent || isSimulatingStudent}
+                        onUpdateBoard={onUpdateBoard}
+                        onBack={onBack}
+                        notes={notes}
+                        userId={userId}
+                        onAddComment={addComment}
+                        onDeleteNote={deleteNote}
+                        onLikeNote={likeNote}
+                        onUpdateNote={updateNote}
+                        onDuplicateNote={duplicateNote}
+                        onOpenAddNote={openAddNoteModal}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenShare={() => setIsShareModalOpen(true)}
+                        isPresentationMode={isPresentationMode}
+                    />
+                    {!isPresentationMode && (
+                        <BoardOverlays 
+                            board={board} 
+                            isStudent={isStudent}
+                            username={username}
+                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
+                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
+                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
+                            isRecipeSidebarOpen={isRecipeSidebarOpen} setIsRecipeSidebarOpen={setIsRecipeSidebarOpen}
+                            isGuideOpen={isGuideOpen} setIsGuideOpen={setIsGuideOpen}
+                            isDragOver={isDragOver}
+                            onUpdateBoard={onUpdateBoard}
+                            setNotes={setNotes}
+                            onAddNote={handleModalSubmit}
+                            pendingPasteImage={pendingPasteImage}
+                            editingNote={editingNote}
+                        />
+                    )}
+                    </>
+                )}
+            </BoardProvider>
+        );
+    }
+
+    if (board.format === 'quiz') {
+        return (
+            <BoardProvider value={contextValue}>
+                {renderProtectedContent(
+                    <>
+                    <QuizView 
+                        board={board}
+                        notes={notes}
+                        userId={userId}
+                        isStudent={isStudent || isSimulatingStudent}
+                        onlineUsers={onlineUsers}
+                        onUpdateBoard={onUpdateBoard}
+                        onActivity={() => {}} 
+                        onBack={onBack}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenShare={() => setIsShareModalOpen(true)}
+                        isPresentationMode={isPresentationMode}
+                    />
+                    {!isPresentationMode && (
+                        <BoardOverlays 
+                            board={board} 
+                            isStudent={isStudent}
+                            username={username}
+                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
+                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
+                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
+                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
+                            isGuideOpen={false} setIsGuideOpen={() => {}}
+                            isDragOver={false}
+                            onUpdateBoard={onUpdateBoard}
+                            setNotes={setNotes}
+                            onAddNote={handleModalSubmit}
+                            pendingPasteImage={null}
+                            editingNote={null}
+                        />
+                    )}
+                    </>
+                )}
+            </BoardProvider>
+        );
+    }
+
+    if (board.format === 'poll') {
+        return (
+            <BoardProvider value={contextValue}>
+                {renderProtectedContent(
+                    <>
+                    <PollView 
+                        board={board}
+                        notes={notes}
+                        userId={userId}
+                        isStudent={isStudent || isSimulatingStudent}
+                        onUpdateBoard={onUpdateBoard}
+                        onActivity={() => {}}
+                        onBack={onBack}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenShare={() => setIsShareModalOpen(true)}
+                        isPresentationMode={isPresentationMode}
+                    />
+                    {!isPresentationMode && (
+                        <BoardOverlays 
+                            board={board} 
+                            isStudent={isStudent}
+                            username={username}
+                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
+                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
+                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
+                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
+                            isGuideOpen={false} setIsGuideOpen={() => {}}
+                            isDragOver={false}
+                            onUpdateBoard={onUpdateBoard}
+                            setNotes={setNotes}
+                            onAddNote={handleModalSubmit}
+                            pendingPasteImage={null}
+                            editingNote={null}
+                        />
+                    )}
+                    </>
+                )}
+            </BoardProvider>
+        );
+    }
+
+    if (board.format === 'assessment') {
+        return (
+            <BoardProvider value={contextValue}>
+                <div className="h-screen w-full relative bg-[#111]">
+                    <AssessmentManager 
+                        board={board}
+                        notes={notes}
+                        userId={userId}
+                        isStudent={isStudent || isSimulatingStudent}
+                        onUpdateBoard={onUpdateBoard}
+                        onBack={onBack}
+                        onlineUsers={onlineUsers}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenShare={() => setIsShareModalOpen(true)}
+                    />
+                    {!isPresentationMode && !isStudent && !isSimulatingStudent && (
+                        <BoardOverlays 
+                            board={board} 
+                            isStudent={isStudent}
+                            username={username}
+                            isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
+                            isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
+                            isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
+                            isRecipeSidebarOpen={false} setIsRecipeSidebarOpen={() => {}}
+                            isGuideOpen={false} setIsGuideOpen={() => {}}
+                            isDragOver={false}
+                            onUpdateBoard={onUpdateBoard}
+                            setNotes={setNotes}
+                            onAddNote={handleModalSubmit}
+                            pendingPasteImage={null}
+                            editingNote={null}
+                        />
+                    )}
+                </div>
+            </BoardProvider>
+        );
+    }
+
+    return (
+        <BoardProvider value={contextValue}>
+            {renderProtectedContent(
+                <div 
+                    className="h-screen w-full relative overflow-hidden" 
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                >
+                    <BoardLayout isPresentationMode={isPresentationMode} />
+                    
+                    <BoardOverlays 
+                        board={board} 
+                        isStudent={isStudent || isSimulatingStudent}
+                        username={username}
+                        isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen}
+                        isShareModalOpen={isShareModalOpen} setIsShareModalOpen={setIsShareModalOpen}
+                        isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}
+                        isRecipeSidebarOpen={isRecipeSidebarOpen} setIsRecipeSidebarOpen={setIsRecipeSidebarOpen}
+                        isGuideOpen={isGuideOpen} setIsGuideOpen={setIsGuideOpen}
+                        isDragOver={isDragOver}
+                        onUpdateBoard={onUpdateBoard}
+                        setNotes={setNotes}
+                        onAddNote={handleModalSubmit}
+                        pendingPasteImage={pendingPasteImage}
+                        editingNote={editingNote}
+                    />
+                </div>
+            )}
+        </BoardProvider>
+    );
+};
