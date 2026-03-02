@@ -56,7 +56,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
   useEffect(() => {
     const editTimeLimit = board.settings?.editTimeLimit;
-    const isAuthor = note.authorId === effectiveUserId;
+    const isAuthor = note.author_id === effectiveUserId;
 
     if (userRole === 'teacher' || !isAuthor || editTimeLimit === undefined || editTimeLimit === null || editTimeLimit <= 0) {
         setIsStillEditable(true);
@@ -68,7 +68,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
     const checkTime = () => {
         const limitInSeconds = editTimeLimit * 60;
-        const updatedAt = new Date(note.updatedAt || note.createdAt).getTime();
+        const updatedAt = new Date(note.updated_at || note.createdAt).getTime();
         const diffSeconds = (Date.now() - updatedAt) / 1000;
 
         if (diffSeconds < limitInSeconds) {
@@ -86,7 +86,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
     return () => clearInterval(intervalId);
 
-}, [board.settings, note.authorId, note.createdAt, note.updatedAt, effectiveUserId, userRole]);
+}, [board.settings, note.author_id, note.createdAt, note.updated_at, effectiveUserId, userRole]);
 
   // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;

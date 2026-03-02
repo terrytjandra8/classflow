@@ -359,7 +359,7 @@ export const useNoteActions = ({
 
     const isEditable = useCallback((note: Note): boolean => {
         if (userRole === 'teacher') return true;
-        if (note.authorId !== userId) return false;
+        if (note.author_id !== userId) return false;
 
         const editTimeLimit = board.settings?.editTimeLimit;
 
@@ -372,7 +372,7 @@ export const useNoteActions = ({
         }
 
         const now = Date.now();
-        const updatedAt = new Date(note.updatedAt || note.createdAt).getTime();
+        const updatedAt = new Date(note.updated_at || note.createdAt).getTime();
         const diffInMinutes = (now - updatedAt) / (1000 * 60);
 
         return diffInMinutes < editTimeLimit;
