@@ -30,7 +30,7 @@ export const useNoteActions = ({
     const historyStack = useRef<HistoryAction[]>([]);
 
     const updateBoardTimestamp = useCallback(async () => {
-        await supabase.from('boards').update({ updated_at: new Date().toISOString() }).eq('id', boardId);
+        await supabase.from('boards').update({ updatedAt: new Date().toISOString() }).eq('id', boardId);
     }, [boardId]);
 
     // --- UNDO LOGIC ---
@@ -231,7 +231,7 @@ export const useNoteActions = ({
             delete dbUpdates.comments;
         }
 
-        dbUpdates.updated_at = new Date().toISOString();
+        dbUpdates.updatedAt = new Date().toISOString();
 
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
         if (error) console.error("Error updating note:", error);

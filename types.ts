@@ -91,6 +91,7 @@ export interface Note {
   likedBy?: string[];
   comments?: Comment[];
   createdAt: number;
+  updatedAt?: number;
   connections?: string[];
   // Assessment Specific
   submissionData?: {
