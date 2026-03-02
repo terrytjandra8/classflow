@@ -68,7 +68,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
     const checkTime = () => {
         const limitInSeconds = editTimeLimit * 60;
-        const updatedAt = new Date(note.updated_at || note.createdAt).getTime();
+        const updatedAt = new Date(note.updatedAt || note.createdAt).getTime();
         const diffSeconds = (Date.now() - updatedAt) / 1000;
 
         if (diffSeconds < limitInSeconds) {
@@ -86,7 +86,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
     return () => clearInterval(intervalId);
 
-}, [board.settings, note.author_id, note.createdAt, note.updated_at, effectiveUserId, userRole]);
+}, [board.settings, note.author_id, note.createdAt, note.updatedAt, effectiveUserId, userRole]);
 
   // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;

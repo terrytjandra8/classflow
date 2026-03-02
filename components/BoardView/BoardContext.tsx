@@ -7,6 +7,7 @@ export interface BoardContextType {
     setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
     userId?: string;
     username: string; // Added username
+    userRole: string;
     isStudent: boolean;
     canManageBoard: boolean;
     isLoadingNotes: boolean;

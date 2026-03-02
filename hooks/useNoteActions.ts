@@ -372,7 +372,7 @@ export const useNoteActions = ({
         }
 
         const now = Date.now();
-        const updatedAt = new Date(note.updated_at || note.createdAt).getTime();
+        const updatedAt = new Date(note.updatedAt || note.createdAt).getTime();
         const diffInMinutes = (now - updatedAt) / (1000 * 60);
 
         return diffInMinutes < editTimeLimit;
