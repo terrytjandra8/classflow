@@ -378,9 +378,9 @@ function AppContent() {
               setBoards(prev => {
                   const idx = prev.findIndex(b => b.id === freshBoard.id);
                   if (idx > -1) {
-                      // Update existing board
+                      // Update existing board by merging
                       const newBoards = [...prev];
-                      newBoards[idx] = freshBoard;
+                      newBoards[idx] = { ...prev[idx], ...freshBoard };
                       return newBoards;
                   } else {
                       // Add new board
