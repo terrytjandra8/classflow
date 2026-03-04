@@ -15,7 +15,6 @@ interface UseNoteActionsProps {
     onTouchBoard: () => void;
 }
 
-// Action Types for Undo History
 type HistoryAction = 
     | { type: 'CREATE_NOTE'; noteId: string }
     | { type: 'DELETE_NOTE'; note: Note }
@@ -26,35 +25,30 @@ export const useNoteActions = ({
     board, boardId, userId, username, userAvatar, userRole, setNotes, onTouchBoard 
 }: UseNoteActionsProps) => {
 
-    // History Stack for Undo
     const historyStack = useRef<HistoryAction[]>([]);
+    const setNotesRef = useRef(setNotes);
+    useEffect(() => { setNotesRef.current = setNotes; }, [setNotes]);
 
     const updateBoardTimestamp = useCallback(async () => {
-        await supabase.from('boards').update({ updatedAt: new Date().toISOString() }).eq('id', boardId);
+        await supabase.from('boards').update({ updated_at: new Date().toISOString() }).eq('id', boardId);
     }, [boardId]);
 
-    // --- UNDO LOGIC ---
     const performUndo = useCallback(async () => {
         const lastAction = historyStack.current.pop();
         if (!lastAction) return;
 
-        console.log("Undoing action:", lastAction.type);
+        const currentSetNotes = setNotesRef.current;
 
         switch (lastAction.type) {
             case 'CREATE_NOTE':
-                // Inverse: Delete the note
-                setNotes(prev => prev.filter(n => n.id !== lastAction.noteId));
+                currentSetNotes(prev => prev.filter(n => n.id !== lastAction.noteId));
                 await supabase.from('notes').delete().eq('id', lastAction.noteId);
                 break;
 
             case 'DELETE_NOTE':
-                // Inverse: Re-insert the note
                 const noteToRestore = lastAction.note;
-                const { id, createdAt, ...rest } = noteToRestore;
-                
-                // Construct DB payload from Note object (mapping back to snake_case for DB)
                 const payload = {
-                    id: noteToRestore.id, // Keep original ID
+                    id: noteToRestore.id,
                     board_id: noteToRestore.board_id,
                     content: noteToRestore.content,
                     title: noteToRestore.title,
@@ -64,28 +58,21 @@ export const useNoteActions = ({
                     author_avatar: noteToRestore.authorAvatar,
                     type: noteToRestore.type,
                     color: noteToRestore.color,
-                    x: noteToRestore.x,
-                    y: noteToRestore.y,
-                    width: noteToRestore.width,
-                    height: noteToRestore.height,
+                    x: noteToRestore.x, y: noteToRestore.y, width: noteToRestore.width, height: noteToRestore.height,
                     section_id: noteToRestore.sectionId,
                     attachment_url: noteToRestore.attachmentUrl,
                     is_pinned: noteToRestore.isPinned,
                     likes: noteToRestore.likes,
                     liked_by: noteToRestore.likedBy,
-                    comments: noteToRestore.comments, // Restore comments too
+                    comments: noteToRestore.comments,
                     created_at: new Date(noteToRestore.createdAt).toISOString()
                 };
-
-                setNotes(prev => [noteToRestore, ...prev]);
+                currentSetNotes(prev => [noteToRestore, ...prev]);
                 await supabase.from('notes').insert([payload]);
                 break;
 
             case 'UPDATE_NOTE':
-                // Inverse: Update with previous data
-                setNotes(prev => prev.map(n => n.id === lastAction.noteId ? { ...n, ...lastAction.previousData } : n));
-                
-                // Map frontend props back to DB columns for specific fields that might have changed
+                currentSetNotes(prev => prev.map(n => n.id === lastAction.noteId ? { ...n, ...lastAction.previousData } : n));
                 const dbUpdates: any = { ...lastAction.previousData };
                 if (dbUpdates.sectionId !== undefined) { dbUpdates.section_id = dbUpdates.sectionId; delete dbUpdates.sectionId; }
                 if (dbUpdates.attachmentUrl !== undefined) { dbUpdates.attachment_url = dbUpdates.attachmentUrl; delete dbUpdates.attachmentUrl; }
@@ -94,43 +81,29 @@ export const useNoteActions = ({
                     dbUpdates.created_at = new Date(dbUpdates.createdAt).toISOString(); 
                     delete dbUpdates.createdAt; 
                 }
-                
                 await supabase.from('notes').update(dbUpdates).eq('id', lastAction.noteId);
                 break;
 
             case 'UPDATE_COMMENT':
-                // Inverse: Revert comments array
-                setNotes(prev => prev.map(n => n.id === lastAction.noteId ? { ...n, comments: lastAction.previousComments } : n));
+                currentSetNotes(prev => prev.map(n => n.id === lastAction.noteId ? { ...n, comments: lastAction.previousComments } : n));
                 await supabase.from('notes').update({ comments: lastAction.previousComments }).eq('id', lastAction.noteId);
                 break;
         }
-        
         onTouchBoard();
-        // We don't bump timestamp on undo to keep it "silent" or maybe we should? Leaving silent for now.
-    }, [setNotes, onTouchBoard]);
+    }, [onTouchBoard]);
 
-    // Keyboard Listener for Ctrl+Z
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Check for Ctrl+Z (or Cmd+Z on Mac)
             if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                // Avoid undoing if user is typing in an input/textarea
                 const activeTag = document.activeElement?.tagName.toLowerCase();
-                if (activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable) {
-                    return;
-                }
-                
+                if (activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable) return;
                 e.preventDefault();
                 performUndo();
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [performUndo]);
-
-
-    // --- WRAPPED ACTIONS ---
 
     const createNote = useCallback(async (noteData: any) => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -161,10 +134,7 @@ export const useNoteActions = ({
         if (data && !error) {
             const newNote = mapNote(data);
             setNotes(prev => [newNote, ...prev]);
-            
-            // Push to History
             historyStack.current.push({ type: 'CREATE_NOTE', noteId: newNote.id });
-            
             onTouchBoard();
             updateBoardTimestamp();
             return newNote;
@@ -175,18 +145,14 @@ export const useNoteActions = ({
     }, [boardId, username, userAvatar, userRole, setNotes, onTouchBoard, userId, updateBoardTimestamp]);
 
     const updateNote = useCallback(async (id: string, updates: Partial<Note>) => {
-        // Snapshot previous state for Undo
         setNotes(currentNotes => {
             const noteToUpdate = currentNotes.find(n => n.id === id);
             if (noteToUpdate) {
-                // Create a subset of the note containing only the keys being updated
                 const previousData: Partial<Note> = {};
                 Object.keys(updates).forEach(key => {
                     // @ts-ignore
                     previousData[key] = noteToUpdate[key];
                 });
-                
-                // If special handling like Comments was passed as a Partial<Note>, capture it
                 if (updates.comments) previousData.comments = noteToUpdate.comments;
 
                 historyStack.current.push({ 
@@ -194,54 +160,37 @@ export const useNoteActions = ({
                     noteId: id, 
                     previousData: previousData,
                     previousComments: noteToUpdate.comments || [] 
-                } as any); // Cast because we dynamically determine type based on content
+                } as any);
             }
             return currentNotes.map(n => n.id === id ? { ...n, ...updates } : n);
         });
 
         const dbUpdates: any = { ...updates };
         
-        // Map frontend props to DB columns
-        if (dbUpdates.sectionId !== undefined) { 
-            dbUpdates.section_id = dbUpdates.sectionId; 
-            delete dbUpdates.sectionId; 
-        }
-        if (dbUpdates.attachmentUrl !== undefined) { 
-            dbUpdates.attachment_url = dbUpdates.attachmentUrl; 
-            delete dbUpdates.attachmentUrl; 
-        }
-        if (dbUpdates.isPinned !== undefined) { 
-            dbUpdates.is_pinned = dbUpdates.isPinned; 
-            delete dbUpdates.isPinned; 
-        }
+        if (dbUpdates.sectionId !== undefined) { dbUpdates.section_id = dbUpdates.sectionId; delete dbUpdates.sectionId; }
+        if (dbUpdates.attachmentUrl !== undefined) { dbUpdates.attachment_url = dbUpdates.attachmentUrl; delete dbUpdates.attachmentUrl; }
+        if (dbUpdates.isPinned !== undefined) { dbUpdates.is_pinned = dbUpdates.isPinned; delete dbUpdates.isPinned; }
         if (dbUpdates.createdAt !== undefined) {
-            // Allow createdAt update for reordering
             dbUpdates.created_at = new Date(dbUpdates.createdAt).toISOString();
             delete dbUpdates.createdAt;
         }
         
         delete dbUpdates.id;
-        // delete dbUpdates.createdAt; // REMOVED: Handled above conditionally
         delete dbUpdates.isPlaceholder;
         delete dbUpdates.likedBy;
         
-        if (updates.comments) {
-            dbUpdates.comments = updates.comments;
-        } else {
-            delete dbUpdates.comments;
-        }
+        if (!updates.comments) delete dbUpdates.comments;
 
-        dbUpdates.updatedAt = new Date().toISOString();
+        dbUpdates.updated_at = new Date().toISOString();
 
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
         if (error) console.error("Error updating note:", error);
         
         onTouchBoard();
         updateBoardTimestamp();
-    }, [setNotes, onTouchBoard, updateBoardTimestamp]);
+    }, [onTouchBoard, updateBoardTimestamp]);
 
     const deleteNote = useCallback(async (id: string) => {
-        // Snapshot for Undo
         setNotes(currentNotes => {
             const noteToDelete = currentNotes.find(n => n.id === id);
             if (noteToDelete) {
@@ -300,7 +249,6 @@ export const useNoteActions = ({
             const note = prev.find(n => n.id === noteId);
             if (!note) return prev;
             
-            // Snapshot previous comments for undo
             historyStack.current.push({ 
                 type: 'UPDATE_COMMENT', 
                 noteId: noteId, 
@@ -309,7 +257,6 @@ export const useNoteActions = ({
 
             const updatedComments = [...(note.comments || []), newComment];
             
-            // Fire and forget update (state is optimistic)
             supabase.from('notes').update({ comments: updatedComments }).eq('id', noteId).then(({ error }) => {
                 if(error) console.error("Error adding comment", error);
                 onTouchBoard();
@@ -349,9 +296,7 @@ export const useNoteActions = ({
         if (data && !error) {
             const newNote = mapNote(data);
             setNotes(prev => [newNote, ...prev]);
-            
             historyStack.current.push({ type: 'CREATE_NOTE', noteId: newNote.id });
-            
             onTouchBoard();
             updateBoardTimestamp();
         }

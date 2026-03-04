@@ -11,6 +11,7 @@ import { TimelineLayout } from './Layouts/TimelineLayout';
 import { MapLayout } from './Layouts/MapLayout';
 import { SandboxLayout } from './Sandbox';
 import { useBoard, BoardProvider } from './BoardContext';
+import { Note } from '../../types';
 
 export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: boolean }> = (props) => {
     const parentContext = useBoard();
@@ -27,7 +28,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     
     const effectivePresentationMode = props.isPresentationMode || parentContext.isPresentationMode || isPresenting;
     
-    const openEditNote = useCallback((note) => {
+    const openEditNote = useCallback((note: Note) => {
         parentContext.openEditNote(note);
     }, [parentContext.openEditNote]);
 
