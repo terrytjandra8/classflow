@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, MonitorPlay, Minimize2, Loader2, Eye } from 'lucide-react';
 import { BoardProps } from './boardTypes';
 import { BoardHeader } from './Header/BoardHeader';
@@ -16,7 +16,6 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     const parentContext = useBoard();
     const [isPresenting, setIsPresenting] = useState(false);
     
-    // Reverted: Simply get the board from context/props. No local state here.
     const board = props.board || parentContext.board;
     
     const isStudent = props.isStudent !== undefined ? props.isStudent : parentContext.isStudent;
@@ -28,7 +27,10 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
     
     const effectivePresentationMode = props.isPresentationMode || parentContext.isPresentationMode || isPresenting;
     
-    // The context value now correctly depends on the 'board' from the parent, ensuring updates propagate.
+    const openEditNote = useCallback((note) => {
+        parentContext.openEditNote(note);
+    }, [parentContext.openEditNote]);
+
     const contextValue = useMemo(() => ({
         ...parentContext,
         board,
@@ -39,6 +41,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
         fontClass,
         userAvatar,
         openAddNote: props.onOpenAddNote || parentContext.openAddNote,
+        openEditNote,
         openSettings: props.onOpenSettings || parentContext.openSettings,
         openShare: props.onOpenShare || parentContext.openShare,
         goBack: props.onBack || parentContext.goBack,
@@ -50,7 +53,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
         onlineUsers: props.onlineUsers || parentContext.onlineUsers,
         classList: props.classList || parentContext.classList,
         isPresentationMode: effectivePresentationMode
-    }), [parentContext, board, isStudent, sectionIdFilter, embeddedMode, backgroundStyle, fontClass, userAvatar, props, effectivePresentationMode]);
+    }), [parentContext, board, isStudent, sectionIdFilter, embeddedMode, backgroundStyle, fontClass, userAvatar, props, effectivePresentationMode, openEditNote]);
 
     const canManageBoard = contextValue.canManageBoard;
     const isLoadingNotes = contextValue.isLoadingNotes;
