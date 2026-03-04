@@ -103,11 +103,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   };
 
   const showUpdatedAt = useMemo(() => {
-      if (!note.updatedAt) return false;
-      const createdAt = new Date(note.createdAt).getTime();
-      const updatedAt = new Date(note.updatedAt).getTime();
-      return (updatedAt - createdAt) > 5000; // Only show if updated more than 5s after creation
-  }, [note.createdAt, note.updatedAt]);
+    return !!note.updatedAt;
+  }, [note.updatedAt]);
 
   // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;

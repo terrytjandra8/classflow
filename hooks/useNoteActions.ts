@@ -145,7 +145,6 @@ export const useNoteActions = ({
     }, [boardId, username, userAvatar, userRole, setNotes, onTouchBoard, userId, updateBoardTimestamp]);
 
     const updateNote = useCallback(async (id: string, updates: Partial<Note>) => {
-        // Optimistic update in the UI first
         setNotes(currentNotes => {
             const noteToUpdate = currentNotes.find(n => n.id === id);
             if (noteToUpdate) {
@@ -163,13 +162,13 @@ export const useNoteActions = ({
                     previousComments: noteToUpdate.comments || [] 
                 } as any);
             }
-            return currentNotes.map(n => n.id === id ? { ...n, ...updates } : n);
+            return currentNotes.map(n => n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n);
         });
 
-        // Build a clean, safe payload for the database
-        const dbUpdates: { [key: string]: any } = {};
+        const dbUpdates: { [key: string]: any } = {
+            updated_at: new Date().toISOString(),
+        };
 
-        // Map all possible updatable fields from camelCase to snake_case
         if (updates.title !== undefined) dbUpdates.title = updates.title;
         if (updates.content !== undefined) dbUpdates.content = updates.content;
         if (updates.color !== undefined) dbUpdates.color = updates.color;
@@ -183,12 +182,10 @@ export const useNoteActions = ({
         if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
         if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString();
 
-        // Send the clean payload to the database
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
 
         if (error) {
             console.error("Error updating note:", error);
-            // NOTE: In a production app, you might want to revert the optimistic update here
         }
         
         onTouchBoard();
