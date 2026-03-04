@@ -11,6 +11,7 @@ interface EditModeProps {
     note: Note;
     onSave: (title: string, content: string, color: NoteColor) => void;
     onCancel: () => void;
+    onUpdate?: (content: string) => void;
     externalColor?: NoteColor;
     setExternalColor?: (color: NoteColor) => void;
     disablePaste?: boolean;
@@ -30,7 +31,7 @@ const markdownToHtml = (text: string) => {
     return html;
 };
 
-export const EditMode: React.FC<EditModeProps> = ({ note, onSave, onCancel, externalColor, setExternalColor, disablePaste, isStudent }) => {
+export const EditMode: React.FC<EditModeProps> = ({ note, onSave, onCancel, onUpdate, externalColor, setExternalColor, disablePaste, isStudent }) => {
     const { board } = useBoard();
     const allowLinks = board.allowLinks;
 
@@ -66,6 +67,7 @@ export const EditMode: React.FC<EditModeProps> = ({ note, onSave, onCancel, exte
 
     const execCmd = (cmd: string) => {
         document.execCommand(cmd, false, undefined);
+        const content = document.getElementById('rich-text-editor')?.innerHTML || editContent;
         setFormats({
             bold: document.queryCommandState('bold'),
             italic: document.queryCommandState('italic'),
@@ -73,6 +75,9 @@ export const EditMode: React.FC<EditModeProps> = ({ note, onSave, onCancel, exte
             subscript: document.queryCommandState('subscript'),
             superscript: document.queryCommandState('superscript')
         });
+        if (onUpdate) {
+            onUpdate(content);
+        }
     };
 
     const TypeIcon = () => {
@@ -154,6 +159,7 @@ export const EditMode: React.FC<EditModeProps> = ({ note, onSave, onCancel, exte
 
                 <div className="flex-1 min-h-[150px]">
                     <RichTextEditor
+                        id="rich-text-editor"
                         value={editContent}
                         onChange={setEditContent}
                         onFormatChange={setFormats}
