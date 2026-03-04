@@ -145,11 +145,12 @@ export const useNoteActions = ({
     }, [boardId, username, userAvatar, userRole, setNotes, onTouchBoard, userId, updateBoardTimestamp]);
 
     const updateNote = useCallback(async (id: string, updates: Partial<Note>) => {
+        // Optimistic update in the UI first
         setNotes(currentNotes => {
             const noteToUpdate = currentNotes.find(n => n.id === id);
             if (noteToUpdate) {
                 const previousData: Partial<Note> = {};
-                Object.keys(updates).forEach(key => {
+                 Object.keys(updates).forEach(key => {
                     // @ts-ignore
                     previousData[key] = noteToUpdate[key];
                 });
@@ -165,30 +166,36 @@ export const useNoteActions = ({
             return currentNotes.map(n => n.id === id ? { ...n, ...updates } : n);
         });
 
-        const dbUpdates: any = { ...updates };
-        
-        if (dbUpdates.sectionId !== undefined) { dbUpdates.section_id = dbUpdates.sectionId; delete dbUpdates.sectionId; }
-        if (dbUpdates.attachmentUrl !== undefined) { dbUpdates.attachment_url = dbUpdates.attachmentUrl; delete dbUpdates.attachmentUrl; }
-        if (dbUpdates.isPinned !== undefined) { dbUpdates.is_pinned = dbUpdates.isPinned; delete dbUpdates.isPinned; }
-        if (dbUpdates.createdAt !== undefined) {
-            dbUpdates.created_at = new Date(dbUpdates.createdAt).toISOString();
-            delete dbUpdates.createdAt;
-        }
-        
-        delete dbUpdates.id;
-        delete dbUpdates.isPlaceholder;
-        delete dbUpdates.likedBy;
-        
-        if (!updates.comments) delete dbUpdates.comments;
+        // Build a clean, safe payload for the database
+        const dbUpdates: { [key: string]: any } = {
+            updated_at: new Date().toISOString(),
+        };
 
-        dbUpdates.updated_at = new Date().toISOString();
+        // Map all possible updatable fields from camelCase to snake_case
+        if (updates.title !== undefined) dbUpdates.title = updates.title;
+        if (updates.content !== undefined) dbUpdates.content = updates.content;
+        if (updates.color !== undefined) dbUpdates.color = updates.color;
+        if (updates.x !== undefined) dbUpdates.x = updates.x;
+        if (updates.y !== undefined) dbUpdates.y = updates.y;
+        if (updates.width !== undefined) dbUpdates.width = updates.width;
+        if (updates.height !== undefined) dbUpdates.height = updates.height;
+        if (updates.comments !== undefined) dbUpdates.comments = updates.comments;
+        if (updates.sectionId !== undefined) dbUpdates.section_id = updates.sectionId;
+        if (updates.attachmentUrl !== undefined) dbUpdates.attachment_url = updates.attachmentUrl;
+        if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
+        if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString();
 
+        // Send the clean payload to the database
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
-        if (error) console.error("Error updating note:", error);
+
+        if (error) {
+            console.error("Error updating note:", error);
+            // NOTE: In a production app, you might want to revert the optimistic update here
+        }
         
         onTouchBoard();
         updateBoardTimestamp();
-    }, [onTouchBoard, updateBoardTimestamp]);
+    }, [setNotes, onTouchBoard, updateBoardTimestamp]);
 
     const deleteNote = useCallback(async (id: string) => {
         setNotes(currentNotes => {
@@ -235,7 +242,7 @@ export const useNoteActions = ({
         const newComment: Comment = {
             id: Math.random().toString(36).substr(2, 9),
             text,
-            author: username || 'Student', 
+            author: username || 'Student',
             authorId: userId, 
             authorRole: userRole, 
             authorAvatar: userAvatar || undefined,
