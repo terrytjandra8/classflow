@@ -167,9 +167,7 @@ export const useNoteActions = ({
         });
 
         // Build a clean, safe payload for the database
-        const dbUpdates: { [key: string]: any } = {
-            updated_at: new Date().toISOString(),
-        };
+        const dbUpdates: { [key: string]: any } = {};
 
         // Map all possible updatable fields from camelCase to snake_case
         if (updates.title !== undefined) dbUpdates.title = updates.title;
