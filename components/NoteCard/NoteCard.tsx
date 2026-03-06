@@ -53,15 +53,13 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
   const [isStillEditable, setIsStillEditable] = useState(true);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
-
-  // --- Safe Booleans ---
   const isStudentBool = !!isStudent;
 
   useEffect(() => {
     const editTimeLimit = board.settings?.editTimeLimit;
     const isAuthor = note.author_id === effectiveUserId;
 
-    if (!isStudentBool || !isAuthor || editTimeLimit === undefined || editTimeLimit === null || editTimeLimit <= 0) {
+    if (userRole === 'teacher' || !isAuthor || editTimeLimit === undefined || editTimeLimit === null || editTimeLimit <= 0) {
         setIsStillEditable(true);
         setRemainingTime(null);
         return;
@@ -89,19 +87,32 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
     return () => clearInterval(intervalId);
 
-}, [board.settings, note.author_id, note.createdAt, note.updatedAt, effectiveUserId, isStudentBool]);
+}, [board.settings, note.author_id, note.createdAt, note.updatedAt, effectiveUserId, userRole]);
 
   const showUpdatedAt = useMemo(() => {
     const hasBeenUpdated = note.updatedAt && note.createdAt && note.updatedAt !== note.createdAt;
     if (!hasBeenUpdated) {
       return false;
     }
-    if (isStudentBool && note.author_id !== effectiveUserId) {
-        return false;
-    }
-    return true;
-  }, [note.createdAt, note.updatedAt, isStudentBool, effectiveUserId, note.author_id]);
 
+    if (!isStudentBool) {
+      return true;
+    }
+
+    if (note.author_id === board.owner_id) {
+      return false;
+    }
+
+    if (note.author_id !== effectiveUserId) {
+      return false;
+    }
+    
+    return true;
+
+  }, [note.createdAt, note.updatedAt, isStudentBool, effectiveUserId, note.author_id, board.owner_id]);
+
+
+  // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;
   const isLockedBool = !!isLocked;
   const isSectionAnonymousBool = isSectionAnonymous ?? false;
