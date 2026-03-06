@@ -103,8 +103,12 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   };
 
   const showUpdatedAt = useMemo(() => {
-    return !!note.updatedAt;
-  }, [note.updatedAt]);
+    if (!note.updatedAt || !note.createdAt) {
+      return false;
+    }
+    const diffInSeconds = (note.updatedAt - note.createdAt) / 1000;
+    return diffInSeconds > 5;
+  }, [note.createdAt, note.updatedAt]);
 
   // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;
