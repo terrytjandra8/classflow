@@ -86,11 +86,11 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
                     </span>
                     <div className={`text-[10px] font-medium flex items-center gap-2 ${subTextColor}`}>
-                        <span>{formatTime(note.createdAt)}</span>
-                        {showUpdatedAt && (
+                        <span>{formatTime(new Date(note.createdAt).getTime())}</span>
+                        {showUpdatedAt && note.updatedAt && (
                             <span className='italic flex items-center gap-1 opacity-70'>
                                 <Edit3 size={8} />
-                                {formatTime(note.updatedAt!)}
+                                {formatTime(new Date(note.updatedAt).getTime())}
                             </span>
                         )}
                     </div>
