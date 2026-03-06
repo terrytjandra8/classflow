@@ -38,7 +38,7 @@ interface NoteCardProps {
   canDrag?: boolean;
 }
 
-const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
+const isHexColor = (color: string): boolean => !!color && color.startsWith('#';
 
 // Main Component
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
@@ -106,7 +106,14 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     if (!note.updatedAt || !note.createdAt) {
       return false;
     }
-    const diffInSeconds = (note.updatedAt - note.createdAt) / 1000;
+    const updatedAtTime = new Date(note.updatedAt).getTime();
+    const createdAtTime = new Date(note.createdAt).getTime();
+
+    if (isNaN(updatedAtTime) || isNaN(createdAtTime)) {
+        return false;
+    }
+
+    const diffInSeconds = (updatedAtTime - createdAtTime) / 1000;
     return diffInSeconds > 5;
   }, [note.createdAt, note.updatedAt]);
 
@@ -216,7 +223,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
       {!isTransparent && !isStickyNote && (
           <div className="relative z-10">
-            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={(id) => onDelete && onDelete(id)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} />
+            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={(id) => onDelete && onDelete(id)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} />
           </div>
       )}
 

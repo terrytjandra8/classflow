@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { ShieldCheck, MoreVertical, X, Pin, Ghost } from 'lucide-react';
+import { ShieldCheck, MoreVertical, X, Pin, Ghost, Edit3 } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
 import { formatTime } from './utils';
 import { NoteMenu } from './NoteMenu';
@@ -26,11 +26,12 @@ interface NoteHeaderProps {
     isSectionAnonymous?: boolean;
     showMenu: boolean;
     setShowMenu: (show: boolean) => void;
+    showUpdatedAt?: boolean;
 }
 
 export const NoteHeader: React.FC<NoteHeaderProps> = ({ 
     note, canDelete, canEdit, onDelete, onEdit, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, isStickyNote, isTransparent, isSectionAnonymous,
-    showMenu, setShowMenu
+    showMenu, setShowMenu, showUpdatedAt
 }) => {
     const { board, isStudent, userId, isPresentationMode } = useBoard();
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -38,18 +39,13 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
     const isAuthor = userId === note.author_id;
     
-    // --- CENTRALIZED ANONYMITY LOGIC ---
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
     const anonymousIdentity = shouldMask && note.author_id ? getAnonymousIdentity(note.author_id) : null;
     
-    // Display Logic with Fallback for empty strings
     const rawName = note.author && note.author.trim() !== '' ? note.author : 'Anonymous';
     const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : rawName;
     const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.authorAvatar;
 
-    // VISIBILITY FIX:
-    // Transparent -> Adaptive (Dark on Light, White on Dark)
-    // Solid (White/Colors) -> Always Dark
     const nameColor = isTransparent ? 'text-slate-900 dark:text-white' : 'text-slate-900';
     const subTextColor = isTransparent ? 'text-slate-600 dark:text-slate-400' : 'text-slate-600';
     const iconHoverBg = isTransparent ? 'hover:bg-black/5 dark:hover:bg-white/10' : 'hover:bg-black/10';
@@ -89,7 +85,15 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {isTeacher && <ShieldCheck size={12} className="text-pink-600 fill-pink-100" />}
                         {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
                     </span>
-                    <span className={`text-[10px] font-medium ${subTextColor}`}>{formatTime(note.createdAt)}</span>
+                    <div className={`text-[10px] font-medium flex items-center gap-2 ${subTextColor}`}>
+                        <span>{formatTime(note.createdAt)}</span>
+                        {showUpdatedAt && (
+                            <span className='italic flex items-center gap-1 opacity-70'>
+                                <Edit3 size={8} />
+                                {formatTime(note.updatedAt!)}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
             
@@ -98,8 +102,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                     <button 
                         ref={triggerRef}
                         onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-                        className={`p-1 rounded-full transition-colors ${showMenu ? 'bg-black/10 text-slate-900' : `${menuIconColor} ${iconHoverBg}`}`}
-                    >
+                        className={`p-1 rounded-full transition-colors ${showMenu ? 'bg-black/10 text-slate-900' : `${menuIconColor} ${iconHoverBg}`}`}>
                         <MoreVertical size={16} />
                     </button>
                     
@@ -118,7 +121,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                             onAddAfter={onAddAfter}
                             onMove={onMove}
                             onClose={() => setShowMenu(false)}
-                            isTeacher={!isStudent} // Pass teacher role
+                            isTeacher={!isStudent}
                         />
                     )}
                 </div>
