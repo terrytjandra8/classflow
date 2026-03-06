@@ -46,6 +46,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
     commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote
 }) => {
+  console.log('note object:', note);
   const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId, userRole } = useBoard();
   
   const effectiveUserId = userId || contextUserId;
