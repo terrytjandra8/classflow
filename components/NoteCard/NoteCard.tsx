@@ -93,15 +93,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     if (!note.updatedAt || !note.createdAt) {
       return false;
     }
-    const updatedAtTime = new Date(note.updatedAt).getTime();
-    const createdAtTime = new Date(note.createdAt).getTime();
-
-    if (isNaN(updatedAtTime) || isNaN(createdAtTime)) {
-        return false;
-    }
-
-    const diffInSeconds = (updatedAtTime - createdAtTime) / 1000;
-    return diffInSeconds > 5;
+    return note.updatedAt !== note.createdAt;
   }, [note.createdAt, note.updatedAt]);
 
   // --- Safe Booleans ---
