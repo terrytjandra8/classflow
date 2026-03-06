@@ -1,8 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, Heart, Link as LinkIcon, MoreVertical, Edit2, Trash2, Reply, ChevronDown, ChevronUp, Send, Ghost } from 'lucide-react';
-import { Comment, CommentAttachment } from '../../types';
-import { formatTime } from '../NoteCard/utils';
+import { Comment } from '../../types';
 import { Tooltip } from '../Tooltip';
 import { DynamicTextarea } from './DynamicTextarea';
 import { Avatar } from '../ui/Avatar';
@@ -10,6 +9,7 @@ import { getAnonymousIdentity } from '../../utils/anonymizer';
 import { isValidUrl } from '../../utils/validation';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
+import { Timestamp } from '../NoteCard/Timestamp';
 
 interface CommentItemProps { 
     comment: Comment; 
@@ -162,7 +162,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[9px] ${metaTextClass}`}>{formatTime(comment.createdAt)}</span>
+                         <div className={`text-[9px] font-medium flex items-center gap-2 ${metaTextClass}`}>
+                            <Timestamp time={comment.createdAt} />
+                        </div>
                         
                         {(canReply || canManage) && (
                             <div className="relative" ref={menuRef}>
