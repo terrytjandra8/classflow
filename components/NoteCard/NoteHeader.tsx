@@ -1,13 +1,13 @@
 
 import React, { useRef } from 'react';
-import { ShieldCheck, MoreVertical, X, Pin, Ghost, Edit3 } from 'lucide-react';
+import { ShieldCheck, MoreVertical, X, Pin, Ghost } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
-import { formatTime } from './utils';
 import { NoteMenu } from './NoteMenu';
 import { Avatar } from '../ui/Avatar';
 import { useBoard } from '../BoardView/BoardContext';
 import { getAnonymousIdentity } from '../../utils/anonymizer';
 import { BoardRules } from '../../utils/boardRules';
+import { Timestamp } from './Timestamp';
 
 interface NoteHeaderProps {
     note: Note;
@@ -86,12 +86,9 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
                     </span>
                     <div className={`text-[10px] font-medium flex items-center gap-2 ${subTextColor}`}>
-                        <span>{formatTime(new Date(note.createdAt).getTime())}</span>
+                        <Timestamp time={note.createdAt} />
                         {showUpdatedAt && note.updatedAt && (
-                            <span className='italic flex items-center gap-1 opacity-70'>
-                                <Edit3 size={8} />
-                                {formatTime(new Date(note.updatedAt).getTime())}
-                            </span>
+                           <Timestamp time={note.updatedAt} isEdited={true} />
                         )}
                     </div>
                 </div>

@@ -4,7 +4,6 @@ import { EyeOff, X, Clock } from 'lucide-react';
 import { Note, CommentAttachment, NoteColor, Board } from '../../types';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
-import { formatTime } from './utils';
 
 // Modular Components
 import { NoteHeader } from './NoteHeader';
