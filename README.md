@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/terrytjandra-ipeka/Classboards/main/public/logo.png" alt="ClassBoard Logo" width="200">
+  <img src="https://raw.githubusercontent.com/terrytjandra-ipeka/Classboards/main/public/logo.svg" alt="ClassBoard Logo" width="200">
   <h1>ClassBoard</h1>
 </div>
 
