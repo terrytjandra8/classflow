@@ -38,7 +38,7 @@ interface NoteCardProps {
   canDrag?: boolean;
 }
 
-const isHexColor = (color: string): boolean => !!color && color.startsWith('#';
+const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
 
 // Main Component
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
