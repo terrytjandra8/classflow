@@ -89,11 +89,18 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 }, [board.settings, note.author_id, note.createdAt, note.updatedAt, effectiveUserId, userRole]);
 
   const showUpdatedAt = useMemo(() => {
-    if (!note.updatedAt || !note.createdAt) {
+    const hasBeenUpdated = note.updatedAt && note.createdAt && note.updatedAt !== note.createdAt;
+    if (!hasBeenUpdated) {
       return false;
     }
-    return note.updatedAt !== note.createdAt;
-  }, [note.createdAt, note.updatedAt]);
+
+    if (userRole === 'student' && note.author_id !== effectiveUserId) {
+        return false;
+    }
+
+    return true;
+  }, [note.createdAt, note.updatedAt, userRole, effectiveUserId, note.author_id]);
+
 
   // --- Safe Booleans ---
   const isCanvasModeBool = !!isCanvasMode;
