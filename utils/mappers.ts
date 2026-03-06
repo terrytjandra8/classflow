@@ -136,7 +136,8 @@ export const mapNote = (row: NoteRow): Note => ({
     likedBy: row.liked_by || [],
     comments: safeParse(row.comments, []),
     connections: safeParse(row.connections, []),
-    createdAt: new Date(row.created_at).getTime()
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime()
 });
 
 // Helper for Math Parsing (Subscript/Superscript)

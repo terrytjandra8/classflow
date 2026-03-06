@@ -46,7 +46,6 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
     commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote
 }) => {
-  console.log('note object:', note);
   const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId, userRole } = useBoard();
   
   const effectiveUserId = userId || contextUserId;
@@ -170,7 +169,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
   const style: React.CSSProperties = useMemo(() => ({
       backgroundColor: isCustomColor ? note.color : undefined,
-      ...(isCanvasModeBool ? { left: note.x, top: note.y, width: isStickyNote && note.width ? note.width : undefined, height: isStickyNote && note.height ? note.height : undefined } : {}),
+      ...(isCanvasModeBool ? { left: note.x, top: note.y, width: isSticky.note && note.width ? note.width : undefined, height: isStickyNote && note.height ? note.height : undefined } : {}),
       ...(isStickyNote ? { boxShadow: '0 1px 4px rgba(0,0,0,0.2), 0 0 20px rgba(0,0,0,0.05) inset' } : {}),
       ...(!canCopy ? { userSelect: 'none', WebkitUserSelect: 'none' } : {})
   }), [isCustomColor, note, isCanvasModeBool, isStickyNote, canCopy]);
