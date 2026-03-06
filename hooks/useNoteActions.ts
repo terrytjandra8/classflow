@@ -162,7 +162,7 @@ export const useNoteActions = ({
                     previousComments: noteToUpdate.comments || [] 
                 } as any);
             }
-            return currentNotes.map(n => n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n);
+            return currentNotes.map(n => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n);
         });
 
         const dbUpdates: { [key: string]: any } = {

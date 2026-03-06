@@ -71,20 +71,12 @@ export const BoardCard: React.FC<BoardCardProps> = ({
             }
         };
 
-        const handleScroll = () => {
-            if (isClassMenuOpen) setIsClassMenuOpen(false);
-        };
-
         if (isClassMenuOpen) {
             document.addEventListener('mousedown', handleClickOutside);
-            window.addEventListener('scroll', handleScroll, true); // Capture phase to detect scroll in any container
-            window.addEventListener('resize', handleScroll);
         }
         
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
-            window.removeEventListener('scroll', handleScroll, true);
-            window.removeEventListener('resize', handleScroll);
         };
     }, [isClassMenuOpen]);
 
