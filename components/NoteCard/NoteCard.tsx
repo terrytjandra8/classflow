@@ -4,6 +4,7 @@ import { EyeOff, X, Clock } from 'lucide-react';
 import { Note, CommentAttachment, NoteColor, Board } from '../../types';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
+import { formatTime } from './utils';
 
 // Modular Components
 import { NoteHeader } from './NoteHeader';
@@ -87,20 +88,6 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     return () => clearInterval(intervalId);
 
 }, [board.settings, note.author_id, note.createdAt, note.updatedAt, effectiveUserId, userRole]);
-
-  const formatTimestamp = (timestamp: string | number) => {
-      const date = new Date(timestamp);
-      const now = new Date();
-      const diffSeconds = (now.getTime() - date.getTime()) / 1000;
-      const diffMinutes = diffSeconds / 60;
-      const diffHours = diffMinutes / 60;
-
-      if (diffMinutes < 1) return `just now`;
-      if (diffMinutes < 60) return `${Math.floor(diffMinutes)}m ago`;
-      if (diffHours < 24) return `${Math.floor(diffHours)}h ago`;
-      
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  };
 
   const showUpdatedAt = useMemo(() => {
     if (!note.updatedAt || !note.createdAt) {
@@ -253,23 +240,11 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                     </div>
                 )}
               <NoteFooter note={note} userId={effectiveUserId} onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }} commentsEnabled={commentsEnabledBool} reactionsEnabled={reactionsEnabledBool} />
-              
-              {showUpdatedAt && (
-                  <div className="text-xs text-gray-500 px-4 pb-2 text-right">
-                      Edited {formatTimestamp(note.updatedAt!)}
-                  </div>
-              )}
 
               {commentsEnabledBool && !isBlurActive && (
                   <CommentSection comments={note.comments || []} noteId={note.id} userId={effectiveUserId} onAddComment={onAddComment} onUpdateNote={onUpdate} reactionsEnabled={reactionsEnabledBool} noteColor={note.color} isStudent={isStudentBool} disablePaste={disablePasteBool} repliesEnabled={repliesEnabledBool} isSectionAnonymous={isSectionAnonymousBool} isReadOnly={isReadOnly} />
               )}
           </div>
-      )}
-
-      {isStickyNote && showUpdatedAt && (
-        <div className="absolute bottom-1 right-2 text-xs text-gray-500/80 z-10">
-            Edited {formatTimestamp(note.updatedAt!)}
-        </div>
       )}
 
     </div>
