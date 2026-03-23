@@ -31,7 +31,8 @@ interface BoardOverlaysProps {
     
     // Specific Props
     pendingPasteImage: File | null;
-    editingNote: Note | null; // New prop
+    editingNote: Note | null;
+    activeSectionId?: string;
 
     // Board Analysis Props (No longer used, kept optional for interface compat if needed but ignored)
     isBoardAnalysisOpen?: boolean;
@@ -52,6 +53,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
     onUpdateBoard, setNotes, onAddNote,
     pendingPasteImage,
     editingNote,
+    activeSectionId,
 }) => {
     
     const showGuide = isGuideOpen && !!board.guide;
@@ -128,6 +130,7 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
                 allowLinks={board.allowLinks}
                 isStudent={isStudent}
                 noteToEdit={editingNote}
+                activeSectionId={activeSectionId}
             />
 
             {/* Drag Over Overlay */}

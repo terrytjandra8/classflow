@@ -19,7 +19,8 @@ interface CreateNoteModalProps {
   disablePaste?: boolean; 
   allowLinks?: boolean; 
   isStudent?: boolean; 
-  noteToEdit?: Note | null; 
+  noteToEdit?: Note | null;
+  activeSectionId?: string;
 }
 
 // Constants
@@ -63,7 +64,7 @@ const ColorOrb: React.FC<{ color: NoteColor, selected: boolean, onClick: () => v
 
 // --- Main Component ---
 
-export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, onClose, onSubmit, initialImage, defaultAuthor, disablePaste, allowLinks, isStudent, noteToEdit }) => {
+export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, onClose, onSubmit, initialImage, defaultAuthor, disablePaste, allowLinks, isStudent, noteToEdit, activeSectionId }) => {
   const { board, setTypingStatus } = useBoard();
 
   // State management
@@ -81,6 +82,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const [author, setAuthor] = useState(defaultAuthor || 'Student');
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [hasDraftRestored, setHasDraftRestored] = useState(false);
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,9 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const dragStart = useRef({ x: 0, y: 0 });
 
   const isEditing = !!noteToEdit;
+  // Scope draft per board AND per section/column so different columns keep separate drafts
+  const sectionSuffix = activeSectionId ? `_${activeSectionId}` : '';
+  const draftKey = `note_draft_${board?.id || 'global'}${sectionSuffix}`;
   
   // Apply the advanced paste protection
   const { pasteWarning, onPaste: honeypotPasteHandler } = usePasteProtection({
@@ -132,24 +137,48 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           else if (noteToEdit.type === 'drawing') setDrawingUrl(noteToEdit.content);
           else if (noteToEdit.type === 'link') setAttachmentUrl(noteToEdit.attachmentUrl || '');
       } else {
-          setTitle('');
-          setContent('');
-          setImageBase64(null);
-          setImageFile(null);
-          setDrawingBlob(null);
-          setDrawingUrl(null);
-          setAttachmentUrl('');
-          setActiveMode('text');
-          setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)] || NoteColor.YELLOW);
-          if (initialImage) {
-            processImageFile(initialImage);
-            setActiveMode('image');
+          // Try to restore a draft from localStorage
+          const savedDraft = localStorage.getItem(draftKey);
+          if (savedDraft) {
+              try {
+                  const draft = JSON.parse(savedDraft);
+                  setTitle(draft.title || '');
+                  setContent(draft.content || '');
+                  setAttachmentUrl(draft.attachmentUrl || '');
+                  setActiveMode(draft.activeMode || 'text');
+                  setHasDraftRestored(true);
+                  setTimeout(() => setHasDraftRestored(false), 3000);
+              } catch { /* ignore parse errors */ }
+          } else {
+              setTitle('');
+              setContent('');
+              setImageBase64(null);
+              setImageFile(null);
+              setDrawingBlob(null);
+              setDrawingUrl(null);
+              setAttachmentUrl('');
+              setActiveMode('text');
+              setSelectedColor(COLORS[Math.floor(Math.random() * COLORS.length)] || NoteColor.YELLOW);
+              if (initialImage) {
+                  processImageFile(initialImage);
+                  setActiveMode('image');
+              }
           }
       }
     } else {
         setTypingStatus(false);
     }
   }, [isOpen, initialImage, noteToEdit]);
+
+  // Auto-save draft to localStorage while typing (text mode only)
+  useEffect(() => {
+      if (!isOpen || isEditing) return;
+      const draft = { title, content, attachmentUrl, activeMode };
+      // Only persist if there's something worth saving
+      if (title || content || attachmentUrl) {
+          localStorage.setItem(draftKey, JSON.stringify(draft));
+      }
+  }, [title, content, attachmentUrl, activeMode, isOpen, isEditing]);
 
   // --- Handlers ---
 
@@ -204,6 +233,8 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
             title, content: finalContent, author, color: selectedColor, type: finalType,
             attachmentUrl: activeMode === 'link' ? attachmentUrl : undefined
         });
+        // Clear draft on success
+        localStorage.removeItem(draftKey);
         onClose();
     } catch (e) {
         console.error(e);
@@ -296,9 +327,25 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                         {isEditing ? <Edit3 size={18} className="text-blue-400" /> : <Edit3 size={18} className="text-yellow-400" />}
                         {isEditing ? 'Edit Note' : 'Create'}
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {hasDraftRestored && (
+                            <span className="text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-full border border-white/10 animate-in fade-in">
+                                ✏️ Draft restored
+                            </span>
+                        )}
+                        {!isEditing && (title || content || attachmentUrl) && (
+                            <button
+                                onClick={() => { localStorage.removeItem(draftKey); setTitle(''); setContent(''); setAttachmentUrl(''); }}
+                                className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                                title="Discard draft"
+                            >
+                                Discard
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2" onMouseDown={e => e.stopPropagation()}>

@@ -16,7 +16,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
         const newQ: QuizQuestion = {
             id: Math.random().toString(36).substr(2, 9),
             question: "New Question",
-            options: ["Option 1", "Option 2", "Option 3", "Option 4"],
+            options: ["", "", "", ""],
             correctIndex: 0,
             timeLimit: 20
         };
@@ -68,6 +68,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                     />
                                     <input 
                                         value={opt}
+                                        placeholder={`Option ${i + 1}`}
                                         onChange={(e) => {
                                             const newOpts = [...editingQuestion.options];
                                             newOpts[i] = e.target.value;

@@ -111,6 +111,7 @@ export const LessonManager: React.FC<LessonManagerProps> = ({
         notes: notes,
         userId: userId,
         isStudent: isStudent,
+        onUpdateBoard: onUpdateBoard,
         onAddComment: onAddComment,
         onDeleteNote: onDeleteNote,
         onLikeNote: onLikeNote,

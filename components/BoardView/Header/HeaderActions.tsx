@@ -6,6 +6,7 @@ import { Tooltip } from '../../Tooltip';
 import { Avatar } from '../../ui/Avatar';
 import { BoardFormat } from '../../../types';
 import { IconVisible } from '../../Icons'; 
+import { useBoard } from '../BoardContext';
 
 const HeaderButton = ({ icon: Icon, label, onClick, ...props }: any) => (
     <button 
@@ -24,11 +25,14 @@ export const HeaderActions: React.FC = () => {
         openSettings, openShare, onlineUsers, updateBoard, launchProjectorMode,
         activeCount, userPreviews, typingUsers, userId
     } = useHeaderLogic();
+    const { embeddedMode } = useBoard();
 
     const [showUserList, setShowUserList] = useState(false);
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+    const [isLayoutMenuOpen, setIsLayoutMenuOpen] = useState(false);
     const userListRef = useRef<HTMLDivElement>(null);
     const moreMenuRef = useRef<HTMLDivElement>(null);
+    const layoutMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -37,6 +41,9 @@ export const HeaderActions: React.FC = () => {
             }
             if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
                 setIsMoreMenuOpen(false);
+            }
+            if (layoutMenuRef.current && !layoutMenuRef.current.contains(event.target as Node)) {
+                setIsLayoutMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -57,8 +64,12 @@ export const HeaderActions: React.FC = () => {
             {canManageBoard && (
                  <>
                     <HeaderButton onClick={() => { toggleStudentSimulation(); setIsMoreMenuOpen(false); }} icon={IconVisible} label={isSimulatingStudent ? "Exit Student View" : "View as Student"} />
-                    <HeaderButton onClick={() => { launchProjectorMode(); setIsMoreMenuOpen(false); }} icon={MonitorPlay} label="Projector Mode" />
-                    <HeaderButton onClick={() => { openSettings(); setIsMoreMenuOpen(false); }} icon={Settings} label="Board Settings" />
+                    {!embeddedMode && (
+                        <>
+                            <HeaderButton onClick={() => { launchProjectorMode(); setIsMoreMenuOpen(false); }} icon={MonitorPlay} label="Projector Mode" />
+                            <HeaderButton onClick={() => { openSettings(); setIsMoreMenuOpen(false); }} icon={Settings} label="Board Settings" />
+                        </>
+                    )}
                  </>
             )}
         </div>
@@ -127,22 +138,27 @@ export const HeaderActions: React.FC = () => {
             {/* --- Desktop Control Bar --- */}
             <div className="hidden md:flex items-center gap-1.5 bg-black/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 shadow-2xl">
                  {canManageBoard && (
-                    <div className="relative group">
-                        <button className="p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-2">
+                    <div className="relative" ref={layoutMenuRef}>
+                        <button 
+                            onClick={() => setIsLayoutMenuOpen(!isLayoutMenuOpen)}
+                            className={`p-2.5 rounded-xl transition-colors flex items-center gap-2 ${isLayoutMenuOpen ? 'bg-white/10 text-white' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+                        >
                             <Layout size={18} />
                         </button>
-                        <div className="absolute top-full right-0 mt-3 w-36 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-1.5 hidden group-hover:block z-50">
-                            {['wall', 'grid', 'canvas', 'columns', 'stream'].map((fmt) => (
-                                <button
-                                    key={fmt}
-                                    onClick={() => updateBoard({ format: fmt as BoardFormat })}
-                                    className={`w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-white/10 transition-colors capitalize flex items-center gap-2 ${board.format === fmt ? 'bg-white/10 text-white font-bold' : 'text-gray-400'}`}
-                                >
-                                    <div className={`w-1.5 h-1.5 rounded-full ${board.format === fmt ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-transparent'}`}></div>
-                                    {fmt}
-                                </button>
-                            ))}
-                        </div>
+                        {isLayoutMenuOpen && (
+                            <div className="absolute top-full right-0 mt-3 w-36 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
+                                {['wall', 'grid', 'canvas', 'columns', 'stream'].map((fmt) => (
+                                    <button
+                                        key={fmt}
+                                        onClick={() => { updateBoard({ format: fmt as BoardFormat }); setIsLayoutMenuOpen(false); }}
+                                        className={`w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-white/10 transition-colors capitalize flex items-center gap-2 ${board.format === fmt ? 'bg-white/10 text-white font-bold' : 'text-gray-400'}`}
+                                    >
+                                        <div className={`w-1.5 h-1.5 rounded-full ${board.format === fmt ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-transparent'}`}></div>
+                                        {fmt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
                 {(canManageBoard || isSimulatingStudent) && (
@@ -152,7 +168,7 @@ export const HeaderActions: React.FC = () => {
                         </button>
                     </Tooltip>
                 )}
-                {canManageBoard && (
+                {!embeddedMode && canManageBoard && (
                     <>
                         <Tooltip content="Launch Projector Mode">
                             <button onClick={launchProjectorMode} className="p-2.5 rounded-xl text-gray-300 hover:text-green-400 hover:bg-white/10 transition-colors"><MonitorPlay size={18} /></button>
@@ -162,11 +178,13 @@ export const HeaderActions: React.FC = () => {
                         </Tooltip>
                     </>
                 )}
-                <Tooltip content="Share">
-                    <button onClick={openShare} className="p-2.5 rounded-xl text-white bg-gradient-to-tr from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 shadow-lg shadow-pink-900/20 transition-all transform hover:scale-105 active:scale-95">
-                        <Share2 size={18} strokeWidth={2.5} />
-                    </button>
-                </Tooltip>
+                {!embeddedMode && (
+                    <Tooltip content="Share">
+                        <button onClick={openShare} className="p-2.5 rounded-xl text-white bg-gradient-to-tr from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 shadow-lg shadow-pink-900/20 transition-all transform hover:scale-105 active:scale-95">
+                            <Share2 size={18} strokeWidth={2.5} />
+                        </button>
+                    </Tooltip>
+                )}
             </div>
 
             {/* --- Mobile Control Bar --- */}

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { X, Sparkles, Layout, MousePointer2, Grid, Map, Kanban, Calendar, AlignLeft, Wand2, Boxes, BarChart2, Gamepad2, PlaySquare, Loader2, Lock } from 'lucide-react';
+import { X, Layout, MousePointer2, Grid, Map, Kanban, Calendar, AlignLeft, Boxes, Loader2 } from 'lucide-react';
 import { BoardFormat } from '../types';
 
 interface CreateBoardModalProps {
@@ -21,12 +20,6 @@ const FORMAT_OPTIONS = [
     { id: 'map', label: 'Map', desc: 'Add content to points on a map.', icon: Map },
 ];
 
-const INTERACTIVE_OPTIONS = [
-    { id: 'lesson', label: 'Lesson', desc: 'Sequential slides with videos, polls, and content.', icon: PlaySquare, color: 'text-green-500' },
-    { id: 'poll', label: 'Live Poll', desc: 'Real-time voting and word clouds.', icon: BarChart2, color: 'text-blue-500' },
-    { id: 'quiz', label: 'Game Quiz', desc: 'Competitive multiple choice game.', icon: Gamepad2, color: 'text-purple-500' },
-    { id: 'assessment', label: 'Assessment', desc: 'Secure test environment with Focus Guard.', icon: Lock, color: 'text-red-500' },
-];
 
 export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({ isOpen, onClose, onCreate, isCreating }) => {
   if (!isOpen) return null;
@@ -72,28 +65,6 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({ isOpen, onCl
         {/* Main Content */}
         <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
             
-            {/* Interactive Section */}
-            <h3 className="text-yellow-500 font-bold text-sm uppercase mb-4 flex items-center gap-2">
-                <Sparkles size={16} /> Interactive Activities <span className="text-[10px] bg-yellow-500/20 px-1.5 rounded text-yellow-500 border border-yellow-500/30">NEW</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-                {INTERACTIVE_OPTIONS.map((format) => (
-                    <button 
-                        key={format.id}
-                        onClick={() => handleSelectFormat(format.id as BoardFormat)}
-                        className="bg-[#2a2a2a] p-5 rounded-xl border border-transparent hover:border-white/20 hover:bg-[#333] transition-all text-left group flex flex-col gap-4 relative overflow-hidden"
-                    >
-                        <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform ${format.color}`}>
-                            <format.icon size={24} />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-white mb-1 text-lg">{format.label}</h4>
-                            <p className="text-sm text-gray-400 leading-snug">{format.desc}</p>
-                        </div>
-                    </button>
-                ))}
-            </div>
-
             <h3 className="text-gray-500 font-bold text-sm uppercase mb-4 flex items-center gap-2">
                 <Layout size={16} /> Boards
             </h3>

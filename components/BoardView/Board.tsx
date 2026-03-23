@@ -61,7 +61,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
 
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
     
-    const showFab = (canManageBoard || (!isLocked && board.format !== 'columns' && board.format !== 'timeline')) && !isPresenting && !embeddedMode && !effectivePresentationMode;
+    const showFab = (canManageBoard || (!isLocked && board.format !== 'columns' && board.format !== 'timeline')) && !isPresenting && !effectivePresentationMode;
 
     useEffect(() => {
         const handleFsChange = () => {
@@ -140,7 +140,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
             <div className={`absolute inset-0 z-0 ${embeddedMode ? '' : 'fixed'}`} style={backgroundStyle}></div>
             
             <div className="relative z-10 flex flex-col h-full">
-                {!embeddedMode && <BoardHeader isPresenting={isPresenting} onTogglePresentation={togglePresentation} />}
+                <BoardHeader isPresenting={isPresenting} onTogglePresentation={togglePresentation} />
                 
                 {effectivePresentationMode && (
                     <div className="absolute top-4 left-4 z-50 pointer-events-none">
@@ -190,16 +190,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
                     </Tooltip>
                  )}
                  
-                 {embeddedMode && (canManageBoard || !isLocked) && sectionIdFilter && (
-                     <div className="absolute bottom-6 right-6 z-50">
-                        <button
-                            onClick={() => contextValue.openAddNote(sectionIdFilter)}
-                            className={`w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 bg-pink-600 text-white`}
-                        >
-                            <Plus size={24} />
-                        </button>
-                     </div>
-                 )}
+
             </div>
         </div>
     );

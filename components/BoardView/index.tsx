@@ -383,7 +383,12 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return (
             <BoardProvider value={contextValue}>
                 {renderProtectedContent(
-                    <>
+                    <div 
+                        className="h-screen w-full relative overflow-hidden"
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                    >
                     <LessonLayout 
                         board={board}
                         isStudent={isStudent || isSimulatingStudent}
@@ -419,7 +424,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             editingNote={editingNote}
                         />
                     )}
-                    </>
+                    </div>
                 )}
             </BoardProvider>
         );
@@ -429,7 +434,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return (
             <BoardProvider value={contextValue}>
                 {renderProtectedContent(
-                    <>
+                    <div className="h-screen w-full relative overflow-hidden">
                     <QuizView 
                         board={board}
                         notes={notes}
@@ -461,7 +466,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             editingNote={null}
                         />
                     )}
-                    </>
+                    </div>
                 )}
             </BoardProvider>
         );
@@ -471,7 +476,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return (
             <BoardProvider value={contextValue}>
                 {renderProtectedContent(
-                    <>
+                    <div className="h-screen w-full relative overflow-hidden">
                     <PollView 
                         board={board}
                         notes={notes}
@@ -502,7 +507,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             editingNote={null}
                         />
                     )}
-                    </>
+                    </div>
                 )}
             </BoardProvider>
         );
@@ -572,6 +577,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                         onAddNote={handleModalSubmit}
                         pendingPasteImage={pendingPasteImage}
                         editingNote={editingNote}
+                        activeSectionId={typeof addNoteLocation === 'string' ? addNoteLocation : (addNoteLocation as any)?.sectionId}
                     />
                 </div>
             )}

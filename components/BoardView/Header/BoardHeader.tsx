@@ -6,6 +6,7 @@ import { HeaderTitle } from './HeaderTitle';
 import { HeaderBadges } from './HeaderBadges';
 import { HeaderMeta } from './HeaderMeta';
 import { HeaderActions } from './HeaderActions';
+import { useBoard } from '../BoardContext';
 
 interface BoardHeaderProps {
     isPresenting: boolean;
@@ -14,9 +15,20 @@ interface BoardHeaderProps {
 
 export const BoardHeader: React.FC<BoardHeaderProps> = ({ isPresenting }) => {
     const { goBack, isPresentationMode } = useHeaderLogic();
+    const { embeddedMode } = useBoard();
 
     if (isPresenting) return null;
 
+    // --- EMBEDDED MODE: compact inline toolbar, no overlap ---
+    if (embeddedMode) {
+        return (
+            <div className="flex items-center gap-2 px-3 py-2 bg-black/30 backdrop-blur-md border-b border-white/10 shrink-0 z-20">
+                <HeaderActions />
+            </div>
+        );
+    }
+
+    // --- STANDALONE MODE: full floating overlay ---
     return (
         <div className="relative w-full z-50 pointer-events-none flex flex-col md:flex-row items-start justify-between px-4 md:px-8 pt-6 md:pt-8 pb-4 md:pb-6 shrink-0 bg-transparent gap-4">
             {/* Backdrop Gradient */}

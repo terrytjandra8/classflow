@@ -135,7 +135,11 @@ export interface Section {
   repliesEnabled?: boolean; 
   studentsCanDrag?: boolean; 
   isTitleBlurred?: boolean;
-  disableCopy?: boolean; // NEW: Prevent text selection in this column
+  disableCopy?: boolean;
+  colSpan?: number;
+  groupId?: string;       // If set, this column belongs to a merge group
+  groupTitle?: string;    // Shared group header label (same for all in group)
+  groupColor?: string;    // Accent color for the group (hex or tailwind token)
   analytics?: ColumnAnalyticsData; 
 }
 

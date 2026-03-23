@@ -122,6 +122,7 @@ interface SlideViewerProps {
     notes: Note[];
     userId?: string;
     isStudent: boolean;
+    onUpdateBoard?: (updates: Partial<Board>) => void;
     onAddComment: any;
     onDeleteNote: any;
     onLikeNote: any;
@@ -131,7 +132,7 @@ interface SlideViewerProps {
 }
 
 export const SlideViewer: React.FC<SlideViewerProps> = (props) => {
-    const { step, board } = props;
+    const { step, board, onUpdateBoard } = props;
 
     if (!step) {
         return (
@@ -160,19 +161,40 @@ export const SlideViewer: React.FC<SlideViewerProps> = (props) => {
             lockMode: lockStatus
         };
 
+        // Intercept updateBoard calls from inside the embedded board.
+        // If the embedded board tries to change `format`, store it as `settings.lessonLayout`
+        // instead — so the parent board never loses its 'lesson' format.
+        const handleEmbeddedUpdate = (updates: Partial<Board>) => {
+            if (updates.format !== undefined && board.format === 'lesson') {
+                onUpdateBoard?.({
+                    settings: {
+                        ...board.settings,
+                        lessonLayout: updates.format as string
+                    }
+                });
+            } else {
+                onUpdateBoard?.(updates);
+            }
+        };
+
+        // For 'columns' format, ColumnsLayout manages its own sections internally
+        // and conflicts with sectionIdFilter (which would block it). Skip the filter
+        // so all board sections and notes are accessible for drag-and-drop and column management.
+        const effectiveSectionFilter = boardFormat === 'columns' ? undefined : step.id;
+
         return (
             <div className="w-full h-full relative overflow-hidden">
                 <BoardLayout 
                     {...props}
                     key={boardFormat} // Force remount when layout changes
                     board={embedBoardConfig} 
-                    sectionIdFilter={step.id} 
+                    sectionIdFilter={effectiveSectionFilter} 
                     embeddedMode={true}
                     backgroundStyle={bgStyle}
                     fontClass="font-sans"
                     userAvatar={null}
                     onBack={() => {}}
-                    onUpdateBoard={() => {}}
+                    onUpdateBoard={handleEmbeddedUpdate}
                     onOpenSettings={() => {}}
                     onOpenShare={() => {}}
                     isSimulating={false}
