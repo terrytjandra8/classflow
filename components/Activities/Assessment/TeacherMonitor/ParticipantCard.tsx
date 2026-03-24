@@ -105,12 +105,12 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
                     </button>
                 )}
 
-                {(participant.status === 'In Progress' || participant.status === 'Revising') && (
+                {(participant.status === 'In Progress' || participant.status === 'Revising' || participant.status === 'Disqualified') && (
                      <button 
                         onClick={() => onContinue(participant)}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors"
+                        className={`px-4 py-2 ${participant.status === 'Disqualified' ? 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_15px_rgba(234,88,12,0.3)]' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg text-xs font-bold transition-colors`}
                     >
-                        Continue
+                        {participant.status === 'Disqualified' ? 'Second Chance' : 'Continue'}
                     </button>
                 )}
 
