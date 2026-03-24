@@ -20,12 +20,32 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
     const estimatedLines = Math.ceil(minWords / 10);
     const minHeight = Math.max(100, estimatedLines * 24);
 
+    // Parse composite answer format {d: drawingUrl, t: htmlText} used by 'both' mode questions
     const isImageAnswer = (text: string) => {
         return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
     };
+    const parseAnswer = (raw: string | undefined): { text: string; drawingUrl: string | null } => {
+        if (!raw) return { text: '', drawingUrl: null };
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && ('d' in parsed || 't' in parsed)) {
+                return { text: parsed.t || '', drawingUrl: parsed.d || null };
+            }
+        } catch {}
+        // Plain string — check if it's a URL/image
+        return { text: raw, drawingUrl: null };
+    };
+    
+    const { text: parsedText, drawingUrl: parsedDrawingUrl } = parseAnswer(studentAnswer);
+    const effectiveImageUrl = parsedDrawingUrl || (isImageAnswer(studentAnswer || '') ? studentAnswer : null);
 
-    if (isImageAnswer(studentAnswer || '') && !isBlank) {
-        return <img src={studentAnswer} alt="Student Drawing" className="print-answer-image" />;
+    if (effectiveImageUrl && !isBlank) {
+        return (
+            <>
+                <img src={effectiveImageUrl} alt="Student Drawing" className="print-answer-image" />
+                {parsedText && <div style={{ border: '1px solid #000', padding: '10px', marginTop: '8px', fontSize: '11pt', backgroundColor: '#fff', color: 'black' }} dangerouslySetInnerHTML={{ __html: parsedText }} />}
+            </>
+        );
     }
 
     if (isBlank) {
@@ -55,9 +75,9 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
     }
 
     return (
-        <div style={{ border: '1px solid #000', padding: '10px', minHeight: `${minHeight}px`, fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}>
-            {studentAnswer || ""}
-        </div>
+        <div style={{ border: '1px solid #000', padding: '10px', minHeight: `${minHeight}px`, fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}
+             dangerouslySetInnerHTML={{ __html: parsedText || '' }}
+        />
     );
 };
 

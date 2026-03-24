@@ -137,6 +137,12 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                         localStorage.removeItem(backupKey);
                         localBackup = null;
                     }
+                    // RESET DETECTION: teacher wiped answers — local backup should not override
+                    const dbAnswerCount = Object.keys(finalData.answers || {}).length;
+                    if (dbAnswerCount === 0 && !finalData.submitted && !finalData.disqualified) {
+                        localStorage.removeItem(backupKey);
+                        localBackup = null;
+                    }
                 }
                 
                 if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
@@ -208,6 +214,26 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         else setHasStarted(true);
     }, [fetchSubmission, isPreviewMode]);
 
+    // When the teacher transitions from Practice to Test mode (or any mode change),
+    // reset client-side state so the start screen appears correctly for the new mode.
+    const prevStatusRef = useRef(config.status);
+    useEffect(() => {
+        if (prevStatusRef.current === config.status) return;
+        const prev = prevStatusRef.current;
+        prevStatusRef.current = config.status;
+        // Only reset if switching between meaningful modes (not just timer ticks)
+        if (prev !== config.status) {
+            // Reset session state so the student sees the correct screen for the new mode
+            setHasStarted(false);
+            setSubmitted(false);
+            setIsDisqualified(false);
+            setRetryQuestions([]);
+            violationCountRef.current = 0;
+            setViolationCount(0);
+            // Re-fetch from DB to get the latest state for this new mode
+            if (!isPreviewMode) fetchSubmission();
+        }
+    }, [config.status, isPreviewMode, fetchSubmission]);
     // Realtime subscription to notes table to instantly reflect Teacher Monitor actions
     // such as granting a Second Chance or releasing grades.
     useEffect(() => {
