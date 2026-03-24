@@ -18,7 +18,6 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
 
     const violationDebounceRef = useRef(false);
     const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const wasInFullscreen = useRef(false);
 
     const handleViolation = useCallback(() => {
         if (violationDebounceRef.current) return;
@@ -37,13 +36,13 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
         }
 
         // --- 1. Fullscreen exit ---
-        // Only count as violation if we were previously IN fullscreen.
-        // This avoids false-triggering if the page was never fullscreened.
+        // Any fullscreen exit during an active guard session = violation.
+        // The student is expected to remain in fullscreen during the test.
         const handleFullscreenChange = () => {
             if (document.fullscreenElement) {
-                wasInFullscreen.current = true;
-            } else if (wasInFullscreen.current) {
-                // Genuinely exited fullscreen
+                // Entered fullscreen — mark it for context
+            } else {
+                // Exited fullscreen during active test = violation
                 handleViolation();
             }
         };

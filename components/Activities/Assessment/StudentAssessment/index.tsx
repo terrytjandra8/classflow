@@ -123,6 +123,21 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             if (data.connections) {
                 const submission = data.connections as any;
                 finalData = Array.isArray(submission) ? {} : submission;
+
+                // === SECOND CHANCE CHECK ===
+                // Must happen BEFORE the early-return block below.
+                // If the teacher cleared disqualified/submitted from DB, but the student's
+                // local backup still says 'disqualified' or 'submitted' — clear the stale backup
+                // and fall through to the normal state refresh.
+                if (localBackup) {
+                    if (localBackup.status === 'disqualified' && !finalData.disqualified) {
+                        localStorage.removeItem(backupKey);
+                        localBackup = null;
+                    } else if (localBackup.status === 'submitted' && !finalData.submitted && !finalData.disqualified) {
+                        localStorage.removeItem(backupKey);
+                        localBackup = null;
+                    }
+                }
                 
                 if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
                     setSubmissionData(finalData);
@@ -149,18 +164,6 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
                 finalAnswers = finalData.answers || {};
                 finalViolations = finalData.violations || 0;
-            }
-
-            // Check if teacher granted second chance (DB says not disqualified, but local says disqualified)
-            // or if teacher reset test (DB says not submitted, but local says submitted)
-            if (localBackup && finalData) {
-                if (localBackup.status === 'disqualified' && !finalData.disqualified) {
-                    localStorage.removeItem(backupKey);
-                    localBackup = null;
-                } else if (localBackup.status === 'submitted' && !finalData.submitted) {
-                    localStorage.removeItem(backupKey);
-                    localBackup = null;
-                }
             }
         }
 
