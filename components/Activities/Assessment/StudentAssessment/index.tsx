@@ -150,6 +150,18 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 finalAnswers = finalData.answers || {};
                 finalViolations = finalData.violations || 0;
             }
+
+            // Check if teacher granted second chance (DB says not disqualified, but local says disqualified)
+            // or if teacher reset test (DB says not submitted, but local says submitted)
+            if (localBackup && finalData) {
+                if (localBackup.status === 'disqualified' && !finalData.disqualified) {
+                    localStorage.removeItem(backupKey);
+                    localBackup = null;
+                } else if (localBackup.status === 'submitted' && !finalData.submitted) {
+                    localStorage.removeItem(backupKey);
+                    localBackup = null;
+                }
+            }
         }
 
         if (localBackup) {
@@ -192,6 +204,29 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         if (!isPreviewMode) fetchSubmission();
         else setHasStarted(true);
     }, [fetchSubmission, isPreviewMode]);
+
+    // Realtime subscription to notes table to instantly reflect Teacher Monitor actions
+    // such as granting a Second Chance or releasing grades.
+    useEffect(() => {
+        if (isPreviewMode || !board.id || !userId) return;
+
+        const channel = supabase.channel(`student-submission-${board.id}-${userId}`)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'notes',
+                filter: `board_id=eq.${board.id}`
+            }, (payload) => {
+                if ((payload.new as any).author_id === userId) {
+                    fetchSubmission();
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [board.id, userId, isPreviewMode, fetchSubmission]);
 
     useEffect(() => {
         if (!isPreviewMode && isClosed && !submitted && hasStarted && !isPracticeMode && retryQuestions.length === 0) {

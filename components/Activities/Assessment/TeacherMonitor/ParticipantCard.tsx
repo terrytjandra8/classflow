@@ -74,6 +74,11 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
                             <AlertTriangle size={12} /> Low WC
                         </span>
                     )}
+                    {(participant.data?.secondChances || 0) > 0 && (
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20" title={`Student was granted a second chance ${participant.data.secondChances} time(s)`}> 
+                            <RotateCcw size={12} /> {participant.data.secondChances}x Retry
+                        </span>
+                    )}
                 </div>
             </div>
 

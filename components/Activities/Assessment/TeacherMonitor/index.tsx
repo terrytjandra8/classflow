@@ -168,7 +168,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
     const handleContinue = async (participant: any) => {
         if (!participant.noteId) return;
-        const updatedData = { ...participant.data, submitted: false, disqualified: false, graded: false, released: false, violations: 0 };
+        const currentSecondChances = participant.data?.secondChances || 0;
+        const updatedData = { ...participant.data, submitted: false, disqualified: false, graded: false, released: false, violations: 0, secondChances: currentSecondChances + 1 };
         await supabase.from('notes').update({ connections: updatedData, content: 'In Progress', color: 'bg-white' }).eq('id', participant.noteId);
         handleForceRefresh();
     };
