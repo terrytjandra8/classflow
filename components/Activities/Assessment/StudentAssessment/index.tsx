@@ -204,7 +204,9 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         setIsDisqualified(false);
         setSubmitted(false);
 
-        if (Object.keys(finalAnswers).length > 0 || dbId) {
+        // Only auto-start if it's NOT a secure test.
+        // Secure tests must go through the Start Test button to acquire Fullscreen.
+        if ((Object.keys(finalAnswers).length > 0 || dbId) && config.status !== 'active') {
             setHasStarted(true);
         }
     }, [board.id, userId, isClosed, backupKey]);
