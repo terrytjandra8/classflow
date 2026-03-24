@@ -90,6 +90,10 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const contentRef = useRef<HTMLDivElement>(null); // Ref for the content area to protect
   const typingTimeoutRef = useRef<any>(null);
   const dragStart = useRef({ x: 0, y: 0 });
+  // Incremented each time the modal opens so the RichTextEditor always remounts
+  // fresh and re-initialises its contentEditable DOM with the correct value.
+  const openCountRef = useRef(0);
+  const [editorKey, setEditorKey] = useState('initial');
 
   const isEditing = !!noteToEdit;
   // Scope draft per board AND per section/column so different columns keep separate drafts
@@ -127,6 +131,10 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   // State reset and pre-fill logic
   useEffect(() => {
     if (isOpen) {
+      // Bump the open counter so the RichTextEditor gets a new key and
+      // fully remounts with whatever content we're about to set below.
+      openCountRef.current += 1;
+      setEditorKey(`${noteToEdit?.id || 'new'}-${openCountRef.current}`);
       setPosition({ x: 0, y: 0 });
       if (noteToEdit) {
           setTitle(noteToEdit.title || '');
@@ -367,7 +375,9 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
 
                 {activeMode === 'text' && (
                     <div className="h-full min-h-[200px]">
-                        <RichTextEditor value={content} onChange={(val) => { setContent(val); handleTyping(); }} placeholder="Type something amazing..." className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed" onPaste={(e) => onPaste(e)} />
+                        {/* editorKey changes on every open so the editor always remounts
+                            with the correct initial value (draft or note content) */}
+                        <RichTextEditor key={editorKey} value={content} onChange={(val) => { setContent(val); handleTyping(); }} placeholder="Type something amazing..." className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed" onPaste={(e) => onPaste(e)} />
                     </div>
                 )}
 

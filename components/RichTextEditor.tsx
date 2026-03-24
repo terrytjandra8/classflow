@@ -95,7 +95,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
 }, ref) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const lastFormats = useRef<FormatState | null>(null);
-    const lastOutgoingValue = useRef<string | null>(value);
+    const lastOutgoingValue = useRef<string | null>(null); // null means 'never synced yet' — ensures first mount always writes innerHTML
 
     // Function to handle internal updates and syncing formats
     const handleUpdate = useCallback(() => {
