@@ -20,15 +20,50 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
     onClear, onImageUpload
 }) => {
 
-    const answerIsImage = isContentImage(answer);
-    const displayAnswer = rawView ? answer : parseAnswer(answer, question.type, question.options);
+    const isImageAnswer = (text: string) => {
+        return text && typeof text === 'string' && (text.startsWith('data:image') || (text.startsWith('http') && /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(text)));
+    };
+
+    // Parse composite answer format {d: drawingUrl, t: htmlText} used by 'both' mode questions
+    const parseCompositeAnswer = (raw: string | undefined): { text: string; drawingUrl: string | null } => {
+        if (!raw) return { text: '', drawingUrl: null };
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && ('d' in parsed || 't' in parsed)) {
+                return { text: parsed.t || '', drawingUrl: parsed.d || null };
+            }
+        } catch {}
+        return { text: raw, drawingUrl: null };
+    };
+
+    const { text: parsedText, drawingUrl: parsedDrawingUrl } = rawView 
+        ? { text: answer, drawingUrl: null } 
+        : parseCompositeAnswer(answer);
+    
+    // MCQ fallback for text part
+    let displayText = !rawView && question.type === 'mcq' && question.options && !isNaN(parseInt(parsedText))
+        ? question.options[parseInt(parsedText)] || parsedText
+        : parsedText;
+
+    const effectiveImageUrl = parsedDrawingUrl || (isImageAnswer(answer) ? answer : null);
+
+    // If the text is exactly the image URL and we are not in raw view, don't show the redundant text below the image
+    if (!rawView && effectiveImageUrl && displayText === effectiveImageUrl) {
+        displayText = '';
+    }
+
+    // Attempt to format raw text that lacks HTML but has newlines
+    let formattedHtml = displayText || "";
+    if (!rawView && formattedHtml && !/<[a-z][\s\S]*>/i.test(formattedHtml)) {
+        formattedHtml = formattedHtml.replace(/\n/g, '<br/>');
+    }
 
     return (
         <div className="bg-[#0c0c0c] p-4 rounded-lg border border-white/10">
             <div className="flex justify-between items-center mb-2">
                 <h4 className="text-base font-semibold text-cyan-400">Student Answer</h4>
                 <div className="flex items-center gap-2">
-                    {answerIsImage && (
+                    {effectiveImageUrl && (
                         <button
                             title="View Full Image"
                             onClick={() => setLightboxImageUrl(answer)}
@@ -63,17 +98,27 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                 </div>
             </div>
 
-            {answerIsImage ? (
-                <img
-                    src={answer}
-                    alt="Student's answer"
-                    className="max-h-60 w-auto rounded-md cursor-pointer mx-auto"
-                    onClick={() => setLightboxImageUrl(answer)}
-                />
+            {effectiveImageUrl ? (
+                <div className="flex flex-col gap-4">
+                    <img
+                        src={effectiveImageUrl}
+                        alt="Student's answer"
+                        className="max-h-80 w-auto rounded-md cursor-pointer mx-auto shadow-md border border-white/10"
+                        onClick={() => setLightboxImageUrl(effectiveImageUrl)}
+                    />
+                    {displayText && (
+                        <div
+                            className="bg-black/30 p-4 rounded-lg border border-white/5 text-gray-300 prose prose-invert max-w-none text-sm break-words overflow-hidden [&_p]:mb-4 [&_div]:mb-4"
+                            style={{ wordBreak: 'break-word' }}
+                            dangerouslySetInnerHTML={{ __html: formattedHtml }}
+                        />
+                    )}
+                </div>
             ) : (
                 <div
-                    className="text-gray-300 prose prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-1 whitespace-pre-wrap text-sm"
-                    dangerouslySetInnerHTML={{ __html: displayAnswer || "" }}
+                    className="text-gray-300 prose prose-invert max-w-none [&_p]:mb-4 [&_div]:mb-4 p-2 whitespace-pre-wrap text-sm break-words overflow-hidden"
+                    style={{ wordBreak: 'break-word', lineHeight: '1.6' }}
+                    dangerouslySetInnerHTML={{ __html: formattedHtml }}
                 />
             )}
         </div>

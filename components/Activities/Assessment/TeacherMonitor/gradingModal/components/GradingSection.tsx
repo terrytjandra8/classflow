@@ -84,7 +84,7 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col bg-black/30 rounded-b-xl border-t border-white/10">
+            <div className="flex-1 flex flex-col bg-black/30 rounded-b-xl border-t border-white/10 min-h-[250px]">
                 <FeedbackToolbar 
                     editorRef={{ current: feedbackEditorRefs.current[qId] }}
                     onImageUpload={() => handleFeedbackImageUpload(qId)}
@@ -96,7 +96,7 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
                     onChange={text => handleGradeChange(qId, grade.score, text)}
                     onFormatChange={(formats: any) => setActiveFeedbackFormats(prev => ({...prev, [qId]: formats}))}
                     placeholder="Provide feedback..."
-                    className="w-full flex-1 bg-transparent p-3 text-sm outline-none resize-none"
+                    className="w-full flex-1 bg-transparent p-3 text-sm outline-none resize-y overflow-y-auto"
                 />
             </div>
 

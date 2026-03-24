@@ -10,13 +10,14 @@ interface PrintHeaderProps {
     className?: string;
     score: number | string;
     totalPoints: number;
+    submissionDate?: number | null;
 }
 
 // This component creates a visible line for writing on, used for empty fields.
 const BlankLine = () => <div style={{ borderBottom: '1px solid #000', height: '20px' }} />;
 
 export const PrintHeader: React.FC<PrintHeaderProps> = ({
-    ipekaLogoUrl, ibLogoUrl, isMasterKey, isRealStudent, participantName, className, score, totalPoints
+    ipekaLogoUrl, ibLogoUrl, isMasterKey, isRealStudent, participantName, className, score, totalPoints, submissionDate
 }) => (
     <div className="print-header">
         <div className="header-logos">
@@ -41,8 +42,8 @@ export const PrintHeader: React.FC<PrintHeaderProps> = ({
                 <tr>
                     <td className="label-cell">Date</td>
                     <td className="value-cell">
-                         {/* Show a line for the student to write the date */}
-                        {isRealStudent ? <BlankLine /> : ''}
+                        {/* Show submission date or a blank line for the student to write the date */}
+                        {isRealStudent ? (submissionDate ? new Date(submissionDate).toLocaleDateString() : <BlankLine />) : ''}
                     </td>
                     <td className="label-cell">Score</td>
                     <td className="value-cell">
