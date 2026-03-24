@@ -116,7 +116,7 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                 </div>
             ) : (
                 <div
-                    className="text-gray-300 prose prose-invert max-w-none [&_p]:mb-4 [&_div]:mb-4 p-2 whitespace-pre-wrap text-sm break-words overflow-hidden"
+                    className="text-gray-300 [&_p]:mb-3 [&_div]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-3 [&_li]:mb-1 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline p-2 text-sm break-words overflow-hidden rich-text-content"
                     style={{ wordBreak: 'break-word', lineHeight: '1.6' }}
                     dangerouslySetInnerHTML={{ __html: formattedHtml }}
                 />
