@@ -103,7 +103,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
             <div className={`mt-4 pt-4 border-t border-white/5 flex items-center ${isReady ? 'justify-center' : 'justify-between'}`}>
                 {!isReady && (
                     <button 
-                        onClick={() => onReset(participant)}
+                        onClick={(e) => { e.stopPropagation(); onReset(participant); }}
                         className="px-4 py-2 bg-red-800/50 hover:bg-red-800/80 text-white rounded-lg text-xs font-bold transition-colors"
                     >
                         Reset
@@ -112,7 +112,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
 
                 {(participant.status === 'In Progress' || participant.status === 'Revising' || participant.status === 'Disqualified') && (
                      <button 
-                        onClick={() => onContinue(participant)}
+                        onClick={(e) => { e.stopPropagation(); onContinue(participant); }}
                         className={`px-4 py-2 ${participant.status === 'Disqualified' ? 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_15px_rgba(234,88,12,0.3)]' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg text-xs font-bold transition-colors`}
                     >
                         {participant.status === 'Disqualified' ? 'Second Chance' : 'Continue'}
@@ -121,14 +121,14 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
 
                 {isSubmitted ? (
                     <button 
-                        onClick={() => onGrade(participant)}
+                        onClick={(e) => { e.stopPropagation(); onGrade(participant); }}
                         className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm transition-colors shadow-lg"
                     >
                         Grade
                     </button>
                 ) : isGraded ? (
                     <button 
-                        onClick={() => onGrade(participant)}
+                        onClick={(e) => { e.stopPropagation(); onGrade(participant); }}
                         className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-bold text-sm transition-colors"
                     >
                         Review
@@ -138,7 +138,7 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
                 {!isReady && 
                     <div className="flex gap-1">
                         {isGraded && (
-                            <button onClick={() => onAllowRevision(participant)} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors" title="Allow Revision"><RotateCcw size={18}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); onAllowRevision(participant); }} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors" title="Allow Revision"><RotateCcw size={18}/></button>
                         )}
                         <div className="relative" ref={printMenuRef}>
                             <button 

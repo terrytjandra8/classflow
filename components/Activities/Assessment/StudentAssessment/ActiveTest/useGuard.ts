@@ -63,6 +63,19 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
             }
         };
 
+        // --- 4. Watchdog Interval (Anti-Bypass) ---
+        // Even if students maliciously delete the event listeners above via DevTools,
+        // this interval constantly verifies the window's focus and visibility state.
+        const watchdogInterval = setInterval(() => {
+            if (document.hidden) {
+                handleViolation();
+                return;
+            }
+            if (document.activeElement?.tagName.toLowerCase() !== 'iframe' && !document.hasFocus()) {
+                handleViolation();
+            }
+        }, 1000);
+
         // --- 4. Keyboard shortcuts ---
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
@@ -119,6 +132,7 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
             window.removeEventListener('blur', handleBlur);
             document.removeEventListener('mouseleave', handleMouseLeave);
             window.removeEventListener('keydown', handleKeyDown, true);
+            clearInterval(watchdogInterval);
         };
 
     }, [isActive, handleViolation]);

@@ -113,6 +113,12 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             }
         };
 
+        const handleMouseEnter = () => {
+            if (lockTypeRef.current === 'focus' && document.hasFocus()) {
+                releaseShield();
+            }
+        };
+
         const handleFocus = () => {
             if (lockTypeRef.current === 'focus') {
                 releaseShield();
@@ -123,6 +129,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         window.addEventListener('afterprint', handleAfterPrint);
         window.addEventListener('blur', handleBlur);
         document.addEventListener('mouseleave', handleMouseLeave);
+        document.addEventListener('mouseenter', handleMouseEnter);
         window.addEventListener('focus', handleFocus);
 
         return () => {
@@ -130,6 +137,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             window.removeEventListener('afterprint', handleAfterPrint);
             window.removeEventListener('blur', handleBlur);
             document.removeEventListener('mouseleave', handleMouseLeave);
+            document.removeEventListener('mouseenter', handleMouseEnter);
             window.removeEventListener('focus', handleFocus);
             releaseShield(true); 
         };
