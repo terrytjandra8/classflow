@@ -11,13 +11,14 @@ interface ReportCardProps {
     board: Board;
     questions: AssessmentQuestion[];
     submissionData: any;
+    submittedAt?: string | number | null;
     isPreviewMode?: boolean;
     onExitPreview?: () => void;
     onReturnHome: () => void;
 }
 
 export const ReportCard: React.FC<ReportCardProps> = ({ 
-    board, questions, submissionData, isPreviewMode, onExitPreview, onReturnHome 
+    board, questions, submissionData, submittedAt, isPreviewMode, onExitPreview, onReturnHome 
 }) => {
     const { username } = useBoard();
     const [printInfo, setPrintInfo] = useState<{mode: PrintMode, isPrinting: boolean} | null>(null);
@@ -80,6 +81,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                         id: 'student-self', 
                         name: username || 'Student',
                         score: submissionData?.score || 0,
+                        submittedAt: submittedAt || submissionData?.created_at,
                         data: submissionData
                     }]}
                     questions={questions}

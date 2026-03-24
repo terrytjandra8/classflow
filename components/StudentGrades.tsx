@@ -272,6 +272,7 @@ export const StudentGrades: React.FC<StudentGradesProps> = ({ userId, onSelectBo
                         id: userId,
                         name: userName,
                         score: selectedItem.score,
+                        submittedAt: selectedItem.submittedAt,
                         data: selectedItem.submissionData
                     }]}
                     questions={selectedItem.questions}

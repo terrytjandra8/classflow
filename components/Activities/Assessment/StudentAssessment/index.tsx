@@ -52,6 +52,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'idle'>('idle');
     const [retryQuestions, setRetryQuestions] = useState<string[]>([]);
     const [userName, setUserName] = useState('Student');
+    const [submittedAt, setSubmittedAt] = useState<string | null>(null);
     
     const submissionIdRef = useRef<string | null>(null);
     const answersRef = useRef<Record<string, string>>({});
@@ -147,6 +148,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 
                 if (finalData.submitted || finalData.disqualified || (isClosed && finalData.answers)) {
                     setSubmissionData(finalData);
+                    setSubmittedAt(data.created_at);
                     setAnswers(finalData.answers || {});
                     answersRef.current = finalData.answers || {};
                     setViolationCount(finalData.violations || 0);
@@ -197,6 +199,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         }
 
         setSubmissionData(finalData);
+        if (data?.created_at) setSubmittedAt(data.created_at);
         setAnswers(finalAnswers);
         answersRef.current = finalAnswers;
         setViolationCount(finalViolations);
@@ -314,6 +317,11 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 if (data && !error) submissionIdRef.current = data.id;
             }
             setSubmissionData(newSubmissionData);
+            if (!submissionIdRef.current && isCreatingRef.current === false) {
+                 // fresh insert - would need re-fetch to get created_at accurately, 
+                 // but we can use now for immediate feedback
+                 setSubmittedAt(new Date().toISOString());
+            }
             setSaveStatus('saved');
             if (isFinalSubmit) localStorage.removeItem(backupKey);
         } catch (e) {
@@ -432,7 +440,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     }, [questions, answers]);
 
     if (((isClosed && submissionData?.released) || (isPreviewMode && submitted && !isDisqualified)) && retryQuestions.length === 0) {
-        return <ReportCard board={board} questions={questions} submissionData={submissionData} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
+        return <ReportCard board={board} questions={questions} submissionData={submissionData} submittedAt={submittedAt} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} />;
     }
 
     if (isDisqualified) return <StatusViews type="disqualified" isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onReturnHome={returnToHome} onCheckStatus={fetchSubmission} />;
