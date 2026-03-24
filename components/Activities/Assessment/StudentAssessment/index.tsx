@@ -410,12 +410,24 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         else window.location.href = '/';
     }, [isPreviewMode, onExitPreview]);
 
+    // Helper: extract plain text from a raw answer (handles 'both'-mode JSON and HTML)
+    const extractAnswerText = (raw: string): string => {
+        if (!raw) return '';
+        let text = raw;
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && 't' in parsed) text = parsed.t || '';
+        } catch { /* plain string */ }
+        // Strip HTML tags for accurate word counting
+        return text.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
+    };
+
     const countWords = (text: string) => text ? text.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
 
     const meetsRequirements = useMemo(() => {
         return !questions.some(q => {
             if (q.type !== 'essay' || !q.minWords) return false;
-            return countWords(answers[q.id] || '') < q.minWords;
+            return countWords(extractAnswerText(answers[q.id] || '')) < q.minWords;
         });
     }, [questions, answers]);
 

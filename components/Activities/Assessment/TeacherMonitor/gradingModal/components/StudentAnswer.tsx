@@ -66,7 +66,7 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                     {effectiveImageUrl && (
                         <button
                             title="View Full Image"
-                            onClick={() => setLightboxImageUrl(answer)}
+                            onClick={() => setLightboxImageUrl(effectiveImageUrl)}
                             className="text-gray-400 hover:text-white"
                         >
                             <FiMaximize2 />

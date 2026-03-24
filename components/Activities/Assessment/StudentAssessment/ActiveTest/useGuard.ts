@@ -14,17 +14,18 @@ import { useEffect, useRef, useCallback } from 'react';
  * 
  * TAB SWITCH (visibilitychange) is always immediate — that's unambiguous cheating.
  */
-export const useGuard = (isActive: boolean, onViolation: () => void) => {
+export const useGuard = (isActive: boolean, onViolation: () => void, isDrawingOpen = false) => {
 
     const violationDebounceRef = useRef(false);
     const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleViolation = useCallback(() => {
         if (violationDebounceRef.current) return;
+        if (isDrawingOpen) return; // drawing modal has its own focus — safe to ignore
         violationDebounceRef.current = true;
         onViolation();
         setTimeout(() => { violationDebounceRef.current = false; }, 1000);
-    }, [onViolation]);
+    }, [onViolation, isDrawingOpen]);
 
     useEffect(() => {
         if (!isActive) return;
@@ -135,6 +136,6 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
             clearInterval(watchdogInterval);
         };
 
-    }, [isActive, handleViolation]);
+    }, [isActive, handleViolation, isDrawingOpen]);
 
 };

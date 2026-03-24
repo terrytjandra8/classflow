@@ -34,11 +34,16 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const [isSyncing, setIsSyncing] = useState(false);
     const { activeDrawingQId, setActiveDrawingQId, drawingSaveStatus, setLiveDrawingBlob, handleCloseDrawingModal, activeDrawingInitialData } = useDrawing(answers, onAnswerChange);
 
+    // Pause the security guard while the drawing modal is open.
+    // The Konva canvas and floating textarea naturally move focus within the page,
+    // which would fire false window-blur violations. isDrawingOpen suppresses them.
+    const isDrawingOpen = !!activeDrawingQId;
+
     const isRevision = retryQuestions && retryQuestions.length > 0;
     const isSecureMode = !isPreviewMode && !isPracticeMode;
 
     // Replace useFocusMode with our new, dedicated security hook
-    useGuard(isSecureMode, onViolation);
+    useGuard(isSecureMode, onViolation, isDrawingOpen);
 
     const handleConfirmSubmit = () => {
         setShowSubmitModal(false);

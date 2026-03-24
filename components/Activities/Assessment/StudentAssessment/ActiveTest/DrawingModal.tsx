@@ -99,6 +99,7 @@ export const DrawingModal: React.FC<DrawingModalProps> = ({ isOpen, onClose, onD
                 <DrawingCanvas
                     onDrawEnd={onDrawEnd}
                     initialData={initialData}
+                    questionId={question?.id}
                     className="h-full"
                 />
             </div>

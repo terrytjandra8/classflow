@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { AssessmentQuestion, Note, AssessmentConfig, NoteColor } from '../../../../types';
 import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView, PrintMode } from '../AssessmentPrintView';
@@ -30,7 +30,8 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     
     const [submissions, setSubmissions] = useState<Note[]>(initialSubmissions);
     
-    useMemo(() => {
+    // Keep local submissions state in sync when the parent passes new data
+    useEffect(() => {
         setSubmissions(initialSubmissions);
     }, [initialSubmissions]);
 

@@ -54,11 +54,19 @@ export const useDrawing = (answers: Record<string, string>, onAnswerChange: (qId
     const handleCloseDrawingModal = useCallback(() => {
         debouncedSave.cancel();
         const qId = activeDrawingQId;
+        // Capture the blob now — we null the state right away so the UI closes cleanly,
+        // but we keep a local reference so the upload can still use it.
+        const blobToSave = liveDrawingBlob;
 
-        if (qId && liveDrawingBlob) {
-            const tempUrl = URL.createObjectURL(liveDrawingBlob);
+        // Close the modal immediately (UI feels snappy)
+        setActiveDrawingQId(null);
+        setLiveDrawingBlob(null);
+        setDrawingSaveStatus('idle');
 
-            // Detect if the current answer has a text portion to preserve (both mode)
+        if (qId && blobToSave) {
+            const tempUrl = URL.createObjectURL(blobToSave);
+
+            // Detect existing text portion to preserve (both mode)
             const currentAnswer = answers[qId] || '';
             let existingText = '';
             try {
@@ -71,27 +79,23 @@ export const useDrawing = (answers: Record<string, string>, onAnswerChange: (qId
             const composeAnswer = (url: string) =>
                 existingText ? JSON.stringify({ d: url, t: existingText }) : url;
 
+            // Optimistically set temp blob URL so student sees their drawing immediately
             onAnswerChange(qId, composeAnswer(tempUrl), false);
-            
-            saveDrawing(liveDrawingBlob, qId).then(finalUrl => {
+
+            // Upload and replace with permanent URL
+            saveDrawing(blobToSave, qId).then(finalUrl => {
                 if (finalUrl) {
                     const img = new Image();
                     img.src = finalUrl;
-                    img.onload = () => {
+                    const update = () => {
                         onAnswerChange(qId, composeAnswer(finalUrl), true);
                         URL.revokeObjectURL(tempUrl);
                     };
-                    img.onerror = () => {
-                        onAnswerChange(qId, composeAnswer(finalUrl), true);
-                        URL.revokeObjectURL(tempUrl);
-                    }
+                    img.onload  = update;
+                    img.onerror = update; // still update even if img fails to load
                 }
             });
         }
-        
-        setActiveDrawingQId(null);
-        setLiveDrawingBlob(null);
-        setDrawingSaveStatus('idle');
     }, [activeDrawingQId, liveDrawingBlob, onAnswerChange, saveDrawing, debouncedSave, answers]);
 
     const activeDrawingInitialData = (() => {
