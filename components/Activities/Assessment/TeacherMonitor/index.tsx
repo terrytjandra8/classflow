@@ -170,7 +170,11 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         if (!participant.noteId) return;
         const currentSecondChances = participant.data?.secondChances || 0;
         const updatedData = { ...participant.data, submitted: false, disqualified: false, graded: false, released: false, violations: 0, secondChances: currentSecondChances + 1 };
-        await supabase.from('notes').update({ connections: updatedData, content: 'In Progress', color: 'bg-white' }).eq('id', participant.noteId);
+        const { error } = await supabase.from('notes').update({ connections: updatedData, content: 'In Progress', color: 'bg-white' }).eq('id', participant.noteId);
+        if (error) {
+            console.error("Second Chance update failed:", error);
+            alert("Failed to grant Second Chance: " + error.message);
+        }
         handleForceRefresh();
     };
 
@@ -247,7 +251,11 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
         if (!participant || !participant.noteId) return;
 
         const updatedData = { ...participant.data, answers: {}, violations: 0, score: 0, submitted: false, disqualified: false, graded: false, released: false, retryQuestions: [] };
-        await supabase.from('notes').update({ connections: updatedData, content: 'Restarted', color: 'bg-white' }).eq('id', participant.noteId);
+        const { error } = await supabase.from('notes').update({ connections: updatedData, content: 'Restarted', color: 'bg-white' }).eq('id', participant.noteId);
+        if (error) {
+            console.error("Reset update failed:", error);
+            alert("Failed to reset student: " + error.message);
+        }
         
         handleForceRefresh();
         setRetryModal({ isOpen: false, participant: null });
