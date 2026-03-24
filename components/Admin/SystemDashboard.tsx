@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useAdminData } from '../../hooks/useAdminData';
 import { UserDirectory } from './UserDirectory';
 import { DataManagement } from './DataManagement';
+import { ImageManager } from './ImageManager';
 import { ConfirmModal } from '../ConfirmModal';
 import { Loader2, Users, HardDrive, ShieldCheck, Activity, UserPlus, Clock } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
@@ -176,6 +177,11 @@ export const SystemDashboard: React.FC<SystemDashboardProps> = ({ theme }) => {
             {/* Data Ops */}
             <div className="space-y-4 pt-4 border-t border-white/5">
                 <DataManagement theme={theme} onRefresh={refresh} />
+            </div>
+
+            {/* Storage Ops */}
+            <div className="space-y-4 pt-8 border-t border-white/5 mt-8">
+                <ImageManager />
             </div>
 
             {/* Modals */}

@@ -79,6 +79,11 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
                             <RotateCcw size={12} /> {participant.data.secondChances}x Retry
                         </span>
                     )}
+                    {participant.violations > 0 && (
+                        <span className={`flex items-center gap-1.5 text-xs font-bold ${participant.disqualified ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'} px-2 py-0.5 rounded-full border`} title={`Student has ${participant.violations} security violation(s)`}> 
+                            <AlertTriangle size={12} /> {participant.violations} Violations
+                        </span>
+                    )}
                 </div>
             </div>
 

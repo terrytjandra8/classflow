@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { Download, Upload, AlertTriangle, CheckCircle, RefreshCw, FileJson } from 'lucide-react';
 import { adminService } from '../../services/adminService';
-import { ImageManager } from './ImageManager'; // Import the new component
 
 interface DataManagementProps {
     theme: 'light' | 'dark';
@@ -148,9 +146,6 @@ export const DataManagement: React.FC<DataManagementProps> = ({ theme, onRefresh
                     </div>
                 </div>
             </div>
-
-            {/* Injected Image Manager */}
-            <ImageManager />
         </div>
     );
 };

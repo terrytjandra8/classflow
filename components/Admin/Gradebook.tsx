@@ -31,7 +31,7 @@ export const Gradebook: React.FC<GradebookProps> = ({
     
     const relevantBoards = boards.filter(b => {
         if (selectedClass === 'All Classes') return true;
-        return b.targetGrade === selectedClass || b.targetGrade === 'General' || !b.targetGrade;
+        return b.targetGrade === selectedClass;
     });
 
     // Helper to normalize score for averages (converts to percentage 0-100 for consistent aggregate stats)

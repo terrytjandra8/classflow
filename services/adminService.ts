@@ -140,17 +140,19 @@ export const adminService = {
 
     async updateGrade(studentId: string, boardId: string, score: number | null) {
         if (score === null) {
-             await supabase.from('grades').upsert({
+             const { error } = await supabase.from('grades').upsert({
                 student_id: studentId,
                 board_id: boardId,
                 score: null
             }, { onConflict: 'student_id, board_id' });
+            if (error) throw error;
         } else {
-            await supabase.from('grades').upsert({
+            const { error } = await supabase.from('grades').upsert({
                 student_id: studentId,
                 board_id: boardId,
                 score: score
             }, { onConflict: 'student_id, board_id' });
+            if (error) throw error;
         }
     },
 
