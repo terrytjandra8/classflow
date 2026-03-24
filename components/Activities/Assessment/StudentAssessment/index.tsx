@@ -367,12 +367,10 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         return <StatusViews type="intro" board={board} isPreviewMode={isPreviewMode} onExitPreview={onExitPreview} onStartTest={startTest} config={config} />;
     }
 
-    const MemoizedActiveTest = React.memo(ActiveTest);
-
     return (
         <div className="h-full relative">
             <SaveStatusIndicator status={saveStatus} onRetry={handleManualSync} />
-            <MemoizedActiveTest 
+            <ActiveTest 
                 boardTitle={board.title}
                 questions={questions}
                 config={config}

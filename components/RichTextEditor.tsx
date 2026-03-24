@@ -1,6 +1,5 @@
-
 import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { supabase } from '../services/supabaseClient'; // Ensure this path is correct
+import { supabase } from '../services/supabaseClient';
 
 export interface FormatState {
     bold: boolean;
@@ -53,6 +52,37 @@ interface RichTextEditorProps {
     readOnly?: boolean;
 }
 
+export const stripHtml = (html: string) => {
+    if (!html) return '';
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+};
+
+export const DebouncedRichTextEditor = React.memo(React.forwardRef(({ value, onChange, ...props }: any, ref: any) => {
+    const [localValue, setLocalValue] = React.useState(value);
+    // Track the last value we sent out so we don't re-sync our own write-backs
+    const lastSentValue = React.useRef<string>(value);
+
+    // Only sync from props when the value changes externally (not from our own debounced write-back)
+    React.useEffect(() => {
+        if (value !== lastSentValue.current) {
+            setLocalValue(value || '');
+        }
+    }, [value]);
+
+    React.useEffect(() => {
+        const handler = setTimeout(() => { 
+            if (localValue !== value) {
+                lastSentValue.current = localValue;
+                onChange(localValue); 
+            }
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [localValue, onChange, value]);
+    return <RichTextEditor {...props} ref={ref} value={localValue} onChange={setLocalValue} />;
+}));
+
 export interface RichTextEditorRef {
     focus: () => void;
     execCommand: (command: string, value?: string) => void;
@@ -64,63 +94,18 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
     id, value, onChange, placeholder, className, onKeyDown, onFormatChange, onPaste, autoFocus, style, imageUploadDisabled = false, readOnly = false 
 }, ref) => {
     const editorRef = useRef<HTMLDivElement>(null);
-    const lastFormats = useRef<FormatState>({
-        bold: false, italic: false, underline: false, strikeThrough: false,
-        list: false, orderedList: false, subscript: false, superscript: false,
-        blockquote: false, h1: false, h2: false, h3: false, h4: false,
-        alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
-    });
-    const isInternalChange = useRef(false);
+    const lastFormats = useRef<FormatState | null>(null);
+    const lastOutgoingValue = useRef<string | null>(value);
 
-    useImperativeHandle(ref, () => ({
-        focus: () => {
-            editorRef.current?.focus();
-        },
-        execCommand: (command: string, value?: string) => {
-            if (editorRef.current) {
-                editorRef.current.focus();
-                document.execCommand(command, false, value);
-                isInternalChange.current = true;
-                onChange(editorRef.current.innerHTML);
-                checkFormats();
-            }
-        },
-        insertHTML: (html: string) => {
-             if (editorRef.current) {
-                editorRef.current.focus();
-                document.execCommand('insertHTML', false, html);
-                isInternalChange.current = true;
-                onChange(editorRef.current.innerHTML);
-            }
-        },
-        getHTML: () => {
-            return editorRef.current?.innerHTML || '';
-        }
-    }));
-
-    useEffect(() => {
-        if (autoFocus && editorRef.current && !readOnly) {
-            editorRef.current.focus();
-        }
-    }, [autoFocus, readOnly]);
-
-    useEffect(() => {
-        if (isInternalChange.current) {
-            isInternalChange.current = false;
-            return;
-        }
-        if (editorRef.current && editorRef.current.innerHTML !== value) {
-             if (value === '' || (editorRef.current.innerHTML === '' && value) || (value !== editorRef.current.innerHTML)) {
-                 editorRef.current.innerHTML = value;
-             }
-        }
-    }, [value]);
-
-    useEffect(() => {
+    // Function to handle internal updates and syncing formats
+    const handleUpdate = useCallback(() => {
         if (editorRef.current) {
-            editorRef.current.contentEditable = readOnly ? 'false' : 'true';
+            const currentHTML = editorRef.current.innerHTML;
+            lastOutgoingValue.current = currentHTML;
+            onChange(currentHTML);
+            checkFormats();
         }
-    }, [readOnly]);
+    }, [onChange]);
 
     const checkFormats = useCallback(() => {
         if (onFormatChange && !readOnly) {
@@ -132,8 +117,12 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
             const getParentTag = (selection: Selection) => {
                 let node = selection.anchorNode;
                 if (node && node.nodeType === 3) node = node.parentNode;
-                while (node) {
+                while (node && node !== editorRef.current) {
                     if (node.nodeName.match(/^(H[1-4]|P|DIV|BLOCKQUOTE)$/)) return node.nodeName;
+                    if (node.nodeName === 'SPAN') {
+                        const className = (node as HTMLElement).className;
+                        if (className.match(/h[1-4]-inline/)) return className.split('-')[0].toUpperCase();
+                    }
                     if ((node as HTMLElement).isContentEditable === false) break;
                     node = node.parentNode;
                 }
@@ -169,17 +158,93 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
         }
     }, [onFormatChange, readOnly]);
 
+    useImperativeHandle(ref, () => ({
+        focus: () => {
+            editorRef.current?.focus();
+        },
+        execCommand: (command: string, value?: string) => {
+            if (editorRef.current) {
+                editorRef.current.focus();
+                
+                if (command === 'formatBlock' || command.startsWith('inline-h')) {
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        let node = range.startContainer;
+                        if (node.nodeType === 3) node = node.parentNode!;
+
+                        if (command.startsWith('inline-h')) {
+                            const level = command.split('-')[1];
+                            const className = `${level}-inline`;
+                            const parentSpan = (node as HTMLElement).closest(`span.${className}`);
+                            if (parentSpan) {
+                                const text = parentSpan.innerHTML;
+                                parentSpan.outerHTML = text;
+                            } else {
+                                document.execCommand('insertHTML', false, `<span class="${className}">${selection.toString()}</span>`);
+                            }
+                            handleUpdate();
+                            return;
+                        }
+                        
+                        if (node === editorRef.current) {
+                            document.execCommand('formatBlock', false, 'p');
+                        }
+                    }
+                }
+
+                document.execCommand(command, false, value);
+                handleUpdate();
+            }
+        },
+        insertHTML: (html: string) => {
+             if (editorRef.current) {
+                editorRef.current.focus();
+                document.execCommand('insertHTML', false, html);
+                handleUpdate();
+            }
+        },
+        getHTML: () => {
+            return editorRef.current?.innerHTML || '';
+        }
+    }));
+
+    useEffect(() => {
+        if (autoFocus && editorRef.current && !readOnly) {
+            editorRef.current.focus();
+        }
+    }, [autoFocus, readOnly]);
+
+    useEffect(() => {
+        if (editorRef.current && value !== editorRef.current.innerHTML) {
+            // Only update if the change is from an external source (not our own debounced update)
+            if (value !== lastOutgoingValue.current) {
+                editorRef.current.innerHTML = value || '';
+            }
+        }
+    }, [value]);
+
+    useEffect(() => {
+        if (editorRef.current) {
+            editorRef.current.contentEditable = readOnly ? 'false' : 'true';
+        }
+    }, [readOnly]);
+
     useEffect(() => {
         const handleSelectionChange = () => checkFormats();
         document.addEventListener('selectionchange', handleSelectionChange);
         return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }, [checkFormats]);
 
+    const handleFocus = () => {
+        if(readOnly) return;
+        document.execCommand('defaultParagraphSeparator', false, 'p');
+        checkFormats();
+    };
+
     const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
         if(readOnly) return;
-        isInternalChange.current = true;
-        onChange(e.currentTarget.innerHTML);
-        checkFormats();
+        handleUpdate();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -195,10 +260,8 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
             else if (key === 'z') document.execCommand(e.shiftKey ? 'redo' : 'undo', false);
             else if (key === 'y') document.execCommand('redo', false);
             
-            if (['b', 'i', 'u', 'z', 'y'].includes(key) && editorRef.current) {
-                isInternalChange.current = true;
-                onChange(editorRef.current.innerHTML);
-                checkFormats();
+            if (['b', 'i', 'u', 'z', 'y'].includes(key)) {
+                handleUpdate();
             }
         }
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === '8') {
@@ -240,8 +303,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
                         placeholderImg.src = publicUrl;
                         placeholderImg.removeAttribute('id');
                         placeholderImg.style.opacity = '1';
-                        isInternalChange.current = true;
-                        onChange(editorRef.current.innerHTML);
+                        handleUpdate();
                     }
                 }
             } catch (err) {
@@ -255,6 +317,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
         } else {
             const text = e.clipboardData.getData('text/plain');
             document.execCommand('insertText', false, text);
+            handleUpdate();
         }
     };
 
@@ -293,10 +356,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
             if (!img) return;
 
             const startX = e.pageX;
-            const startY = e.pageY;
             const startWidth = img.offsetWidth;
-            const startHeight = img.offsetHeight;
-
             const handle = target.dataset.handle;
 
             const onMouseMove = (moveE: MouseEvent) => {
@@ -313,8 +373,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
             const onMouseUp = () => {
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
-                isInternalChange.current = true;
-                onChange(editor.innerHTML);
+                handleUpdate();
             };
 
             document.addEventListener('mousemove', onMouseMove);
@@ -354,11 +413,16 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
             observer.disconnect();
         };
 
-    }, [onChange]);
+    }, [handleUpdate]);
 
     return (
         <>
             <style>{`
+                .rich-text-content h1, .rich-text-content .h1-inline { font-size: 2.25rem; font-weight: 800; margin: 1rem 0; line-height: 1.2; color: white; display: block; }
+                .rich-text-content h2, .rich-text-content .h2-inline { font-size: 1.875rem; font-weight: 700; margin: 0.875rem 0; line-height: 1.3; color: white; display: block; }
+                .rich-text-content h3, .rich-text-content .h3-inline { font-size: 1.5rem; font-weight: 700; margin: 0.75rem 0; line-height: 1.4; color: white; display: block; }
+                .rich-text-content h4, .rich-text-content .h4-inline { font-size: 1.25rem; font-weight: 600; margin: 0.625rem 0; line-height: 1.5; color: white; display: block; }
+                .rich-text-content .h1-inline, .rich-text-content .h2-inline, .rich-text-content .h3-inline, .rich-text-content .h4-inline { display: inline; margin: 0; }
                 .rich-text-content sub { vertical-align: sub; font-size: smaller; }
                 .rich-text-content sup { vertical-align: super; font-size: smaller; }
                 .rich-text-content blockquote { border-left: 4px solid #4a5568; margin-left: 1rem; padding-left: 1rem; color: #a0aec0; font-style: italic; }
@@ -378,6 +442,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
                 contentEditable={!readOnly}
                 className={`rich-text-content outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500 overflow-auto break-words whitespace-pre-wrap ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-text'} ${className}`}
                 onInput={handleInput}
+                onFocus={handleFocus}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePasteLogic}
                 onMouseUp={checkFormats}

@@ -57,19 +57,32 @@ export const useDrawing = (answers: Record<string, string>, onAnswerChange: (qId
 
         if (qId && liveDrawingBlob) {
             const tempUrl = URL.createObjectURL(liveDrawingBlob);
-            onAnswerChange(qId, tempUrl, false);
+
+            // Detect if the current answer has a text portion to preserve (both mode)
+            const currentAnswer = answers[qId] || '';
+            let existingText = '';
+            try {
+                const parsed = JSON.parse(currentAnswer);
+                if (parsed && typeof parsed === 'object' && 't' in parsed) {
+                    existingText = parsed.t || '';
+                }
+            } catch { /* plain string answer — no text to preserve */ }
+
+            const composeAnswer = (url: string) =>
+                existingText ? JSON.stringify({ d: url, t: existingText }) : url;
+
+            onAnswerChange(qId, composeAnswer(tempUrl), false);
             
             saveDrawing(liveDrawingBlob, qId).then(finalUrl => {
                 if (finalUrl) {
                     const img = new Image();
                     img.src = finalUrl;
                     img.onload = () => {
-                        onAnswerChange(qId, finalUrl, true);
+                        onAnswerChange(qId, composeAnswer(finalUrl), true);
                         URL.revokeObjectURL(tempUrl);
                     };
                     img.onerror = () => {
-                        console.error("Failed to preload final image, swapping directly.");
-                        onAnswerChange(qId, finalUrl, true);
+                        onAnswerChange(qId, composeAnswer(finalUrl), true);
                         URL.revokeObjectURL(tempUrl);
                     }
                 }
@@ -79,9 +92,18 @@ export const useDrawing = (answers: Record<string, string>, onAnswerChange: (qId
         setActiveDrawingQId(null);
         setLiveDrawingBlob(null);
         setDrawingSaveStatus('idle');
-    }, [activeDrawingQId, liveDrawingBlob, onAnswerChange, saveDrawing, debouncedSave]);
+    }, [activeDrawingQId, liveDrawingBlob, onAnswerChange, saveDrawing, debouncedSave, answers]);
 
-    const activeDrawingInitialData = activeDrawingQId ? answers[activeDrawingQId] : undefined;
+    const activeDrawingInitialData = (() => {
+        if (!activeDrawingQId) return undefined;
+        const raw = answers[activeDrawingQId];
+        if (!raw) return undefined;
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && 'd' in parsed) return parsed.d || undefined;
+        } catch { /* not JSON */ }
+        return raw;
+    })();
 
     return {
         activeDrawingQId,

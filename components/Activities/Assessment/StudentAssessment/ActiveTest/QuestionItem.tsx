@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../../types';
-import { Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Minus, Square, PenTool, ShieldAlert, Check } from 'lucide-react';
-import { RichTextEditor, FormatState, getActiveFormat } from '../../../../RichTextEditor';
+import { Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Minus, Square, PenTool, ShieldAlert, Check, Heading1, Heading2, Heading3, Heading4 } from 'lucide-react';
+import { RichTextEditor, FormatState, getActiveFormat, RichTextEditorRef, DebouncedRichTextEditor } from '../../../../RichTextEditor';
 import { parseMath } from '../../../../../utils/mappers';
 import { countQualityWords } from '../../../../../utils/validation';
 
@@ -19,6 +19,7 @@ interface QuestionItemProps {
 export const QuestionItem = memo(({ 
     q, answer, onAnswerChange, isReadingMode, setActiveDrawingQId, questionNumber, isReadOnly, config
 }: QuestionItemProps) => {
+    const editorRef = React.useRef<RichTextEditorRef>(null);
     const [activeFormats, setActiveFormats] = useState<FormatState & { box: boolean }>({
         bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
         subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
@@ -29,7 +30,7 @@ export const QuestionItem = memo(({
     if (q.type === 'section') {
         return (
             <div className="pt-8 pb-2 border-b border-white/10 mb-4">
-                <h3 className="text-2xl font-bold text-white uppercase tracking-tight">{q.text}</h3>
+                <h3 className="text-2xl font-bold text-white uppercase tracking-tight" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
             </div>
         );
     }
@@ -38,39 +39,81 @@ export const QuestionItem = memo(({
     const responseType = q.responseType || (q.allowDrawing ? 'both' : 'text');
     const allowText = responseType === 'text' || responseType === 'both';
     const allowDrawing = responseType === 'drawing' || responseType === 'both';
-    
-    const isDrawingAnswer = isEssay && (answer?.startsWith('http') || answer?.startsWith('blob'));
-    const isTextAnswer = isEssay && !isDrawingAnswer;
-    
-    const isDrawingVisible = allowDrawing && isDrawingAnswer;
-    const isTextVisible = allowText && !isDrawingAnswer;
 
-    const wc = isTextAnswer ? countQualityWords(answer || '') : 0;
-    const rawWc = isTextAnswer ? (answer || '').trim().split(/\s+/).filter(w => w.length > 0).length : 0;
-    const isSpamming = isTextAnswer && (rawWc - wc > 5);
-    const isUnderWordLimit = isTextAnswer && q.minWords && wc < q.minWords;
+    // --- Composite answer parsing for 'both' mode ---
+    // Format: JSON {"d":"drawing-url","t":"text-html"} or legacy plain string.
+    let drawingUrl: string | undefined;
+    let textValue: string;
+    if (responseType === 'both' && answer) {
+        try {
+            const parsed = JSON.parse(answer);
+            if (parsed && typeof parsed === 'object' && ('d' in parsed || 't' in parsed)) {
+                drawingUrl = parsed.d || undefined;
+                textValue = parsed.t || '';
+            } else { throw new Error(); }
+        } catch {
+            // Legacy plain answer: URL → drawing, anything else → text
+            if (answer.startsWith('http') || answer.startsWith('blob:')) {
+                drawingUrl = answer;
+                textValue = '';
+            } else {
+                drawingUrl = undefined;
+                textValue = answer;
+            }
+        }
+    } else {
+        // Single-mode: answer is either a URL (drawing) or text
+        const isUrl = !!answer && (answer.startsWith('http') || answer.startsWith('blob:'));
+        drawingUrl = isUrl ? answer : undefined;
+        textValue = isUrl ? '' : (answer || '');
+    }
+
+    const isDrawingAnswer = isEssay && !!drawingUrl;
+    const isTextAnswer = isEssay && !isDrawingAnswer;
+    const isDrawingVisible = allowDrawing && isDrawingAnswer;
+    // When responseType is 'both', text field always stays visible
+    const isTextVisible = allowText && (responseType === 'both' || !isDrawingAnswer);
+
+    // Word-count uses the actual text content (not a URL)
+    const wc = isTextVisible ? countQualityWords(textValue) : 0;
+    const rawWc = isTextVisible ? textValue.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
+    const isSpamming = isTextVisible && !isReadingMode && !isReadOnly && (rawWc - wc > 5);
+    const isUnderWordLimit = isTextVisible && q.minWords && wc < q.minWords;
+
+    // Compose answer for text changes (preserves drawing URL in 'both' mode)
+    const handleTextChange = (val: string) => {
+        if (responseType === 'both') {
+            onAnswerChange(q.id, JSON.stringify({ d: drawingUrl || '', t: val }));
+        } else {
+            onAnswerChange(q.id, val);
+        }
+    };
+
     
     const renderedText = parseMath(q.text);
     const renderedNotes = q.notes ? parseMath(q.notes) : null;
 
-    const handleCommand = (cmd: string) => {
-        const isBoxActive = getActiveFormat('', ['SPAN.box']);
-
-        if (cmd === 'formatBlock') { // Toggling the box
+    const handleCommand = (cmd: string, value?: string) => {
+        if (cmd === 'formatBlock' && value === 'box') {
+            const isBoxActive = getActiveFormat('', ['SPAN.box']);
             document.execCommand('removeFormat');
             if (!isBoxActive) {
                 document.execCommand('insertHTML', false, `<span class="box">${window.getSelection()?.toString()}</span>`);
             }
-        } else if (cmd === 'insertHorizontalRule') { // Inserting a line
-            if (isBoxActive && !config.allowLineInBox) {
-                // If in a box and combining is not allowed, remove the box first.
-                document.execCommand('removeFormat');
-            }
+        } else if (cmd === 'formatBlock' && value && value.startsWith('H')) {
+            const level = value.toLowerCase();
+            editorRef.current?.execCommand(`inline-${level}`);
+        } else if (cmd === 'insertHorizontalRule') {
             document.execCommand(cmd, false);
-        } else { // All other commands
-            document.execCommand(cmd, false);
+        } else {
+            editorRef.current?.execCommand(cmd);
         }
     }
+
+    const handleMouseDown = (e: React.MouseEvent, cmd: string, val?: string) => {
+        e.preventDefault();
+        handleCommand(cmd, val);
+    };
 
     const getBtnClass = (isActive: boolean) => 
         `p-1.5 rounded transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`;
@@ -128,7 +171,7 @@ export const QuestionItem = memo(({
                         <div className="mb-4">
                             {isDrawingVisible ? (
                                 <div className="relative group border border-white/10 rounded-xl overflow-hidden">
-                                    <img src={answer} alt="Drawing Answer" className="w-full h-auto max-h-[400px] object-contain bg-white" />
+                                    <img src={drawingUrl} alt="Drawing Answer" className="w-full h-auto max-h-[400px] object-contain bg-white" />
                                     {!isReadingMode && !isReadOnly && (
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                             <button 
@@ -157,24 +200,30 @@ export const QuestionItem = memo(({
                     {isTextVisible && (
                         <div className={`relative bg-[#111] border rounded-xl focus-within:border-blue-500 transition-colors ${isReadingMode || isReadOnly ? 'border-transparent opacity-70' : 'border-white/10'}`}>
                             {!(isReadingMode || isReadOnly) && (
-                                <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl">
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
+                                <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl overflow-x-auto no-scrollbar">
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H1')} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H2')} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H3')} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H4')} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
                                     <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'bold')} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'italic')} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'underline')} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
                                     <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'subscript')} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'superscript')} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
                                     <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('insertHorizontalRule'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Line"><Minus size={14}/></button>
-                                    <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock'); }} className={getBtnClass(activeFormats.box)} title="Box"><Square size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'insertUnorderedList')} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'insertOrderedList')} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
+                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
+                                    <button onMouseDown={e => handleMouseDown(e, 'insertHorizontalRule')} className={getBtnClass(activeFormats.strikeThrough)} title="Line"><Minus size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'box')} className={getBtnClass(activeFormats.box)} title="Box"><Square size={14}/></button>
                                 </div>
                             )}
-                            <RichTextEditor 
-                                value={answer || ''}
-                                onChange={(val: string) => onAnswerChange(q.id, val)}
+                            <DebouncedRichTextEditor 
+                                ref={editorRef}
+                                value={textValue}
+                                onChange={handleTextChange}
                                 onFormatChange={(formats: FormatState) => setActiveFormats({ ...formats, box: getActiveFormat('', ['SPAN.box']) })}
                                 imageUploadDisabled={!config.allowStudentImages}
                                 readOnly={isReadingMode || isReadOnly}

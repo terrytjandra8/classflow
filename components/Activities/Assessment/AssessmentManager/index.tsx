@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Board, Note, AssessmentConfig, AssessmentState } from '../../../../types';
 import { Editor } from '../Editor';
 import { StudentAssessment } from '../StudentAssessment/index';
@@ -27,12 +27,12 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
 }) => {
     const questions = board.assessmentQuestions || [];
     
-    const config: AssessmentConfig = board.settings?.assessmentConfig || {
+    const config: AssessmentConfig = useMemo(() => board.settings?.assessmentConfig || {
         durationMinutes: 60,
         readingMinutes: 0,
         startTime: null,
         status: 'setup'
-    };
+    }, [board.settings?.assessmentConfig]);
 
     const [view, setView] = useState<'editor' | 'monitor'>(() => {
         return (localStorage.getItem('cb_assessment_view') as 'editor' | 'monitor') || 'editor';

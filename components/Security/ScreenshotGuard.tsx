@@ -4,13 +4,16 @@ import React, { useState, useEffect, useRef } from 'react';
 interface ScreenshotGuardProps {
     isEnabled: boolean;
     children: React.ReactNode;
+    /** Grace period in ms before the focus-loss overlay triggers. Default: 1500ms */
+    blurGraceMs?: number;
 }
 
-export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children }) => {
+export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children, blurGraceMs = 1500 }) => {
     const [lockType, setLockType] = useState<'integrity' | 'focus' | 'devtools' | null>(null);
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
+    const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools') => {
         if (!overlayRef.current) return;
@@ -72,21 +75,16 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
             const isPrintScreen = key === 'printscreen';
             const isMacScreenshot = isMac && e.metaKey && e.shiftKey && ['3', '4'].includes(key);
+            // Chromebook: Ctrl+Overview (mapped as F5 or F4 depending on model)
+            const isChromebookScreenshot = e.ctrlKey && (key === 'f5' || key === 'f4');
 
-            if (isPrintScreen || isMacScreenshot) {
+            if (isPrintScreen || isMacScreenshot || isChromebookScreenshot) {
                 e.preventDefault();
-
-                // --- STRATEGY: IMMEDIATE HIDE + PRINT HIJACK ---
-                // 1. Instantly hide the content. This is the fastest JS method.
                 if (contentRef.current) {
                     contentRef.current.style.display = 'none';
                 }
-                // 2. Trigger the integrity shield overlay for user feedback.
                 triggerShield('integrity');
-                // 3. Trigger the browser's print dialog. The @media print styles will ensure a blank page.
-                // This is a robust backup to the display:none strategy.
                 window.print();
-                // The afterprint event will handle cleanup.
                 return;
             }
             
@@ -104,8 +102,25 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             releaseShield(true);
         };
 
-        const handleBlur = () => triggerShield('focus');
+        const handleBlur = () => {
+            // Grace period: extension popups, Grammarly, Chromebook OS notifications,
+            // and the DrawingModal overlay all briefly steal focus and return quickly.
+            // Only trigger focus-loss overlay if focus is still gone after grace period.
+            if (blurTimerRef.current) return; // already pending
+            blurTimerRef.current = setTimeout(() => {
+                blurTimerRef.current = null;
+                if (!document.hasFocus()) {
+                    triggerShield('focus');
+                }
+            }, blurGraceMs);
+        };
+
         const handleFocus = () => {
+            // Focus returned — cancel pending blur shield
+            if (blurTimerRef.current) {
+                clearTimeout(blurTimerRef.current);
+                blurTimerRef.current = null;
+            }
             if (lockTypeRef.current === 'focus') {
                 releaseShield();
             }
@@ -121,6 +136,10 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
             window.removeEventListener('afterprint', handleAfterPrint);
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
+            if (blurTimerRef.current) {
+                clearTimeout(blurTimerRef.current);
+                blurTimerRef.current = null;
+            }
             releaseShield(true); 
         };
     }, [isEnabled]);

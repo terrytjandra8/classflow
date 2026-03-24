@@ -384,7 +384,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
 
                 {activeMode === 'drawing' && (
                      <div className="h-full w-full relative min-h-[250px] md:min-h-[300px] flex-1 flex flex-col touch-none">
-                        <DrawingCanvas onDrawEnd={setDrawingBlob} initialData={drawingUrl || undefined} onClear={() => { setDrawingBlob(null); setDrawingUrl(null); }} className="w-full h-full" strokeColor={selectedColor === NoteColor.TRANSPARENT ? '#ffffff' : '#000000'} />
+                        <DrawingCanvas onDrawEnd={setDrawingBlob} initialData={drawingUrl || undefined} onClear={() => { setDrawingBlob(null); setDrawingUrl(null); }} className="w-full h-full" />
                     </div>
                 )}
 

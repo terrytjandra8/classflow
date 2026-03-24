@@ -121,6 +121,7 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 onDrawEnd={setLiveDrawingBlob}
                 initialData={activeDrawingInitialData}
                 saveStatus={drawingSaveStatus}
+                question={activeDrawingQId ? questions.find(q => q.id === activeDrawingQId) : undefined}
             />
         </div>
     );

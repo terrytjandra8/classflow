@@ -2,20 +2,12 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { AssessmentQuestion, Board } from '../../../types';
 import { Plus, Trash2, CheckCircle, Type, List, X, Layout, GripVertical, AlignLeft, Bold, Italic, Subscript, Superscript, List as ListIcon, Calculator, AlertCircle, PenTool, Image, FileText, UploadCloud, Loader2, Underline, Strikethrough, AlignCenter, AlignRight, AlignJustify, Pilcrow, Quote, Undo, Redo, Heading1, Heading2, Heading3, Heading4, Box, Minus } from 'lucide-react';
 import { useSortableList } from '../../../src/logic/dnd/useSortableList';
-import { RichTextEditor, FormatState, getActiveFormat } from '../../RichTextEditor';
+import { RichTextEditor, FormatState, getActiveFormat, RichTextEditorRef, DebouncedRichTextEditor, stripHtml } from '../../RichTextEditor';
 import { DebouncedInput } from '../../ui/DebouncedInput';
 import { parseMath } from '../../../utils/mappers';
 import { supabase } from '../../../services/supabaseClient';
 
-const DebouncedRichTextEditor = ({ value, onChange, ...props }: any) => {
-    const [localValue, setLocalValue] = useState(value);
-    useEffect(() => { setLocalValue(value || ''); }, [value]);
-    useEffect(() => {
-        const handler = setTimeout(() => { if (localValue !== value) onChange(localValue); }, 500);
-        return () => clearTimeout(handler);
-    }, [localValue, onChange, value]);
-    return <RichTextEditor {...props} value={localValue} onChange={setLocalValue} />;
-};
+// Moved to RichTextEditor.tsx
 
 interface EditorProps {
     questions: AssessmentQuestion[];
@@ -30,8 +22,18 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
         subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
         alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
     });
+
+    useEffect(() => {
+        // Reset formats when switching editors to avoid "ghost buttons"
+        setActiveFormats({
+            bold: false, italic: false, underline: false, strikeThrough: false, list: false, orderedList: false,
+            subscript: false, superscript: false, blockquote: false, h1: false, h2: false, h3: false, h4: false,
+            alignLeft: true, alignCenter: false, alignRight: false, alignJustify: false,
+        });
+    }, [editingId, activeEditor]);
     const [isUploading, setIsUploading] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const editorRefs = useRef<Record<string, RichTextEditorRef | null>>({});
 
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
         items: questions,
@@ -84,10 +86,15 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const getQuestionNumber = (index: number) => questions.slice(0, index + 1).filter(q => q.type !== 'section').length;
 
     const handleCommand = (cmd: string, value?: string) => {
-        document.execCommand(cmd, false, value);
-        if (activeEditor) {
-            const editor = document.getElementById(activeEditor);
-            if (editor) editor.dispatchEvent(new Event('input', { bubbles: true }));
+        if (activeEditor && editorRefs.current[activeEditor]) {
+             // Handle H1-H4 specifically for inline formatting (per character)
+            let actualCmd = cmd;
+            if (cmd === 'formatBlock' && value) {
+                actualCmd = `inline-${value.toLowerCase()}`;
+            }
+            editorRefs.current[activeEditor]?.execCommand(actualCmd);
+        } else {
+            document.execCommand(cmd, false, value);
         }
     };
 
@@ -173,7 +180,9 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     </div>
                                 )}
                             </div>
-                            <div className={`text-xs truncate ml-6 pr-2 leading-relaxed ${q.type === 'section' ? 'font-bold text-yellow-100 uppercase tracking-wide' : 'text-gray-300'}`} dangerouslySetInnerHTML={{ __html: parseMath(q.text) || '<em>Untitled</em>' }} />
+                            <div className={`text-xs truncate ml-6 pr-2 leading-relaxed ${q.type === 'section' ? 'font-bold text-yellow-100 uppercase tracking-wide' : 'text-gray-300'}`}>
+                                {stripHtml(q.text) || 'Untitled'}
+                            </div>
                         </div>
                     ))}
                     {questions.length === 0 && <div className="text-center py-10 text-gray-500 text-xs">No questions yet.</div>}
@@ -212,7 +221,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isSection ? 'Section Title' : 'Question Prompt'}</label>
                                     <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-text` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-text`)}>
                                         {renderToolbar(`${q.id}-text`)}
-                                        <DebouncedRichTextEditor id={`${q.id}-text`} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
+                                        <DebouncedRichTextEditor id={`${q.id}-text`} ref={(el: any) => (editorRefs.current[`${q.id}-text`] = el)} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
                                     </div>
                                 </div>
 
@@ -221,7 +230,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Model Answer / Teacher Key</label>
                                         <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-notes` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-notes`)}>
                                             {renderToolbar(`${q.id}-notes`)}
-                                            <DebouncedRichTextEditor id={`${q.id}-notes`} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Provide a model answer, grading rubric, or key points..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
+                                            <DebouncedRichTextEditor id={`${q.id}-notes`} ref={(el: any) => (editorRefs.current[`${q.id}-notes`] = el)} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Provide a model answer, grading rubric, or key points..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
                                         </div>
                                     </div>
                                 )}
@@ -264,7 +273,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     <button onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-8 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}><CheckCircle size={16}/></button>
                                                     <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'} ${activeEditor === `${q.id}-options-${idx}` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-options-${idx}`)}>
                                                         {renderToolbar(`${q.id}-options-${idx}`)}
-                                                        <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
+                                                        <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} ref={(el: any) => (editorRefs.current[`${q.id}-options-${idx}`] = el)} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
                                                     </div>
                                                     <button onClick={() => updateQuestion(q.id, { options: q.options?.filter((_, i) => i !== idx) })} className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><X size={16}/></button>
                                                 </div>
