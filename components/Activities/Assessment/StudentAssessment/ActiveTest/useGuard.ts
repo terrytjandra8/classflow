@@ -29,12 +29,6 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
     useEffect(() => {
         if (!isActive) return;
 
-        // Clear any pending blur timer on mount/re-activation
-        if (blurTimerRef.current) {
-            clearTimeout(blurTimerRef.current);
-            blurTimerRef.current = null;
-        }
-
         // --- 1. Fullscreen exit ---
         // Any fullscreen exit during an active guard session = violation.
         // The student is expected to remain in fullscreen during the test.
@@ -50,43 +44,22 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
         // --- 2. Tab switch (unambiguous) — immediate violation ---
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                // Cancel any pending blur timer to avoid double-counting
-                if (blurTimerRef.current) {
-                    clearTimeout(blurTimerRef.current);
-                    blurTimerRef.current = null;
-                }
                 handleViolation();
             }
         };
 
-        // --- 3. Window blur — with 2-second grace period ---
-        // Grammarly, spell-check extensions, Chromebook OS notifications, system
-        // permission dialogs all briefly steal focus and return within ~500ms–1s.
-        // We only count it as a violation if focus is still gone after 2 seconds.
+        // --- 3. Window blur and Mouse Leave — immediate violation ---
+        // As requested: trigger immediately when cursor is out or focus is lost.
         const handleBlur = () => {
-            // Skip if an iframe has focus (rich text editor iframes are normal)
             if (document.activeElement?.tagName.toLowerCase() === 'iframe') return;
-
-            // Skip if focus is still within the document (e.g., canvas overlay)
             if (document.hasFocus()) return;
-
-            // Start grace timer — if focus returns before it fires, we cancel it
-            if (!blurTimerRef.current) {
-                blurTimerRef.current = setTimeout(() => {
-                    blurTimerRef.current = null;
-                    // Double-check: still unfocused?
-                    if (!document.hasFocus() && !document.hidden) {
-                        handleViolation();
-                    }
-                }, 2000); // 2-second grace period
-            }
+            
+            handleViolation();
         };
 
-        const handleFocus = () => {
-            // Focus returned — cancel any pending blur violation
-            if (blurTimerRef.current) {
-                clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = null;
+        const handleMouseLeave = (e: MouseEvent) => {
+            if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+                handleViolation();
             }
         };
 
@@ -137,21 +110,15 @@ export const useGuard = (isActive: boolean, onViolation: () => void) => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('blur', handleBlur);
-        window.addEventListener('focus', handleFocus);
+        document.addEventListener('mouseleave', handleMouseLeave);
         window.addEventListener('keydown', handleKeyDown, true);
 
         return () => {
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('blur', handleBlur);
-            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('mouseleave', handleMouseLeave);
             window.removeEventListener('keydown', handleKeyDown, true);
-
-            // Clean up any pending grace timer
-            if (blurTimerRef.current) {
-                clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = null;
-            }
         };
 
     }, [isActive, handleViolation]);

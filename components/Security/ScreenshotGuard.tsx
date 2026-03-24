@@ -13,7 +13,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
     const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
-    const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools') => {
         if (!overlayRef.current) return;
@@ -103,24 +102,18 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         };
 
         const handleBlur = () => {
-            // Grace period: extension popups, Grammarly, Chromebook OS notifications,
-            // and the DrawingModal overlay all briefly steal focus and return quickly.
-            // Only trigger focus-loss overlay if focus is still gone after grace period.
-            if (blurTimerRef.current) return; // already pending
-            blurTimerRef.current = setTimeout(() => {
-                blurTimerRef.current = null;
-                if (!document.hasFocus()) {
-                    triggerShield('focus');
-                }
-            }, blurGraceMs);
+            if (!document.hasFocus()) {
+                triggerShield('focus');
+            }
+        };
+
+        const handleMouseLeave = (e: MouseEvent) => {
+            if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+                triggerShield('focus');
+            }
         };
 
         const handleFocus = () => {
-            // Focus returned — cancel pending blur shield
-            if (blurTimerRef.current) {
-                clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = null;
-            }
             if (lockTypeRef.current === 'focus') {
                 releaseShield();
             }
@@ -129,17 +122,15 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
         window.addEventListener('keydown', handleKeyDown, true);
         window.addEventListener('afterprint', handleAfterPrint);
         window.addEventListener('blur', handleBlur);
+        document.addEventListener('mouseleave', handleMouseLeave);
         window.addEventListener('focus', handleFocus);
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, true);
             window.removeEventListener('afterprint', handleAfterPrint);
             window.removeEventListener('blur', handleBlur);
+            document.removeEventListener('mouseleave', handleMouseLeave);
             window.removeEventListener('focus', handleFocus);
-            if (blurTimerRef.current) {
-                clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = null;
-            }
             releaseShield(true); 
         };
     }, [isEnabled]);
