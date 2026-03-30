@@ -256,6 +256,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                 <DebouncedRichTextEditor key={`${q.id}-notes`} id={`${q.id}-notes`} ref={(el: any) => (editorRefs.current[`${q.id}-notes`] = el)} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Provide hints, formula sheets, or formatting instructions..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
                                             </div>
                                         </div>
+                                        {q.type !== 'mcq' && (
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Model Answer (Hidden from students, shown on graded report)</label>
                                             <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-modelAnswer` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-modelAnswer`)}>
@@ -263,6 +264,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                 <DebouncedRichTextEditor key={`${q.id}-modelAnswer`} id={`${q.id}-modelAnswer`} ref={(el: any) => (editorRefs.current[`${q.id}-modelAnswer`] = el)} value={q.modelAnswer || ''} onChange={(val: string) => updateQuestion(q.id, { modelAnswer: val })} onFormatChange={setActiveFormats} placeholder="Provide a model answer or grading rubric..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
                                             </div>
                                         </div>
+                                        )}
                                      </>
                                 )}
 

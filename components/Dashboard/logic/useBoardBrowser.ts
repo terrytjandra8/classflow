@@ -51,7 +51,8 @@ export const useBoardBrowser = (
     isStudent: boolean,
     studentClasses: string[] = [],
     classes: ClassGroup[] = [],
-    setClasses: (classes: ClassGroup[]) => void
+    setClasses: (classes: ClassGroup[]) => void,
+    onUpdateBoard?: (id: string, updates: Partial<Board>) => void
 ) => {
     const [sidebarFilter, setSidebarFilterState] = useState<string>(() => {
         const key = isStudent ? 'cb_student_sidebar_filter' : 'cb_teacher_sidebar_filter';
@@ -84,9 +85,6 @@ export const useBoardBrowser = (
     
     const menuRef = useRef<HTMLDivElement>(null);
     const sortMenuRef = useRef<HTMLDivElement>(null);
-
-    // This useEffect is now REMOVED, as we no longer fetch classes separately.
-    // useEffect(() => { ... }, [isStudent]);
 
     const filteredBoards = useMemo(() => {
         let result = boards;
@@ -171,6 +169,10 @@ export const useBoardBrowser = (
         if (board) {
             setExitingBoardId(id);
             setTimeout(async () => {
+                // Optimistic: mark as not trashed locally so it moves out of Trash view immediately
+                if (onUpdateBoard) {
+                    onUpdateBoard(id, { isTrashed: false, deletedAt: undefined } as any);
+                }
                 await supabase.from('boards').update({ settings: { ...(board.settings || {}), isTrashed: false, deletedAt: null }, updated_at: new Date().toISOString() }).eq('id', id);
                 setExitingBoardId(null);
             }, 300);
@@ -188,8 +190,16 @@ export const useBoardBrowser = (
         if ((type === 'soft_delete' || type === 'hard_delete') && id) {
             setExitingBoardId(id);
             setTimeout(async () => {
-                if (type === 'soft_delete') onDeleteBoard(id);
-                else await supabase.from('boards').delete().eq('id', id);
+                if (type === 'soft_delete') {
+                    onDeleteBoard(id);
+                } else {
+                    // Hard delete: optimistically remove from local state, then delete from DB
+                    if (onUpdateBoard) {
+                        // Remove from list by marking as a sentinel that gets filtered
+                        onUpdateBoard(id, { isTrashed: true, deletedAt: -1 } as any);
+                    }
+                    await supabase.from('boards').delete().eq('id', id);
+                }
                 setExitingBoardId(null);
             }, 300);
         } else if (type === 'empty_trash') onEmptyTrash();

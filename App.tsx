@@ -339,6 +339,10 @@ function AppContent() {
       if (!session && !isGuest) return;
       const channel = supabase.channel('public:boards')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (payload) => {
+          if (payload.eventType === 'DELETE') {
+              setBoards(prev => prev.filter(b => b.id !== (payload.old as any).id));
+              return;
+          }
           if (payload.new) {
              const freshBoard = mapBoard(payload.new as any);
              setBoards(prev => {
@@ -348,6 +352,7 @@ function AppContent() {
                       newBoards[idx] = freshBoard;
                       return newBoards;
                   }
+                  // New board discovered via real-time
                   return [freshBoard, ...prev]; 
              });
           }
@@ -426,7 +431,8 @@ function AppContent() {
 
   const handleDeleteBoard = async (id: string) => {
       try {
-          setBoards(boards.filter(b => b.id !== id));
+          // Optimistically update property instead of filtering to keep real-time index stable
+          setBoards(prev => prev.map(b => b.id === id ? { ...b, isTrashed: true } : b));
           await boardService.updateBoard(id, { isTrashed: true, deletedAt: Date.now() });
       } catch (e) {
           console.error("Failed to delete board", e);

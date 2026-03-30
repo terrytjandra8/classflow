@@ -152,15 +152,15 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             </div>
                         </div>
                         <div 
-                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), disablePaste: !board.settings?.disablePaste } })}
-                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.settings?.disablePaste ? 'bg-red-500' : 'bg-white/20 hover:bg-white/30'}`}
+                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), disablePaste: !board.disablePaste } })}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.disablePaste ? 'bg-red-500' : 'bg-white/20 hover:bg-white/30'}`}
                         >
-                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.settings?.disablePaste ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.disablePaste ? 'translate-x-6' : 'translate-x-0'}`}></div>
                         </div>
                     </div>
 
                     {/* Allow Links Exception */}
-                    {board.settings?.disablePaste && (
+                    {board.disablePaste && (
                         <div className="flex items-center justify-between pl-4 animate-in fade-in slide-in-from-top-1 border-t border-red-500/10 pt-2">
                             <div className="flex items-center gap-3">
                                 <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg"><Link size={14}/></div>
@@ -188,10 +188,10 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             </div>
                         </div>
                         <div 
-                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), disableCopy: !board.settings?.disableCopy } })}
-                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.settings?.disableCopy ? 'bg-orange-500' : 'bg-white/20 hover:bg-white/30'}`}
+                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), disableCopy: !board.disableCopy } })}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.disableCopy ? 'bg-orange-500' : 'bg-white/20 hover:bg-white/30'}`}
                         >
-                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.settings?.disableCopy ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.disableCopy ? 'translate-x-6' : 'translate-x-0'}`}></div>
                         </div>
                     </div>
 
@@ -205,10 +205,10 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             </div>
                         </div>
                         <div 
-                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), blockScreenshots: !board.settings?.blockScreenshots } })}
-                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.settings?.blockScreenshots ? 'bg-yellow-500' : 'bg-white/20 hover:bg-white/30'}`}
+                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), blockScreenshots: !board.blockScreenshots } })}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.blockScreenshots ? 'bg-yellow-500' : 'bg-white/20 hover:bg-white/30'}`}
                         >
-                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.settings?.blockScreenshots ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.blockScreenshots ? 'translate-x-6' : 'translate-x-0'}`}></div>
                         </div>
                     </div>
                 </div>
@@ -242,15 +242,15 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             </div>
                         </div>
                         <div 
-                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), blurOtherPosts: !board.settings?.blurOtherPosts } })}
-                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.settings?.blurOtherPosts ? 'bg-indigo-500' : 'bg-white/20 hover:bg-white/30'}`}
+                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), blurOtherPosts: !board.blurOtherPosts } })}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.blurOtherPosts ? 'bg-indigo-500' : 'bg-white/20 hover:bg-white/30'}`}
                         >
-                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.settings?.blurOtherPosts ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.blurOtherPosts ? 'translate-x-6' : 'translate-x-0'}`}></div>
                         </div>
                     </div>
 
                     {/* Sub-toggle: Blur Teacher Posts */}
-                    {board.settings?.blurOtherPosts && (
+                    {board.blurOtherPosts && (
                         <div className="flex items-center justify-between pl-4 border-t border-indigo-500/10 pt-2 animate-in fade-in">
                             <div className="flex items-center gap-3">
                                 <div className="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-lg"><UserX size={14}/></div>
@@ -260,10 +260,10 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                                 </div>
                             </div>
                             <div 
-                                onClick={() => onUpdate({ settings: { ...(board.settings || {}), blurTeacherPosts: !board.settings?.blurTeacherPosts } })}
-                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${board.settings?.blurTeacherPosts ? 'bg-indigo-500' : 'bg-white/20 hover:bg-white/30'}`}
+                                onClick={() => onUpdate({ settings: { ...(board.settings || {}), blurTeacherPosts: !board.blurTeacherPosts } })}
+                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${board.blurTeacherPosts ? 'bg-indigo-500' : 'bg-white/20 hover:bg-white/30'}`}
                             >
-                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${board.settings?.blurTeacherPosts ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${board.blurTeacherPosts ? 'translate-x-4' : 'translate-x-0'}`}></div>
                             </div>
                         </div>
                     )}

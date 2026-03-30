@@ -104,8 +104,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         !b.isTrashed && 
         (
             b.isPublished || 
-            b.quizState !== 'setup' || 
-            b.assessmentState === 'active'
+            (b.format === 'quiz' && b.quizState && b.quizState !== 'setup') || 
+            (b.format === 'assessment' && (b.assessmentState === 'active' || b.assessmentState === 'reading'))
         )
     );
 

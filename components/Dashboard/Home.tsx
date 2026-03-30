@@ -56,7 +56,7 @@ export const Home: React.FC<HomeProps> = ({
         openConfirmModal,
         handleConfirmAction,
         handleMenuAction
-    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent, studentClasses, classes, setClasses);
+    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent, studentClasses, classes, setClasses, onUpdateBoard);
 
     const getDisplayTitle = () => {
         if (isStudent) {

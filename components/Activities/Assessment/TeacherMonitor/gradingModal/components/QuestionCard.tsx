@@ -128,17 +128,25 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     </div>
                     
                     {/* Model Answer / Reference - Directly visible at the top of the right pane */}
-                    {(question.correctAnswer || (question as any).modelAnswer) && (
+                    {/* For MCQ: only show the correct option, not the raw index as "model answer" */}
+                    {/* For Essay: show the model answer text if provided */}
+                    {(question.type === 'mcq' ? correctAnswerMcqOption : ((question as any).modelAnswer || question.correctAnswer)) && (
                         <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl relative group/model overflow-hidden">
                             <div className="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
                                 <span className="text-[10px] font-bold uppercase tracking-tighter text-blue-400">REFERENCE</span>
                             </div>
-                            <h5 className="font-bold text-blue-400 text-[10px] mb-2 uppercase tracking-widest">Model Answer</h5>
-                            <div className="rounded-lg text-blue-100/90 text-sm rich-text-content leading-relaxed">
-                                <div dangerouslySetInnerHTML={{ __html: parseMath((question as any).modelAnswer || question.correctAnswer || '') }} />
-                            </div>
+                            {/* For Essay questions: show the model answer text */}
+                            {question.type !== 'mcq' && (question as any).modelAnswer && (
+                                <>
+                                    <h5 className="font-bold text-blue-400 text-[10px] mb-2 uppercase tracking-widest">Model Answer</h5>
+                                    <div className="rounded-lg text-blue-100/90 text-sm rich-text-content leading-relaxed">
+                                        <div dangerouslySetInnerHTML={{ __html: parseMath((question as any).modelAnswer || '') }} />
+                                    </div>
+                                </>
+                            )}
+                            {/* For MCQ: show the correct option text */}
                             {question.type === 'mcq' && correctAnswerMcqOption && (
-                                <div className="mt-3 pt-3 border-t border-blue-500/10">
+                                <div className={question.type !== 'mcq' && (question as any).modelAnswer ? 'mt-3 pt-3 border-t border-blue-500/10' : ''}>
                                     <span className="text-[10px] text-blue-400/60 font-bold uppercase">Correct Option</span>
                                     <p className="text-sm font-bold text-blue-200 mt-0.5">{correctAnswerMcqOption}</p>
                                 </div>
