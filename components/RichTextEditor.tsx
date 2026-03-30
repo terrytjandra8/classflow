@@ -61,26 +61,40 @@ export const stripHtml = (html: string) => {
 
 export const DebouncedRichTextEditor = React.memo(React.forwardRef(({ value, onChange, ...props }: any, ref: any) => {
     const [localValue, setLocalValue] = React.useState(value);
-    // Track the last value we sent out so we don't re-sync our own write-backs
     const lastSentValue = React.useRef<string>(value);
+    const isDirty = React.useRef(false);
 
-    // Only sync from props when the value changes externally (not from our own debounced write-back)
+    // Only sync from props when the value changes externally AND we're not actively editing
     React.useEffect(() => {
-        if (value !== lastSentValue.current) {
+        if (value !== lastSentValue.current && !isDirty.current) {
             setLocalValue(value || '');
+            lastSentValue.current = value;
         }
     }, [value]);
 
     React.useEffect(() => {
         const handler = setTimeout(() => { 
-            if (localValue !== value) {
+            if (localValue !== lastSentValue.current) {
                 lastSentValue.current = localValue;
+                // Important: clearing isDirty before onChange, because onChange could trigger
+                // a state update upstream that loops back down. As long as they don't type
+                // within the loop cycle, this prevents the cursor drop while still allowing
+                // new remote data to overwrite old data once typing actually finishes.
+                isDirty.current = false;
                 onChange(localValue); 
+            } else {
+                isDirty.current = false;
             }
         }, 500);
         return () => clearTimeout(handler);
-    }, [localValue, onChange, value]);
-    return <RichTextEditor {...props} ref={ref} value={localValue} onChange={setLocalValue} />;
+    }, [localValue, onChange]);
+
+    const handleChange = React.useCallback((val: string) => {
+        isDirty.current = true;
+        setLocalValue(val);
+    }, []);
+
+    return <RichTextEditor {...props} ref={ref} value={localValue} onChange={handleChange} />;
 }));
 
 export interface RichTextEditorRef {
@@ -219,10 +233,14 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
         if (editorRef.current && value !== editorRef.current.innerHTML) {
             // Only update if the change is from an external source (not our own debounced update)
             if (value !== lastOutgoingValue.current) {
+                // Prevent overwriting innerHTML while the user is actively typing in it
+                if (document.activeElement === editorRef.current && !readOnly) {
+                    return; 
+                }
                 editorRef.current.innerHTML = value || '';
             }
         }
-    }, [value]);
+    }, [value, readOnly]);
 
     useEffect(() => {
         if (editorRef.current) {

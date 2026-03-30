@@ -100,14 +100,7 @@ export const GradingSection: React.FC<GradingSectionProps> = ({
                 />
             </div>
 
-            {correctAnswer && (
-                <div className="p-3 mt-2">
-                    <h5 className="font-bold text-gray-500 text-xs mb-1 uppercase tracking-wider">Correct Answer</h5>
-                    <div className="p-2.5 rounded bg-green-900/30 border border-green-500/30 text-green-200 text-sm rich-text-content">
-                        <div dangerouslySetInnerHTML={{ __html: questionType === 'mcq' ? parseMath(correctAnswerMcqOption ?? 'N/A') : parseMath(correctAnswer) }} />
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };

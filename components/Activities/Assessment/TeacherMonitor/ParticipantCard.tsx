@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckSquare, Square, User, AlertTriangle, Printer, Edit, RotateCcw, Play, FileText, CheckCircle2, File, FileX } from 'lucide-react';
+import { CheckSquare, Square, User, AlertTriangle, Printer, Edit, RotateCcw, Play, FileText, CheckCircle2, File, FileX, FileCheck } from 'lucide-react';
 import { PrintMode } from '../AssessmentPrintView';
 
 interface ParticipantCardProps {
@@ -49,10 +49,13 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
     };
 
     return (
-        <div className={`bg-[#1a1a1a] border rounded-lg p-4 flex flex-col justify-between relative transition-all duration-300 ${isSelected ? 'border-blue-500 shadow-2xl scale-[1.02]' : 'border-white/5'}`}>
+        <div 
+            onClick={() => onGrade(participant)}
+            className={`bg-[#1a1a1a] border rounded-lg p-4 flex flex-col justify-between relative cursor-pointer hover:border-gray-500 transition-all duration-300 ${isSelected ? 'border-blue-500 shadow-2xl scale-[1.02]' : 'border-white/5'}`}
+        >
             {participant.noteId && (
                 <button 
-                    onClick={() => onToggleSelect(participant.id)}
+                    onClick={(e) => { e.stopPropagation(); onToggleSelect(participant.id); }}
                     className="absolute top-3 right-3 p-1 text-gray-600 hover:text-white transition-colors z-10"
                 >
                     {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}
@@ -117,10 +120,17 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
 
                 {(participant.status === 'In Progress' || participant.status === 'Revising' || participant.status === 'Disqualified') && (
                      <button 
-                        onClick={(e) => { e.stopPropagation(); onContinue(participant); }}
-                        className={`px-4 py-2 ${participant.status === 'Disqualified' ? 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_15px_rgba(234,88,12,0.3)]' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg text-xs font-bold transition-colors`}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (participant.status === 'Disqualified') {
+                                onContinue(participant);
+                            } else {
+                                onGrade(participant);
+                            }
+                        }}
+                        className={`px-4 py-2 ${participant.status === 'Disqualified' ? 'bg-orange-600 hover:bg-orange-700 shadow-[0_0_15px_rgba(234,88,12,0.3)] text-white' : 'bg-white/10 hover:bg-white/20 text-gray-300'} rounded-lg text-xs font-bold transition-colors`}
                     >
-                        {participant.status === 'Disqualified' ? 'Second Chance' : 'Continue'}
+                        {participant.status === 'Disqualified' ? 'Continue' : 'Preview'}
                     </button>
                 )}
 
@@ -143,35 +153,41 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant, i
                 {!isReady && 
                     <div className="flex gap-1">
                         {isGraded && (
-                            <button onClick={(e) => { e.stopPropagation(); onAllowRevision(participant); }} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors" title="Allow Revision"><RotateCcw size={18}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); onAllowRevision(participant); }} className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors" data-tooltip="Allow Revision"><RotateCcw size={18}/></button>
                         )}
                         <div className="relative" ref={printMenuRef}>
                             <button 
-                                onClick={() => setIsPrintMenuOpen(prev => !prev)}
+                                onClick={(e) => { e.stopPropagation(); setIsPrintMenuOpen(prev => !prev); }}
                                 className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors"
-                                title="Print Options"
+                                data-tooltip="Print Options"
                             >
                                 <Printer size={18}/>
                             </button>
                             {isPrintMenuOpen && (
                                 <div className="absolute bottom-full right-0 mb-2 w-56 bg-[#2a2a2a] border border-white/10 rounded-lg shadow-xl z-20 animate-in fade-in zoom-in-95">
                                     <button 
-                                        onClick={() => { onPrint(participant, 'WITH_ANSWERS_AND_FEEDBACK'); setIsPrintMenuOpen(false); }}
-                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300"
+                                        onClick={(e) => { e.stopPropagation(); onPrint(participant, 'WITH_ANSWERS_AND_FEEDBACK'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300 transition-colors"
                                     >
-                                        <FileText size={14} /> With Feedback
+                                        <FileCheck size={14} className="text-green-400" /> With Feedback
                                     </button>
                                     <button 
-                                        onClick={() => { onPrint(participant, 'WITH_ANSWERS'); setIsPrintMenuOpen(false); }}
-                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300"
+                                        onClick={(e) => { e.stopPropagation(); onPrint(participant, 'WITH_ANSWERS_MODEL'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300 transition-colors"
                                     >
-                                        <File size={14} /> Submission Only
+                                        <FileText size={14} className="text-blue-400" /> With Model Answers
                                     </button>
                                     <button 
-                                        onClick={() => { onPrint(participant, 'BLANK'); setIsPrintMenuOpen(false); }}
-                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300"
+                                        onClick={(e) => { e.stopPropagation(); onPrint(participant, 'WITH_ANSWERS'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300 transition-colors"
                                     >
-                                        <FileX size={14} /> Blank Paper
+                                        <File size={14} className="text-gray-400" /> Submission Only
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onPrint(participant, 'BLANK'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/5 text-gray-300 transition-colors border-t border-white/5 mt-1 pt-2"
+                                    >
+                                        <FileX size={14} className="text-red-400" /> Blank Paper
                                     </button>
                                 </div>
                             )}

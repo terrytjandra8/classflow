@@ -43,7 +43,8 @@ export const TestHeader: React.FC<TestHeaderProps> = ({ boardTitle, config, time
                         onClick={onSync}
                         disabled={isSyncing}
                         className={`p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 ${isSyncing ? 'animate-spin text-blue-400' : ''}`}
-                        title="Sync & Save answers manually"
+                        data-tooltip="Sync & Save answers manually"
+                        data-tooltip-placement="bottom"
                     >
                         <RefreshCcw size={14} />
                     </button>

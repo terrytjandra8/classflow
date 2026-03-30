@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Play, Pause, Lock, BookOpen, SkipForward, Eye, Share2, Settings, Radio, EyeOff, Printer, Users, ChevronDown, Rocket } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Lock, BookOpen, SkipForward, Eye, Share2, Settings, Radio, EyeOff, Printer, Users, ChevronDown, Rocket, FileText } from 'lucide-react';
 import { AssessmentConfig } from '../../../../types';
 
 interface ControlHeaderProps {
@@ -17,7 +17,7 @@ interface ControlHeaderProps {
     onPreview: () => void;
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
-    onPrint?: () => void;
+    onPrint?: (mode: 'BLANK' | 'MODEL_ANSWER_ONLY') => void;
     onUpdateTitle: (newTitle: string) => void;
     // New Class Props
     classList?: string[];
@@ -38,9 +38,21 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
     onOpenSettings, onOpenShare, onPrint, classList, currentClass, onUpdateClass, onUpdateTitle
 }) => {
     const [isClassMenuOpen, setIsClassMenuOpen] = useState(false);
+    const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState(title);
     const titleInputRef = useRef<HTMLTextAreaElement>(null);
+    const printMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (printMenuRef.current && !printMenuRef.current.contains(event.target as Node)) {
+                setIsPrintMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         if (isEditingTitle && titleInputRef.current) {
@@ -97,7 +109,7 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                         rows={1}
                     />
                 ) : (
-                    <h1 onDoubleClick={handleTitleDoubleClick} className="font-bold text-lg flex items-center gap-2 cursor-pointer" title="Double-click to edit">
+                    <h1 onDoubleClick={handleTitleDoubleClick} className="font-bold text-lg flex items-center gap-2 cursor-pointer" data-tooltip="Double-click to edit" data-tooltip-placement="bottom">
                         <Lock size={16} className="text-red-500 shrink-0"/>
                         <span className="break-words">{title}</span>
                     </h1>
@@ -201,7 +213,8 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                         <button 
                             onClick={onOpenShare}
                             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title="Share Board"
+                            data-tooltip="Share Board"
+                            data-tooltip-placement="bottom"
                         >
                             <Share2 size={20} />
                         </button>
@@ -210,24 +223,45 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                         <button 
                             onClick={onOpenSettings}
                             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title="Settings"
+                            data-tooltip="Settings"
+                            data-tooltip-placement="bottom"
                         >
                             <Settings size={20} />
                         </button>
                     )}
                     {onPrint && (
-                        <button 
-                            onClick={onPrint}
-                            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title="Print Assessment"
-                        >
-                            <Printer size={20} />
-                        </button>
+                        <div className="relative" ref={printMenuRef}>
+                            <button 
+                                onClick={() => setIsPrintMenuOpen(!isPrintMenuOpen)}
+                                className={`p-2 rounded-lg transition-colors ${isPrintMenuOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                                data-tooltip="Print Options"
+                                data-tooltip-placement="bottom"
+                            >
+                                <Printer size={20} />
+                            </button>
+                            {isPrintMenuOpen && (
+                                <div className="absolute top-full right-0 mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in zoom-in-95 origin-top-right">
+                                    <button 
+                                        onClick={() => { onPrint('BLANK'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors flex items-center gap-2"
+                                    >
+                                        <Printer size={14} /> Blank Paper
+                                    </button>
+                                    <button 
+                                        onClick={() => { onPrint('MODEL_ANSWER_ONLY'); setIsPrintMenuOpen(false); }}
+                                        className="w-full text-left px-4 py-2 text-xs text-blue-400 hover:bg-white/5 transition-colors flex items-center gap-2 border-t border-white/5"
+                                    >
+                                        <FileText size={14} /> Answer Key
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
                     <button 
                         onClick={onPreview}
                         className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                        title="Student Preview"
+                        data-tooltip="Student Preview"
+                        data-tooltip-placement="bottom"
                     >
                         <Eye size={20} />
                     </button>

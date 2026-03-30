@@ -36,13 +36,15 @@ export const boardService = {
     },
 
     async createBoard(board: Partial<Board>, userId: string) {
+        const isAssessment = board.format === 'assessment';
+
         const settings: any = {
             sections: board.sections || [],
             lockMode: board.lockMode || 'unlocked',
             autoLockTime: board.autoLockTime || null,
             autoLiveTime: board.autoLiveTime || null,
-            commentsEnabled: board.commentsEnabled ?? true,
-            reactionsEnabled: board.reactionsEnabled ?? true,
+            commentsEnabled: isAssessment ? false : (board.commentsEnabled ?? true),
+            reactionsEnabled: isAssessment ? false : (board.reactionsEnabled ?? true),
             wallpaper: board.wallpaper,
             colorScheme: board.colorScheme,
             font: board.font,
@@ -50,6 +52,12 @@ export const boardService = {
             recipeStatus: board.recipeStatus,
             icon: board.icon,
             guide: board.guide,
+            // Security Defaults (Global)
+            disablePaste: board.disablePaste ?? true, // Default to true for all boards
+            blockScreenshots: board.blockScreenshots ?? true, // Default to true for all boards
+            // Assessment Specific Security
+            disableCopy: isAssessment ? true : (board.disableCopy ?? false),
+            blurOtherPosts: isAssessment ? true : (board.blurOtherPosts ?? false),
             // Interactive Modules
             polls: board.polls,
             quizQuestions: board.quizQuestions,
@@ -60,6 +68,7 @@ export const boardService = {
             // Capture Grading Config
             gradingConfig: board.gradingConfig
         };
+
 
         const payload: BoardInsert = {
             title: board.title || 'Untitled Board',

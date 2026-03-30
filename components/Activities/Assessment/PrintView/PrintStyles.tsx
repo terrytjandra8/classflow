@@ -7,11 +7,6 @@ export const PrintStyles = () => (
             @page { 
                 size: A4;
                 margin: 15mm; 
-                @bottom-right {
-                    content: "Page " counter(page) " of " counter(pages);
-                    font-size: 9pt;
-                    color: #666;
-                }
             }
             
             /* GLOBAL RESET */

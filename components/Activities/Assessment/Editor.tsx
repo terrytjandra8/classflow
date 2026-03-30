@@ -15,6 +15,16 @@ interface EditorProps {
 }
 
 export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
+    const [localQuestions, setLocalQuestions] = useState<AssessmentQuestion[]>(questions);
+
+    useEffect(() => {
+        // Only sync from props if local is empty (initial load) or lengths mismatch significantly (e.g. external sync)
+        // to avoid overwriting mid-edit states
+        if (localQuestions.length === 0 && questions.length > 0) {
+            setLocalQuestions(questions);
+        }
+    }, [questions]);
+
     const [editingId, setEditingId] = useState<string | null>(null);
     const [activeEditor, setActiveEditor] = useState<string | null>(null);
     const [activeFormats, setActiveFormats] = useState<FormatState>({
@@ -36,15 +46,18 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
     const editorRefs = useRef<Record<string, RichTextEditorRef | null>>({});
 
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem, dragOverItem } = useSortableList({
-        items: questions,
-        onReorder: (newItems: any) => onUpdateBoard({ assessmentQuestions: newItems })
+        items: localQuestions,
+        onReorder: (newItems: any) => {
+            setLocalQuestions(newItems);
+            onUpdateBoard({ assessmentQuestions: newItems });
+        }
     });
 
     const { totalMarks, sectionScores } = useMemo(() => {
         let total = 0;
         const sScores: Record<string, number> = {};
         let currentSectionId = '';
-        questions.forEach(q => {
+        localQuestions.forEach(q => {
             if (q.type === 'section') {
                 currentSectionId = q.id;
                 sScores[currentSectionId] = 0;
@@ -55,35 +68,44 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
             }
         });
         return { totalMarks: total, sectionScores: sScores };
-    }, [questions]);
+    }, [localQuestions]);
 
     const addQuestion = (type: 'mcq' | 'essay' | 'section') => {
         const newQ: AssessmentQuestion = {
             id: Math.random().toString(36).substr(2, 9),
-            type, text: type === 'section' ? 'New Section' : '', notes: '',
+            type, text: type === 'section' ? 'New Section' : '', notes: '', modelAnswer: '',
             options: type === 'mcq' ? ['', ''] : undefined,
             correctAnswer: type === 'mcq' ? '0' : undefined,
             points: type === 'section' ? 0 : (type === 'mcq' ? 1 : 5),
             responseType: 'text',
             answerAreaFormat: 'box', // Default format
         };
-        const newQuestions = [...questions, newQ];
-        onUpdateBoard({ assessmentQuestions: newQuestions });
+        setLocalQuestions(prev => {
+            const next = [...prev, newQ];
+            onUpdateBoard({ assessmentQuestions: next });
+            return next;
+        });
         setEditingId(newQ.id);
     };
 
-    const updateQuestion = (id: string, updates: Partial<AssessmentQuestion>) => {
-        const newQuestions = questions.map(q => q.id === id ? { ...q, ...updates } : q);
-        onUpdateBoard({ assessmentQuestions: newQuestions });
-    };
+    const updateQuestion = useCallback((id: string, updates: Partial<AssessmentQuestion>) => {
+        setLocalQuestions(prev => {
+            const next = prev.map(q => q.id === id ? { ...q, ...updates } : q);
+            onUpdateBoard({ assessmentQuestions: next });
+            return next;
+        });
+    }, [onUpdateBoard]);
 
     const deleteQuestion = (id: string) => {
-        const newQuestions = questions.filter(q => q.id !== id);
-        onUpdateBoard({ assessmentQuestions: newQuestions });
+        setLocalQuestions(prev => {
+            const next = prev.filter(q => q.id !== id);
+            onUpdateBoard({ assessmentQuestions: next });
+            return next;
+        });
         if (editingId === id) setEditingId(null);
     };
 
-    const getQuestionNumber = (index: number) => questions.slice(0, index + 1).filter(q => q.type !== 'section').length;
+    const getQuestionNumber = (index: number) => localQuestions.slice(0, index + 1).filter(q => q.type !== 'section').length;
 
     const handleCommand = (cmd: string, value?: string) => {
         if (activeEditor && editorRefs.current[activeEditor]) {
@@ -121,33 +143,33 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
          if (activeEditor !== editorKey) return null;
         return (
             <div className="flex flex-wrap items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('undo'); }} className={getBtnClass(false)} title="Undo (Ctrl+Z)"><Undo size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('redo'); }} className={getBtnClass(false)} title="Redo (Ctrl+Y)"><Redo size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('undo'); }} className={getBtnClass(false)} data-tooltip="Undo (Ctrl+Z)" data-tooltip-placement="bottom"><Undo size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('redo'); }} className={getBtnClass(false)} data-tooltip="Redo (Ctrl+Y)" data-tooltip-placement="bottom"><Redo size={14}/></button>
+                <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} data-tooltip="Heading 1" data-tooltip-placement="bottom"><Heading1 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} data-tooltip="Heading 2" data-tooltip-placement="bottom"><Heading2 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H3'); }} className={getBtnClass(activeFormats.h3)} data-tooltip="Heading 3" data-tooltip-placement="bottom"><Heading3 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H4'); }} className={getBtnClass(activeFormats.h4)} data-tooltip="Heading 4" data-tooltip-placement="bottom"><Heading4 size={14}/></button>
+                <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} data-tooltip="Bold (Ctrl+B)" data-tooltip-placement="bottom"><Bold size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} data-tooltip="Italic (Ctrl+I)" data-tooltip-placement="bottom"><Italic size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} data-tooltip="Underline (Ctrl+U)" data-tooltip-placement="bottom"><Underline size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('strikeThrough'); }} className={getBtnClass(activeFormats.strikeThrough)} data-tooltip="Strikethrough" data-tooltip-placement="bottom"><Strikethrough size={14}/></button>
+                <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} data-tooltip="Subscript" data-tooltip-placement="bottom"><Subscript size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} data-tooltip="Superscript" data-tooltip-placement="bottom"><Superscript size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H1'); }} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H2'); }} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H3'); }} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'H4'); }} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} data-tooltip="Bulleted List (Ctrl+Shift+8)" data-tooltip-placement="bottom"><ListIcon size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} data-tooltip="Numbered List" data-tooltip-placement="bottom"><List size={14} /></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'blockquote'); }} className={getBtnClass(activeFormats.blockquote)} data-tooltip="Blockquote" data-tooltip-placement="bottom"><Quote size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('bold'); }} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('italic'); }} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('underline'); }} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('strikeThrough'); }} className={getBtnClass(activeFormats.strikeThrough)} title="Strikethrough"><Strikethrough size={14}/></button>
-                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('subscript'); }} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('superscript'); }} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
-                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertUnorderedList'); }} className={getBtnClass(activeFormats.list)} title="Bulleted List (Ctrl+Shift+8)"><ListIcon size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('insertOrderedList'); }} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><List size={14} /></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('formatBlock', 'blockquote'); }} className={getBtnClass(activeFormats.blockquote)} title="Blockquote"><Quote size={14}/></button>
-                <div className="w-px h-4 bg-white/10 mx-1"></div>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyLeft'); }} className={getBtnClass(activeFormats.alignLeft)} title="Align Left"><AlignLeft size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyCenter'); }} className={getBtnClass(activeFormats.alignCenter)} title="Align Center"><AlignCenter size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyRight'); }} className={getBtnClass(activeFormats.alignRight)} title="Align Right"><AlignRight size={14}/></button>
-                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyFull'); }} className={getBtnClass(activeFormats.alignJustify)} title="Justify"><AlignJustify size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyLeft'); }} className={getBtnClass(activeFormats.alignLeft)} data-tooltip="Align Left" data-tooltip-placement="bottom"><AlignLeft size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyCenter'); }} className={getBtnClass(activeFormats.alignCenter)} data-tooltip="Align Center" data-tooltip-placement="bottom"><AlignCenter size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyRight'); }} className={getBtnClass(activeFormats.alignRight)} data-tooltip="Align Right" data-tooltip-placement="bottom"><AlignRight size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); handleCommand('justifyFull'); }} className={getBtnClass(activeFormats.alignJustify)} data-tooltip="Justify" data-tooltip-placement="bottom"><AlignJustify size={14}/></button>
                 <div className="w-px h-4 bg-white/10 mx-1"></div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if(e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
-                <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isUploading === editorKey ? 'text-yellow-500' : ''}`} title="Upload Image" disabled={!!isUploading}>
+                <button onClick={() => fileInputRef.current?.click()} className={`${getBtnClass(false)} ${isUploading === editorKey ? 'text-yellow-500' : ''}`} data-tooltip="Upload Image" data-tooltip-placement="bottom" disabled={!!isUploading}>
                     {isUploading === editorKey ? <Loader2 size={14} className="animate-spin"/> : <Image size={14}/>}
                 </button>
             </div>
@@ -163,7 +185,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                     <div className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs font-bold border border-blue-500/30 flex items-center gap-1"><Calculator size={12} />Total: {totalMarks} Marks</div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                    {questions.map((q, idx) => (
+                    {localQuestions.map((q, idx) => (
                         <div key={q.id} draggable onDragStart={(e) => handleDragStart(e, q)} onDragEnter={(e) => handleDragEnter(e, q)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} onClick={() => setEditingId(q.id)}
                             className={`group relative p-3 rounded-lg cursor-pointer border transition-all select-none ${editingId === q.id ? 'bg-blue-600/10 border-blue-500/50 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/5'} ${draggedItem?.id === q.id ? 'opacity-30' : ''} ${dragOverItem?.id === q.id && draggedItem?.id !== q.id ? 'border-t-2 border-t-blue-500' : ''}`}>
                              <div className="flex items-center gap-2 mb-1">
@@ -176,7 +198,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                 ) : (
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-2"><span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ${editingId === q.id ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-400'}`}>{getQuestionNumber(idx)}</span><span className="text-[10px] text-gray-500 uppercase font-medium">{q.type}</span></div>
-                                        <span className={`ml-auto text-[10px] font-mono font-bold px-1.5 rounded ${editingId === q.id ? 'text-blue-300' : 'text-gray-500'}`}>{q.points} Marks</span>
+                                        <span className={`ml-auto text-[10px] font-bold px-1.5 rounded ${editingId === q.id ? 'text-blue-300' : 'text-gray-500'}`}>{q.points} Marks</span>
                                     </div>
                                 )}
                             </div>
@@ -185,7 +207,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                             </div>
                         </div>
                     ))}
-                    {questions.length === 0 && <div className="text-center py-10 text-gray-500 text-xs">No questions yet.</div>}
+                    {localQuestions.length === 0 && <div className="text-center py-10 text-gray-500 text-xs">No questions yet.</div>}
                 </div>
                 <div className="p-3 border-t border-white/10 grid grid-cols-3 gap-2 bg-[#1a1a1a]">
                     <button onClick={() => addQuestion('section')} className="bg-yellow-900/20 hover:bg-yellow-900/40 text-yellow-500 border border-yellow-500/30 p-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center gap-1 transition-colors"><Layout size={14}/> Section</button>
@@ -196,8 +218,8 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
 
             {/* Editor Panel */}
             <div className="flex-1 bg-[#111] p-6 md:p-10 overflow-y-auto custom-scrollbar">
-                {editingId && questions.find(qu => qu.id === editingId) ? (() => {
-                    const q = questions.find(qu => qu.id === editingId)!;
+                {editingId && localQuestions.find(qu => qu.id === editingId) ? (() => {
+                    const q = localQuestions.find(qu => qu.id === editingId)!;
                     const isSection = q.type === 'section';
                     const editorFocusHandler = (key: string) => { setActiveEditor(key); };
 
@@ -221,18 +243,27 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isSection ? 'Section Title' : 'Question Prompt'}</label>
                                     <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-text` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-text`)}>
                                         {renderToolbar(`${q.id}-text`)}
-                                        <DebouncedRichTextEditor id={`${q.id}-text`} ref={(el: any) => (editorRefs.current[`${q.id}-text`] = el)} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
+                                        <DebouncedRichTextEditor key={`${q.id}-text`} id={`${q.id}-text`} ref={(el: any) => (editorRefs.current[`${q.id}-text`] = el)} value={q.text} onChange={(val: string) => updateQuestion(q.id, { text: val })} onFormatChange={setActiveFormats} placeholder="Type your question here..." className="w-full text-base text-white placeholder-white/20 min-h-[100px] focus:outline-none p-2" />
                                     </div>
                                 </div>
 
                                 {!isSection && (
-                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Model Answer / Teacher Key</label>
-                                        <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-notes` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-notes`)}>
-                                            {renderToolbar(`${q.id}-notes`)}
-                                            <DebouncedRichTextEditor id={`${q.id}-notes`} ref={(el: any) => (editorRefs.current[`${q.id}-notes`] = el)} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Provide a model answer, grading rubric, or key points..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
+                                     <>
+                                         <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><List size={12}/> Notes / Answering Guide (Visible to students)</label>
+                                            <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-notes` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-notes`)}>
+                                                {renderToolbar(`${q.id}-notes`)}
+                                                <DebouncedRichTextEditor key={`${q.id}-notes`} id={`${q.id}-notes`} ref={(el: any) => (editorRefs.current[`${q.id}-notes`] = el)} value={q.notes || ''} onChange={(val: string) => updateQuestion(q.id, { notes: val })} onFormatChange={setActiveFormats} placeholder="Provide hints, formula sheets, or formatting instructions..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
+                                            </div>
                                         </div>
-                                    </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><FileText size={12}/> Model Answer (Hidden from students, shown on graded report)</label>
+                                            <div className={`bg-[#111] border rounded-xl p-2 focus-within:border-blue-500 transition-colors ${activeEditor === `${q.id}-modelAnswer` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-modelAnswer`)}>
+                                                {renderToolbar(`${q.id}-modelAnswer`)}
+                                                <DebouncedRichTextEditor key={`${q.id}-modelAnswer`} id={`${q.id}-modelAnswer`} ref={(el: any) => (editorRefs.current[`${q.id}-modelAnswer`] = el)} value={q.modelAnswer || ''} onChange={(val: string) => updateQuestion(q.id, { modelAnswer: val })} onFormatChange={setActiveFormats} placeholder="Provide a model answer or grading rubric..." className="w-full text-sm text-white placeholder-white/20 min-h-[60px] focus:outline-none p-2" />
+                                            </div>
+                                        </div>
+                                     </>
                                 )}
 
                                 {!isSection && <div className="grid grid-cols-2 gap-6 p-4 bg-[#111] rounded-xl border border-white/5">
@@ -273,7 +304,7 @@ export const Editor: React.FC<EditorProps> = ({ questions, onUpdateBoard }) => {
                                                     <button onClick={() => updateQuestion(q.id, { correctAnswer: idx.toString() })} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 mt-8 ${q.correctAnswer === idx.toString() ? 'border-green-500 bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-gray-600 hover:border-gray-400 bg-transparent text-transparent'}`}><CheckCircle size={16}/></button>
                                                     <div className={`flex-1 bg-[#111] border rounded-lg text-sm text-white outline-none focus-within:border-blue-500 transition-colors p-2 ${q.correctAnswer === idx.toString() ? 'border-green-500/30 bg-green-900/10' : 'border-white/10'} ${activeEditor === `${q.id}-options-${idx}` ? 'border-blue-500' : 'border-white/10'}`} onFocus={() => editorFocusHandler(`${q.id}-options-${idx}`)}>
                                                         {renderToolbar(`${q.id}-options-${idx}`)}
-                                                        <DebouncedRichTextEditor id={`${q.id}-options-${idx}`} ref={(el: any) => (editorRefs.current[`${q.id}-options-${idx}`] = el)} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
+                                                        <DebouncedRichTextEditor key={`${q.id}-options-${idx}`} id={`${q.id}-options-${idx}`} ref={(el: any) => (editorRefs.current[`${q.id}-options-${idx}`] = el)} value={opt} onChange={(val: string) => {const newOpts = [...(q.options || [])]; newOpts[idx] = val; updateQuestion(q.id, { options: newOpts });}} onFormatChange={setActiveFormats} placeholder={`Option ${idx + 1}`} className="w-full text-sm text-white placeholder-white/20 min-h-[30px] focus:outline-none p-2"/>
                                                     </div>
                                                     <button onClick={() => updateQuestion(q.id, { options: q.options?.filter((_, i) => i !== idx) })} className="absolute right-3 top-3 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><X size={16}/></button>
                                                 </div>

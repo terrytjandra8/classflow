@@ -65,7 +65,7 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                 <div className="flex items-center gap-2">
                     {effectiveImageUrl && (
                         <button
-                            title="View Full Image"
+                            data-tooltip="View Full Image"
                             onClick={() => setLightboxImageUrl(effectiveImageUrl)}
                             className="text-gray-400 hover:text-white"
                         >
@@ -74,7 +74,7 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                     )}
                     {question.type === 'essay' && (
                          <button
-                            title={rawView ? "Show Formatted View" : "Show Raw HTML"}
+                            data-tooltip={rawView ? "Show Formatted View" : "Show Raw HTML"}
                             onClick={() => setRawView(prev => ({...prev, [qId]: !prev[qId]}))}
                             className={rawView ? "text-blue-400 hover:text-blue-300" : "text-gray-400 hover:text-white"}
                         >
@@ -82,14 +82,14 @@ export const StudentAnswer: React.FC<StudentAnswerProps> = ({
                         </button>
                     )}
                      <button
-                        title="Upload Corrected Answer"
+                        data-tooltip="Upload Corrected Answer"
                         onClick={() => onImageUpload(qId)}
                         className="text-gray-400 hover:text-white"
                     >
                         <FiUploadCloud />
                     </button>
                     <button
-                        title="Clear Answer"
+                        data-tooltip="Clear Answer"
                         onClick={() => onClear(qId)}
                         className="text-red-500 hover:text-red-400"
                     >

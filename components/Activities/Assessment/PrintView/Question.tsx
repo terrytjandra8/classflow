@@ -12,6 +12,7 @@ interface PrintQuestionProps {
     isRealStudent: boolean;
     isBlankCopy: boolean;
     includeFeedback?: boolean;
+    showModelAnswer?: boolean;
 }
 
 const AnswerArea = ({ question, isBlank, studentAnswer }: { question: AssessmentQuestion, isBlank: boolean, studentAnswer?: string }) => {
@@ -75,14 +76,14 @@ const AnswerArea = ({ question, isBlank, studentAnswer }: { question: Assessment
     }
 
     return (
-        <div style={{ border: '1px solid #000', padding: '10px', minHeight: `${minHeight}px`, fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}
+        <div style={{ border: '1px solid #000', padding: '10px', fontSize: '11pt', backgroundColor: '#fff', color: 'black' }}
              dangerouslySetInnerHTML={{ __html: parsedText || '' }}
         />
     );
 };
 
 export const PrintQuestion: React.FC<PrintQuestionProps> = ({
-    q, qNum, answer, gradeInfo, isMasterKey, isRealStudent, isBlankCopy, includeFeedback = true
+    q, qNum, answer, gradeInfo, isMasterKey, isRealStudent, isBlankCopy, includeFeedback = true, showModelAnswer = false
 }) => {
     const isMCQ = q.type === 'mcq';
     const obtained = gradeInfo?.score !== undefined ? gradeInfo.score : (isMCQ && answer === q.correctAnswer ? q.points : 0);
@@ -133,24 +134,30 @@ export const PrintQuestion: React.FC<PrintQuestionProps> = ({
                     </div>
                 ) : (
                     <div style={{ marginTop: '10px' }}>
-                        {isMasterKey && !isBlankCopy ? (
-                            <div style={{ border: '1px solid black', padding: '10px', fontSize: '11pt', backgroundColor: '#f0f0f0', minHeight: `${blankMinHeight}px` }}>
-                                <strong style={{ color: 'black', display: 'block', fontSize: '9pt', marginBottom: '4px' }}>TEACHER KEY:</strong>
-                                <div dangerouslySetInnerHTML={{ __html: q.notes || '<em>No model answer provided.</em>' }} />
+                        {/* Always show student answer area if it's not a master key view */}
+                        {!isMasterKey && (
+                            <div style={{ marginBottom: (isMasterKey || showModelAnswer) ? '10px' : '0' }}>
+                                <AnswerArea 
+                                    question={q} 
+                                    isBlank={isBlankCopy || (!isMasterKey && !answer)}
+                                    studentAnswer={isBlankCopy ? '' : answer}
+                                />
                             </div>
-                        ) : (
-                            <AnswerArea 
-                                question={q} 
-                                isBlank={isBlankCopy || (!isMasterKey && !answer)}
-                                studentAnswer={isBlankCopy ? '' : answer}
-                            />
+                        )}
+
+                        {/* Show Model Answer if requested */}
+                        {(isMasterKey || showModelAnswer) && !isBlankCopy && (
+                            <div style={{ border: '1px solid #555', borderLeft: '4px solid #333', padding: '10px', fontSize: '11pt', backgroundColor: '#fff', marginTop: !isMasterKey ? '10px' : '0' }}>
+                                <strong style={{ color: 'black', display: 'block', fontSize: '9pt', marginBottom: '4px' }}>TEACHER KEY:</strong>
+                                <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.modelAnswer || q.notes || '<em>No reference answer provided.</em>') }} />
+                            </div>
                         )}
                     </div>
                 )}
                 
                 {isRealStudent && includeFeedback && gradeInfo?.feedback && (
                     <div style={{ marginTop: '8px', paddingLeft: '8px', borderLeft: '2px solid black', fontSize: '10pt', paddingTop: '2px', paddingBottom: '2px' }}>
-                        <strong>Feedback:</strong> <span dangerouslySetInnerHTML={{ __html: gradeInfo.feedback }} />
+                        <strong>Feedback:</strong> <span className="rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(gradeInfo.feedback) }} />
                     </div>
                 )}
             </div>

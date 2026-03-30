@@ -45,8 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       joinError, isJoining,
       handleJoinSubmit,
       userEmail, isSuperAdmin, isStudent,
-      selectedClass, setSelectedClass,
-      classList, studentClasses,
+      selectedClass, setSelectedClass, classList, studentClasses, classes, setClasses,
       showClassMenu, setShowClassMenu,
       showProfileMenu, setShowProfileMenu,
       profileMenuRef,
@@ -299,6 +298,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 isStudent={isStudent}
                 selectedClass={selectedClass}
                 studentClasses={studentClasses}
+                classes={classes}
+                setClasses={setClasses}
              />
           )}
           

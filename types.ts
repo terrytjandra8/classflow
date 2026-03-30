@@ -163,6 +163,7 @@ export interface AssessmentQuestion {
     id: string;
     type: 'mcq' | 'essay' | 'section';
     notes?: string;
+    modelAnswer?: string; // NEW: Hidden teacher model answer
     text: string;
     options?: string[]; // For MCQ
     correctAnswer?: string; // For MCQ (index or text)

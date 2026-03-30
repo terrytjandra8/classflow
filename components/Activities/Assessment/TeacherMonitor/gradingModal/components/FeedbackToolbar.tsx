@@ -29,19 +29,19 @@ export const FeedbackToolbar: React.FC<FeedbackToolbarProps> = ({ editorRef, onI
 
     return (
         <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] rounded-t-xl overflow-x-auto no-scrollbar">
-            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h1')} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
-            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h2')} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
-            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h3')} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
-            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h4')} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
-            <div className="w-px h-4 bg-white/10 mx-1"></div>
-            <button onMouseDown={(e) => handleMouseDown(e, 'bold')} className={getBtnClass(activeFormats.bold)} title="Bold"><Bold size={14}/></button>
-            <button onMouseDown={(e) => handleMouseDown(e, 'italic')} className={getBtnClass(activeFormats.italic)} title="Italic"><Italic size={14}/></button>
-            <button onMouseDown={(e) => handleMouseDown(e, 'underline')} className={getBtnClass(activeFormats.underline)} title="Underline"><Underline size={14}/></button>
-            <div className="w-px h-4 bg-white/10 mx-1"></div>
-            <button onMouseDown={(e) => handleMouseDown(e, 'insertUnorderedList')} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
-            <button onMouseDown={(e) => handleMouseDown(e, 'insertOrderedList')} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
-            <div className="w-px h-4 bg-white/10 mx-1"></div>
-            <button onMouseDown={(e) => { e.preventDefault(); onImageUpload(); }} className={getBtnClass(false)} title="Upload Image"><ImagePlus size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h1')} className={getBtnClass(activeFormats.h1)} data-tooltip="Heading 1"><Heading1 size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h2')} className={getBtnClass(activeFormats.h2)} data-tooltip="Heading 2"><Heading2 size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h3')} className={getBtnClass(activeFormats.h3)} data-tooltip="Heading 3"><Heading3 size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'inline-h4')} className={getBtnClass(activeFormats.h4)} data-tooltip="Heading 4"><Heading4 size={14}/></button>
+            <div className="w-px h-4 bg-white/10 mx-1" />
+            <button onMouseDown={(e) => handleMouseDown(e, 'bold')} className={getBtnClass(activeFormats.bold)} data-tooltip="Bold"><Bold size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'italic')} className={getBtnClass(activeFormats.italic)} data-tooltip="Italic"><Italic size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'underline')} className={getBtnClass(activeFormats.underline)} data-tooltip="Underline"><Underline size={14}/></button>
+            <div className="w-px h-4 bg-white/10 mx-1" />
+            <button onMouseDown={(e) => handleMouseDown(e, 'insertUnorderedList')} className={getBtnClass(activeFormats.list)} data-tooltip="Bulleted List"><List size={14}/></button>
+            <button onMouseDown={(e) => handleMouseDown(e, 'insertOrderedList')} className={getBtnClass(activeFormats.orderedList)} data-tooltip="Numbered List"><ListOrdered size={14}/></button>
+            <div className="w-px h-4 bg-white/10 mx-1" />
+            <button onMouseDown={(e) => { e.preventDefault(); onImageUpload(); }} className={getBtnClass(false)} data-tooltip="Upload Image"><ImagePlus size={14}/></button>
         </div>
     );
 };

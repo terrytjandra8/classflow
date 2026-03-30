@@ -1,15 +1,14 @@
-
 import React from 'react';
 import { Search, Hash, Clock, User, Trash2, Heart, Database, Quote, Folder, GripVertical, Globe, ShieldCheck } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { ClassGroup } from '../../types';
 import { useSortableList } from '../../src/logic/dnd/useSortableList';
 import { classService } from '../../services/classService';
-import { useAdminData } from '../../hooks/useAdminData'; // CORRECTED IMPORT
 
-interface SidebarProps {
+export interface SidebarProps {
     username: string;
     userAvatar: string | null;
+    userId?: string;
     theme: 'light' | 'dark';
     sidebarFilter: string;
     setSidebarFilter: (filter: string) => void;
@@ -18,18 +17,18 @@ interface SidebarProps {
     onJoinBoard: () => void;
     onOpenSetup: () => void;
     filter: string;
-    setFilter: (val: string) => void;
+    setFilter: (f: string) => void;
     randomQuote: string;
     isSuperAdmin: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
-    username, userAvatar, theme, sidebarFilter, setSidebarFilter, 
+    username, userAvatar, userId, theme, sidebarFilter, setSidebarFilter, 
     classes, setClasses,
     onJoinBoard, onOpenSetup, filter, setFilter, randomQuote, isSuperAdmin
 }) => {
     
-    const { userId } = useAdminData(); // CORRECTED: Use the existing hook to get userId
+    // const { userId } = useAdminData(); // REMOVED: Use the prop instead for better performance and consistency
 
     const { handleDragStart, handleDragEnter, handleDragEnd, draggedItem } = useSortableList({
         items: classes,
@@ -43,8 +42,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         classService.reorderClasses(classes);
     };
 
-    // Filter classes to only show ones owned by the current user
-    const myClasses = classes.filter(cls => cls.owner_id === userId);
+    // Filter classes to only show ones owned by the current user or legacy classes (no owner)
+    // This matches the logic in adminService.fetchStats to ensure consistency with the Admin Dashboard
+    const myClasses = userId ? classes.filter(cls => cls.owner_id === userId || !cls.owner_id) : [];
 
     return (
         <>

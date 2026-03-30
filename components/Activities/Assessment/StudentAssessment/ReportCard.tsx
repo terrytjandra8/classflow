@@ -6,6 +6,7 @@ import { useBoard } from '../../../BoardView/BoardContext';
 import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView, PrintMode } from '../AssessmentPrintView';
 import { parseMath } from '../../../../utils/mappers';
+import { stripHtml } from '../../../RichTextEditor';
 
 interface ReportCardProps {
     board: Board;
@@ -132,7 +133,14 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
                 {questions.map((q, idx) => {
                     if (q.type === 'section') {
-                        return <h3 key={q.id} className="text-xl font-bold border-b border-white/10 pb-2 mt-8 text-yellow-500 uppercase">{q.text}</h3>;
+                        return (
+                            <div key={q.id} className="pt-8 first:pt-0">
+                                <h3 
+                                    className="text-xl font-black border-b-2 border-blue-500/30 pb-2 text-blue-500 uppercase tracking-widest mb-4 rich-text-content"
+                                    dangerouslySetInnerHTML={{ __html: parseMath(q.text) }}
+                                />
+                            </div>
+                        );
                     }
 
                     const grading = submissionData?.grading?.[q.id];
@@ -143,36 +151,76 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     const qNum = questions.filter((item, i) => i <= idx && item.type !== 'section').length;
 
                     return (
-                        <div key={q.id} className="bg-[#1a1a1a] rounded-xl border border-white/10 overflow-hidden">
-                            <div className="p-4 bg-[#222] border-b border-white/5 flex justify-between items-center">
-                                <h4 className="font-bold text-sm text-gray-300">Question {qNum}</h4>
-                                <span className={`text-xs font-bold px-2 py-1 rounded ${score === q.points ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                    {score} / {q.points} pts
+                        <div key={q.id} className="bg-[#1a1a1a] rounded-xl border border-white/5 overflow-hidden transition-all">
+                            <div className="p-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
+                                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Question {qNum}</h4>
+                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border ${score === q.points ? 'bg-green-500/10 text-green-400 border-green-500/20' : (score === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20')}`}>
+                                    {score} / {q.points} marks
                                 </span>
                             </div>
-                            <div className="p-6 space-y-4">
-                                <div className="font-medium text-lg rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
-                                <div className="bg-black/30 p-4 rounded-lg border border-white/5">
-                                    <span className="block text-xs font-bold text-gray-500 uppercase mb-2">Your Answer</span>
-                                    {q.type === 'mcq' ? (
-                                        <div className="text-gray-300">
-                                            {q.options && studentAns ? q.options[parseInt(studentAns)] : <span className="italic text-gray-500">No Answer</span>}
-                                            {q.correctAnswer && <span className="ml-2 text-xs text-gray-500">(Correct: {q.options?.[parseInt(q.correctAnswer)]})</span>}
+                            <div className="p-6 space-y-6">
+                                <div className="text-lg font-bold leading-relaxed rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
+                                
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Left: Student Answer */}
+                                    <div className="bg-black/30 p-5 rounded-xl border border-white/5">
+                                        <span className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Your Submission</span>
+                                        {q.type === 'mcq' ? (
+                                            <div className="space-y-4">
+                                                {q.options?.map((opt, oIdx) => {
+                                                    const val = oIdx.toString();
+                                                    const isSelected = studentAns === val;
+                                                    const isCorrect = q.correctAnswer === val;
+                                                    return (
+                                                        <div key={oIdx} className={`p-3 rounded-lg border flex items-center gap-3 ${isSelected ? (isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5') : 'border-white/5 opacity-60'}`}>
+                                                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected ? (isCorrect ? 'border-green-500' : 'border-red-500') : 'border-gray-600'}`}>
+                                                                {isSelected && <div className={`w-2 h-2 rounded-full ${isCorrect ? 'bg-green-500' : 'bg-red-500'}`} />}
+                                                            </div>
+                                                            <div className="rich-text-content text-sm" dangerouslySetInnerHTML={{ __html: parseMath(opt) }} />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {drawingUrl && (
+                                                    <div className="mb-3 p-2 bg-white rounded-lg inline-block border border-gray-200 max-w-full overflow-hidden shadow-sm">
+                                                        <img src={drawingUrl} alt="Drawing" className="max-w-full h-auto rounded" />
+                                                    </div>
+                                                )}
+                                                {textContent && <div className="text-sm text-gray-300 rich-text-content leading-relaxed" dangerouslySetInnerHTML={{ __html: textContent }} />}
+                                                {!drawingUrl && !textContent && <span className="italic text-gray-500 opacity-50">No Answer Provided</span>}
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Right: Model Answer */}
+                                    <div className="bg-emerald-500/5 p-5 rounded-xl border border-emerald-500/20">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Model Answer</span>
+                                            <FileText size={14} className="text-emerald-500 opacity-50" />
                                         </div>
-                                    ) : (
-                                        <>
-                                            {drawingUrl && <img src={drawingUrl} alt="Drawing" className="max-w-full h-auto rounded border border-white/10 bg-white mb-2" />}
-                                            {textContent && <p className="whitespace-pre-wrap text-gray-300">{textContent}</p>}
-                                            {!drawingUrl && !textContent && <span className="italic text-gray-500">No Answer</span>}
-                                        </>
-                                    )}
+                                        {q.type === 'mcq' ? (
+                                            <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                                                <span className="text-[10px] font-black text-emerald-500 uppercase block mb-1">Correct Option</span>
+                                                <div className="text-emerald-50 font-bold" dangerouslySetInnerHTML={{ __html: q.options?.[parseInt(q.correctAnswer || '0')] || '' }} />
+                                            </div>
+                                        ) : (
+                                            <div 
+                                                className="text-sm text-emerald-100 rich-text-content leading-relaxed" 
+                                                dangerouslySetInnerHTML={{ __html: parseMath(q.modelAnswer || q.notes || '<em>No reference answer provided.</em>') }} 
+                                            />
+                                        )}
+                                    </div>
                                 </div>
 
                                 {feedback && (
-                                    <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg flex gap-3 animate-in fade-in slide-in-from-top-2">
-                                        <MessageSquare size={18} className="text-blue-400 shrink-0 mt-1" />
+                                    <div className="bg-blue-600/10 border border-blue-500/20 p-5 rounded-xl flex gap-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                                            <MessageSquare size={20} className="text-blue-400" />
+                                        </div>
                                         <div className="flex-1 min-w-0">
-                                            <span className="text-xs font-bold text-blue-400 uppercase block mb-1">Teacher Feedback</span>
+                                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] block mb-2">Teacher Feedback</span>
                                             <div className="text-sm text-blue-100 rich-text-content leading-relaxed" dangerouslySetInnerHTML={{ __html: parseMath(feedback) }} />
                                         </div>
                                     </div>

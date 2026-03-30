@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import { AssessmentQuestion, AssessmentConfig } from '../../../../../types';
 import { Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Minus, Square, PenTool, ShieldAlert, Check, Heading1, Heading2, Heading3, Heading4 } from 'lucide-react';
-import { RichTextEditor, FormatState, getActiveFormat, RichTextEditorRef, DebouncedRichTextEditor } from '../../../../RichTextEditor';
+import { RichTextEditor, FormatState, getActiveFormat, RichTextEditorRef, DebouncedRichTextEditor, stripHtml } from '../../../../RichTextEditor';
 import { parseMath } from '../../../../../utils/mappers';
 import { countQualityWords } from '../../../../../utils/validation';
 
@@ -91,7 +91,8 @@ export const QuestionItem = memo(({
 
     
     const renderedText = parseMath(q.text);
-    const renderedNotes = q.notes ? parseMath(q.notes) : null;
+    const hasValidNotes = q.notes && stripHtml(q.notes).trim().length > 0;
+    const renderedNotes = hasValidNotes ? parseMath(q.notes!) : null;
 
     const handleCommand = (cmd: string, value?: string) => {
         if (cmd === 'formatBlock' && value === 'box') {
@@ -177,6 +178,7 @@ export const QuestionItem = memo(({
                                             <button 
                                                 onClick={() => setActiveDrawingQId(q.id)}
                                                 className="bg-white text-black px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"
+                                                data-tooltip="Modify your existing drawing"
                                             >
                                                 <PenTool size={16}/> Edit Drawing
                                             </button>
@@ -189,6 +191,7 @@ export const QuestionItem = memo(({
                                         onClick={() => setActiveDrawingQId(q.id)}
                                         disabled={isReadingMode || isReadOnly}
                                         className="flex items-center gap-2 text-xs font-bold text-purple-400 hover:text-white bg-purple-500/10 px-3 py-1.5 rounded-lg border border-purple-500/30 transition-colors disabled:opacity-50"
+                                        data-tooltip="Open drawing canvas to sketch your answer"
                                     >
                                         <PenTool size={14} /> Draw Answer
                                     </button>
@@ -201,23 +204,23 @@ export const QuestionItem = memo(({
                         <div className={`relative bg-[#111] border rounded-xl focus-within:border-blue-500 transition-colors ${isReadingMode || isReadOnly ? 'border-transparent opacity-70' : 'border-white/10'}`}>
                             {!(isReadingMode || isReadOnly) && (
                                 <div className="flex items-center gap-1 p-1 border-b border-white/10 bg-[#111] sticky top-0 z-10 rounded-t-xl overflow-x-auto no-scrollbar">
-                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H1')} className={getBtnClass(activeFormats.h1)} title="Heading 1"><Heading1 size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H2')} className={getBtnClass(activeFormats.h2)} title="Heading 2"><Heading2 size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H3')} className={getBtnClass(activeFormats.h3)} title="Heading 3"><Heading3 size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H4')} className={getBtnClass(activeFormats.h4)} title="Heading 4"><Heading4 size={14}/></button>
-                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => handleMouseDown(e, 'bold')} className={getBtnClass(activeFormats.bold)} title="Bold (Ctrl+B)"><Bold size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'italic')} className={getBtnClass(activeFormats.italic)} title="Italic (Ctrl+I)"><Italic size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'underline')} className={getBtnClass(activeFormats.underline)} title="Underline (Ctrl+U)"><Underline size={14}/></button>
-                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => handleMouseDown(e, 'subscript')} className={getBtnClass(activeFormats.subscript)} title="Subscript"><Subscript size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'superscript')} className={getBtnClass(activeFormats.superscript)} title="Superscript"><Superscript size={14}/></button>
-                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => handleMouseDown(e, 'insertUnorderedList')} className={getBtnClass(activeFormats.list)} title="Bulleted List"><List size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'insertOrderedList')} className={getBtnClass(activeFormats.orderedList)} title="Numbered List"><ListOrdered size={14}/></button>
-                                    <div className="w-px h-4 bg-white/10 mx-1"></div>
-                                    <button onMouseDown={e => handleMouseDown(e, 'insertHorizontalRule')} className={getBtnClass(activeFormats.strikeThrough)} title="Line"><Minus size={14}/></button>
-                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'box')} className={getBtnClass(activeFormats.box)} title="Box"><Square size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H1')} className={getBtnClass(activeFormats.h1)} data-tooltip="Heading 1" data-tooltip-placement="bottom"><Heading1 size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H2')} className={getBtnClass(activeFormats.h2)} data-tooltip="Heading 2" data-tooltip-placement="bottom"><Heading2 size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H3')} className={getBtnClass(activeFormats.h3)} data-tooltip="Heading 3" data-tooltip-placement="bottom"><Heading3 size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'H4')} className={getBtnClass(activeFormats.h4)} data-tooltip="Heading 4" data-tooltip-placement="bottom"><Heading4 size={14}/></button>
+                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                    <button onMouseDown={e => handleMouseDown(e, 'bold')} className={getBtnClass(activeFormats.bold)} data-tooltip="Bold (Ctrl+B)" data-tooltip-placement="bottom"><Bold size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'italic')} className={getBtnClass(activeFormats.italic)} data-tooltip="Italic (Ctrl+I)" data-tooltip-placement="bottom"><Italic size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'underline')} className={getBtnClass(activeFormats.underline)} data-tooltip="Underline (Ctrl+U)" data-tooltip-placement="bottom"><Underline size={14}/></button>
+                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                    <button onMouseDown={e => handleMouseDown(e, 'subscript')} className={getBtnClass(activeFormats.subscript)} data-tooltip="Subscript" data-tooltip-placement="bottom"><Subscript size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'superscript')} className={getBtnClass(activeFormats.superscript)} data-tooltip="Superscript" data-tooltip-placement="bottom"><Superscript size={14}/></button>
+                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                    <button onMouseDown={e => handleMouseDown(e, 'insertUnorderedList')} className={getBtnClass(activeFormats.list)} data-tooltip="Bulleted List" data-tooltip-placement="bottom"><List size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'insertOrderedList')} className={getBtnClass(activeFormats.orderedList)} data-tooltip="Numbered List" data-tooltip-placement="bottom"><ListOrdered size={14}/></button>
+                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                    <button onMouseDown={e => handleMouseDown(e, 'insertHorizontalRule')} className={getBtnClass(activeFormats.strikeThrough)} data-tooltip="Line" data-tooltip-placement="bottom"><Minus size={14}/></button>
+                                    <button onMouseDown={e => handleMouseDown(e, 'formatBlock', 'box')} className={getBtnClass(activeFormats.box)} data-tooltip="Box" data-tooltip-placement="bottom"><Square size={14}/></button>
                                 </div>
                             )}
                             <DebouncedRichTextEditor 

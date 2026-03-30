@@ -11,6 +11,7 @@ interface GradingModalProps {
     participant: any;
     onClose: () => void;
     questions: AssessmentQuestion[];
+    boardId: string;
     onSave: (grades: Record<string, { score: number, feedback: string }>, release: boolean, retryIds?: string[]) => Promise<boolean>; // Returns true on success
     onAutoSave: (
         grades: Record<string, { score: number, feedback: string }>,
@@ -19,7 +20,7 @@ interface GradingModalProps {
 }
 
 export const GradingModal: React.FC<GradingModalProps> = ({ 
-    isOpen, participant, onClose, questions, onSave, onAutoSave 
+    isOpen, participant, onClose, questions, boardId, onSave, onAutoSave 
 }) => {
     const {
         currentAnswers,
@@ -40,7 +41,7 @@ export const GradingModal: React.FC<GradingModalProps> = ({
         handleFeedbackImageUpload,
         handleToggleQuestionToRevise,
         totalScore,
-    } = useGradingState({ isOpen, participant, questions, onAutoSave });
+    } = useGradingState({ isOpen, participant, questions, boardId, onAutoSave });
 
     const handleSaveAndClose = async (release: boolean) => {
         const success = await onSave(currentGrades, release, Array.from(questionsToRevise));
@@ -76,7 +77,10 @@ export const GradingModal: React.FC<GradingModalProps> = ({
                 <Lightbox imageUrl={lightboxImageUrl} onClose={() => setLightboxImageUrl(null)} />
             )}
             <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl">
+                <div 
+                    style={{ resize: 'both', overflow: 'hidden', minWidth: '400px', minHeight: '400px', maxWidth: '98vw', maxHeight: '98vh' }}
+                    className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-[1000px] h-[90vh] flex flex-col shadow-2xl relative"
+                >
                     <GradingModalHeader
                         participantName={participant.name}
                         participantId={participant.id}

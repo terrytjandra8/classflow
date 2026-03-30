@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { classService } from '../../../services/classService';
+import { ClassGroup } from '../../../types';
 import { SUPER_ADMIN_EMAIL } from '../constants';
 
 export type TabView = 'home' | 'gallery' | 'make' | 'admin' | 'system' | 'documentation';
@@ -22,6 +23,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     
     const [selectedClass, setSelectedClassState] = useState<string>('');
     const [classList, setClassList] = useState<string[]>([]);
+    const [classes, setClasses] = useState<ClassGroup[]>([]);
     const [studentClasses, setStudentClasses] = useState<string[]>([]);
 
     const [showClassMenu, setShowClassMenu] = useState(false);
@@ -78,6 +80,8 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
             } else { // Teacher or Super Admin
                 try {
                     const data = await classService.getClasses();
+                    setClasses(data);
+
                     const names = data && data.length > 0 ? data.map(c => c.name) : [];
                     const uniqueNames = Array.from(new Set(names));
                     const fullClassList = ['All Classes', ...uniqueNames];
@@ -95,7 +99,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
                 }
             }
         }
-    }, []);
+    }, []); // Removed isStudent to prevent re-fetch loop when state updates
 
     useEffect(() => {
         fetchUserAndClasses();
@@ -150,7 +154,7 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
         activeTab, setActiveTab, showJoinModal, setShowJoinModal,
         showSetupModal, setShowSetupModal, joinCode, setJoinCode, joinError,
         isJoining, handleJoinSubmit, userEmail, isSuperAdmin, isStudent, 
-        selectedClass, setSelectedClass, classList, studentClasses,
+        selectedClass, setSelectedClass, classList, studentClasses, classes, setClasses,
         showClassMenu, setShowClassMenu, showProfileMenu, setShowProfileMenu,
         profileMenuRef, handleLogout
     };

@@ -6,6 +6,7 @@ import { StudentAnswer } from './StudentAnswer';
 import { GradingSection } from './GradingSection';
 import { getWordCount } from '../../../../../../utils/helpers';
 import { TbAlertTriangle } from 'react-icons/tb';
+import { parseMath } from '../../../../../../utils/mappers';
 
 interface QuestionCardProps {
     qNum: number;
@@ -98,30 +99,67 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <StudentAnswer
-                    qId={question.id}
-                    question={question}
-                    answer={answer}
-                    rawView={rawView}
-                    setRawView={setRawView}
-                    setLightboxImageUrl={setLightboxImageUrl}
-                    onClear={handleClearAnswer}
-                    onImageUpload={handleStudentAnswerImageUpload}
-                />
-                <GradingSection
-                    qId={question.id}
-                    grade={grade}
-                    points={question.points}
-                    questionType={question.type}
-                    correctAnswer={question.correctAnswer}
-                    correctAnswerMcqOption={correctAnswerMcqOption}
-                    handleGradeChange={handleGradeChange}
-                    handleFeedbackImageUpload={handleFeedbackImageUpload}
-                    feedbackEditorRefs={feedbackEditorRefs}
-                    activeFeedbackFormats={activeFeedbackFormats}
-                    setActiveFeedbackFormats={setActiveFeedbackFormats}
-                />
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                {/* LEFT COLUMN: STUDENT ANSWER */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-px flex-1 bg-white/10"></div>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Student Response</span>
+                        <div className="h-px flex-1 bg-white/10"></div>
+                    </div>
+                    <StudentAnswer
+                        qId={question.id}
+                        question={question}
+                        answer={answer}
+                        rawView={rawView}
+                        setRawView={setRawView}
+                        setLightboxImageUrl={setLightboxImageUrl}
+                        onClear={handleClearAnswer}
+                        onImageUpload={handleStudentAnswerImageUpload}
+                    />
+                </div>
+
+                {/* RIGHT COLUMN: MODEL ANSWER & GRADING */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-px flex-1 bg-white/10"></div>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Assessment & Feedback</span>
+                        <div className="h-px flex-1 bg-white/10"></div>
+                    </div>
+                    
+                    {/* Model Answer / Reference - Directly visible at the top of the right pane */}
+                    {(question.correctAnswer || (question as any).modelAnswer) && (
+                        <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl relative group/model overflow-hidden">
+                            <div className="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
+                                <span className="text-[10px] font-bold uppercase tracking-tighter text-blue-400">REFERENCE</span>
+                            </div>
+                            <h5 className="font-bold text-blue-400 text-[10px] mb-2 uppercase tracking-widest">Model Answer</h5>
+                            <div className="rounded-lg text-blue-100/90 text-sm rich-text-content leading-relaxed">
+                                <div dangerouslySetInnerHTML={{ __html: parseMath((question as any).modelAnswer || question.correctAnswer || '') }} />
+                            </div>
+                            {question.type === 'mcq' && correctAnswerMcqOption && (
+                                <div className="mt-3 pt-3 border-t border-blue-500/10">
+                                    <span className="text-[10px] text-blue-400/60 font-bold uppercase">Correct Option</span>
+                                    <p className="text-sm font-bold text-blue-200 mt-0.5">{correctAnswerMcqOption}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <GradingSection
+                        qId={question.id}
+                        grade={grade}
+                        points={question.points}
+                        questionType={question.type}
+                        correctAnswer={question.correctAnswer}
+                        correctAnswerMcqOption={correctAnswerMcqOption}
+                        handleGradeChange={handleGradeChange}
+                        handleFeedbackImageUpload={handleFeedbackImageUpload}
+                        feedbackEditorRefs={feedbackEditorRefs}
+                        activeFeedbackFormats={activeFeedbackFormats}
+                        setActiveFeedbackFormats={setActiveFeedbackFormats}
+                    />
+                </div>
             </div>
         </div>
     )

@@ -1,6 +1,5 @@
-
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { AssessmentQuestion, Note, AssessmentConfig, NoteColor } from '../../../../types';
+import { AssessmentQuestion, Note, AssessmentConfig } from '../../../../types';
 import { supabase } from '../../../../services/supabaseClient';
 import { AssessmentPrintView, PrintMode } from '../AssessmentPrintView';
 import { mapNote } from '../../../../utils/mappers';
@@ -263,10 +262,6 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     };
 
     const openGrading = (participant: any) => {
-        if (!participant.noteId) {
-            alert(`Student ${participant.name} has not started the assessment yet.`);
-            return;
-        }
         setGradingModal({ isOpen: true, participant });
     };
 
@@ -349,7 +344,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
     };
 
     const handlePrintMaster = (isKey: boolean) => {
-        const mode: PrintMode = isKey ? 'ANSWER_KEY' : 'BLANK';
+        const mode: PrintMode = isKey ? 'MODEL_ANSWER_ONLY' : 'BLANK';
         const name = isKey ? 'Answer Key' : 'Question Paper';
         handlePrint([{ id: 'master-copy', name, data: { answers: {} } }], mode);
     };
@@ -385,7 +380,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 selectedCount={selectedStudentIds.size}
                 totalCount={students.length}
                 onSelectAll={selectAll}
-                onPrintSelected={() => handlePrint(students.filter(s => selectedStudentIds.has(s.id)), 'WITH_ANSWERS_AND_FEEDBACK')}
+                onPrintSelected={(mode) => handlePrint(students.filter(s => selectedStudentIds.has(s.id)), mode)}
                 onAllowRevisionSelected={handleBulkAllowRevision}
                 onReleaseGradesSelected={handleBulkReleaseGrades}
             />
@@ -412,9 +407,10 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
 
             <GradingModal 
                 isOpen={gradingModal.isOpen}
-                participant={gradingModal.participant}
+                participant={gradingModal.participant ? (students.find(s => s.id === gradingModal.participant.id) || gradingModal.participant) : null}
                 onClose={() => setGradingModal({ isOpen: false, participant: null })}
                 questions={questions}
+                boardId={boardId}
                 onSave={saveGrades}
                 onAutoSave={handleAutoSave}
             />

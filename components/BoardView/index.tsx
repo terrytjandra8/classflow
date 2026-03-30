@@ -601,11 +601,12 @@ export const BoardView: React.FC<BoardViewProps> = ({
         <BoardProvider value={contextValue}>
             {renderProtectedContent(
                 <div 
-                    className="h-screen w-full relative overflow-hidden" 
+                    className={`h-screen w-full relative overflow-hidden ${board.disableCopy && (isStudent || isSimulatingStudent) ? 'select-none' : ''}`} 
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                 >
+
                     <BoardLayout isPresentationMode={isPresentationMode} />
                     
                     <BoardOverlays 

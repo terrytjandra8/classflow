@@ -204,10 +204,33 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         if (dragTypeRef.current !== 'NOTE') return;
         const draggedId = dragItemRef.current;
         if (!draggedId) return;
-        const finalNotes = localNotes.map(n => n.id === draggedId ? { ...n, sectionId: targetSectionId } : n);
-        updateBoard({ notes: finalNotes } as any);
-        setDraggingId(null); setDraggingType(null);
-    }, [localNotes, updateBoard]);
+
+        // Calculate New Timestamp for persistence (matching GridLayout logic)
+        // This ensures the note stays in the correct relative position after refresh
+        const newIndex = localNotes.findIndex(n => n.id === draggedId);
+        const prevNote = newIndex > 0 ? localNotes[newIndex - 1] : null;
+        const nextNote = newIndex < localNotes.length - 1 ? localNotes[newIndex + 1] : null;
+
+        let newCreatedAt = Date.now();
+        if (prevNote && nextNote) {
+            newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
+        } else if (prevNote) {
+            newCreatedAt = prevNote.createdAt - 1000;
+        } else if (nextNote) {
+            newCreatedAt = nextNote.createdAt + 1000;
+        }
+
+        // Persist the change to the database
+        updateNote(draggedId, { 
+            sectionId: targetSectionId,
+            createdAt: newCreatedAt
+        });
+        
+        setDraggingId(null); 
+        setDraggingType(null);
+        dragItemRef.current = null;
+        dragTypeRef.current = null;
+    }, [localNotes, updateNote]);
 
     const handleAutoScroll = useCallback((e: React.DragEvent) => {
         if (dragTypeRef.current !== 'NOTE') return;
@@ -222,17 +245,26 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         if (note) openAddNote(note.sectionId || 'default');
     };
 
-    const handleMoveNote = (noteId: string, targetSectionId: string) => {
-        const finalNotes = localNotes.map(n => n.id === noteId ? { ...n, sectionId: targetSectionId } : n);
-        updateBoard({ notes: finalNotes } as any);
-    };
+    const handleMoveNote = useCallback((noteId: string, direction: 'up' | 'down') => {
+        const index = localNotes.findIndex(n => n.id === noteId);
+        if (index === -1) return;
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        
+        if (targetIndex >= 0 && targetIndex < localNotes.length) {
+            const targetNote = localNotes[targetIndex];
+            // Swap Timestamps to swap positions
+            const currentNote = localNotes[index];
+            updateNote(noteId, { createdAt: targetNote.createdAt });
+            updateNote(targetNote.id, { createdAt: currentNote.createdAt });
+        }
+    }, [localNotes, updateNote]);
 
     const onDragEnd = () => {
-        if (dragTypeRef.current === 'NOTE' && draggingId) {
-            updateBoard({ notes: localNotes.map(n => ({ ...n })) } as any);
-        }
-        setDraggingId(null); setDraggingType(null);
-        dragItemRef.current = null; dragTypeRef.current = null;
+        // Cleanup dragging state
+        setDraggingId(null); 
+        setDraggingType(null);
+        dragItemRef.current = null; 
+        dragTypeRef.current = null;
     };
 
     const cancelMergeMode = () => {

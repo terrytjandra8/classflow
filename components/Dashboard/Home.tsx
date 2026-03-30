@@ -1,7 +1,6 @@
-
 import React, { useMemo } from 'react';
 import { Search, Trash2, Layout, Plus, ExternalLink, Link as LinkIcon, Copy, RotateCcw, Edit2, Calendar, ChevronDown, ListFilter, Heart, Clock } from 'lucide-react';
-import { Board } from '../../types';
+import { Board, ClassGroup } from '../../types';
 import { QUOTES } from './constants';
 import { BoardCard } from './BoardCard';
 import { ConfirmModal } from '../ConfirmModal';
@@ -28,11 +27,14 @@ interface HomeProps {
     isStudent: boolean;
     selectedClass: string;
     studentClasses: string[];
+    classes: ClassGroup[];
+    setClasses: (classes: ClassGroup[]) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({ 
     boards, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash,
-    onJoinBoard, onNavigateToMake, onOpenSetup, onUpdateBoard, username, userAvatar, userId, theme, isSuperAdmin, isStudent, selectedClass, studentClasses
+    onJoinBoard, onNavigateToMake, onOpenSetup, onUpdateBoard, username, userAvatar, userId, theme, isSuperAdmin, isStudent, selectedClass, studentClasses,
+    classes, setClasses
 }) => {
     
     const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
@@ -41,7 +43,6 @@ export const Home: React.FC<HomeProps> = ({
         sidebarFilter, setSidebarFilter,
         filter, setFilter,
         sortBy, setSortBy,
-        classes, setClasses,
         menu,
         isSortMenuOpen, setIsSortMenuOpen,
         renamingId, setRenamingId,
@@ -55,7 +56,7 @@ export const Home: React.FC<HomeProps> = ({
         openConfirmModal,
         handleConfirmAction,
         handleMenuAction
-    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent, studentClasses);
+    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent, studentClasses, classes, setClasses);
 
     const getDisplayTitle = () => {
         if (isStudent) {
@@ -104,6 +105,7 @@ export const Home: React.FC<HomeProps> = ({
                     <Sidebar 
                         username={username}
                         userAvatar={userAvatar}
+                        userId={userId}
                         theme={theme}
                         sidebarFilter={sidebarFilter}
                         setSidebarFilter={setSidebarFilter}

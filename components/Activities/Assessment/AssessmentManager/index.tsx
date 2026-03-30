@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Board, Note, AssessmentConfig, AssessmentState } from '../../../../types';
 import { Editor } from '../Editor';
 import { StudentAssessment } from '../StudentAssessment/index';
 import { TeacherMonitor } from '../TeacherMonitor';
 import { ControlHeader } from './ControlHeader';
-import { AssessmentPrintView } from '../AssessmentPrintView';
+import { AssessmentPrintView, PrintMode } from '../AssessmentPrintView';
 import { supabase } from '../../../../services/supabaseClient';
 import { classService } from '../../../../services/classService';
 
@@ -39,7 +38,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
     });
 
     const [isPreviewMode, setIsPreviewMode] = useState(false);
-    const [isPrinting, setIsPrinting] = useState(false);
+    const [isPrinting, setIsPrinting] = useState<{ isOpen: boolean; mode: PrintMode }>({ isOpen: false, mode: 'BLANK' });
     const [classList, setClassList] = useState<string[]>([]);
 
     useEffect(() => {
@@ -181,15 +180,15 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
     return (
         <div className="h-full flex flex-col bg-[#111] text-white overflow-hidden">
             
-            {isPrinting && (
+            {isPrinting.isOpen && (
                 <AssessmentPrintView 
                     participants={[{ name: "____________________________", data: { answers: {} } }]}
                     questions={questions}
                     ipekaLogoUrl={ipekaLogoUrl}
                     ibLogoUrl={ibLogoUrl}
                     className={board.targetGrade}
-                    onAfterPrint={() => setIsPrinting(false)}
-                    printMode={"BLANK"}
+                    onAfterPrint={() => setIsPrinting({ ...isPrinting, isOpen: false })}
+                    printMode={isPrinting.mode}
                 />
             )}
 
@@ -207,7 +206,7 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
                 onPreview={() => setIsPreviewMode(true)}
                 onOpenSettings={onOpenSettings}
                 onOpenShare={onOpenShare}
-                onPrint={() => setIsPrinting(true)}
+                onPrint={(mode) => setIsPrinting({ isOpen: true, mode })}
                 classList={classList}
                 currentClass={board.targetGrade}
                 onUpdateClass={(cls) => onUpdateBoard({ targetGrade: cls })}

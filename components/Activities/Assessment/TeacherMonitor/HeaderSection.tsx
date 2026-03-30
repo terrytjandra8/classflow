@@ -33,7 +33,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeStudentsCoun
                             onClick={handleRefresh}
                             disabled={isRefreshing}
                             className={`p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all ${isRefreshing ? 'animate-spin text-blue-500' : ''}`}
-                            title="Force Refresh Data"
+                            data-tooltip="Force Refresh Data"
+                            data-tooltip-placement="bottom"
                         >
                             <RefreshCw size={16} />
                         </button>

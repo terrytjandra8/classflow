@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Lock, Clock, RefreshCw, Eye, Ban, ShieldAlert, Home, CheckCircle, Rocket, UserCheck, Puzzle } from 'lucide-react';
+import { Lock, Clock, RefreshCw, Eye, Ban, ShieldAlert, Home, CheckCircle, Rocket, UserCheck, Puzzle, Monitor, ZapOff, MousePointer2 } from 'lucide-react';
 import { AssessmentConfig, AssessmentQuestion, Board } from '../../../../types';
 
 interface StatusViewProps {
@@ -14,7 +13,7 @@ interface StatusViewProps {
     onStartTest?: () => void;
     onManualRefresh?: () => void;
     submissionData?: any;
-    onCheckStatus?: () => void; // Added for checking second chance
+    onCheckStatus?: () => void;
 }
 
 const PreviewBanner = ({ onExit }: { onExit?: () => void }) => (
@@ -23,18 +22,6 @@ const PreviewBanner = ({ onExit }: { onExit?: () => void }) => (
             <Eye size={16} /> Student Preview Mode
         </span>
         <button onClick={onExit} className="bg-white text-indigo-600 px-4 py-1 rounded-full text-xs font-bold hover:bg-indigo-50">Exit</button>
-    </div>
-);
-
-const RuleItem = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-    <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-900/50 border border-red-500/20 flex items-center justify-center text-red-400 mt-1">
-            {icon}
-        </div>
-        <div>
-            <h4 className="font-bold text-white">{title}</h4>
-            <p className="text-gray-400 text-sm">{description}</p>
-        </div>
     </div>
 );
 
@@ -126,22 +113,25 @@ export const StatusViews: React.FC<StatusViewProps> = ({
                             <h3 className="text-red-400 font-bold flex items-center gap-2">
                                 <Ban size={20} /> Assessment Rules
                             </h3>
-                            <div className="space-y-5">
-                                <RuleItem 
-                                    icon={<Eye size={16} />}
-                                    title="Stay in the Test Window"
-                                    description="Navigating away, switching tabs, or minimizing the browser will result in immediate disqualification."
-                                />
-                                <RuleItem 
-                                    icon={<Puzzle size={16} />}
-                                    title="No Browser Extensions"
-                                    description="Interacting with extensions (like Grammarly) is treated as leaving the test and will cause disqualification."
-                                />
-                                <RuleItem 
-                                    icon={<Ban size={16} />}
-                                    title="No Right-Clicking"
-                                    description="Attempting to use the context menu (right-click) is disabled and will trigger a violation."
-                                />
+                            <div className="flex gap-4">
+                                <div 
+                                    className="p-3 bg-white/5 rounded-xl border border-white/10 text-gray-400"
+                                    data-tooltip="Stay in the Test Window"
+                                >
+                                    <Monitor size={20} />
+                                </div>
+                                <div 
+                                    className="p-3 bg-white/5 rounded-xl border border-white/10 text-gray-400"
+                                    data-tooltip="No Browser Extensions"
+                                >
+                                    <ZapOff size={20} />
+                                </div>
+                                <div 
+                                    className="p-3 bg-white/5 rounded-xl border border-white/10 text-gray-400"
+                                    data-tooltip="No Right-Clicking"
+                                >
+                                    <MousePointer2 size={20} />
+                                </div>
                             </div>
                             <div className="bg-red-900/50 text-red-300 text-xs p-3 rounded-lg border border-red-500/20">
                                 Breaking these rules will automatically end the assessment and your score will be set to 0. This action is final.

@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '../../../services/supabaseClient';
 import { Board, ClassGroup } from '../../../types';
+import { classService } from '../../../services/classService';
 
 // This function remains the same
 const getDateCategory = (timestamp: number) => {
@@ -48,7 +49,9 @@ export const useBoardBrowser = (
     onDuplicateBoard: (id: string) => void,
     onToggleFavorite: (id: string) => void,
     isStudent: boolean,
-    studentClasses: string[] = []
+    studentClasses: string[] = [],
+    classes: ClassGroup[] = [],
+    setClasses: (classes: ClassGroup[]) => void
 ) => {
     const [sidebarFilter, setSidebarFilterState] = useState<string>(() => {
         const key = isStudent ? 'cb_student_sidebar_filter' : 'cb_teacher_sidebar_filter';
@@ -64,34 +67,9 @@ export const useBoardBrowser = (
     const [filter, setFilter] = useState('');
     const [sortBy, setSortBy] = useState<'created' | 'updated'>('created');
     
-    // --- FIX STARTS HERE ---
-    // 1. Derive the classes directly from the boards prop.
-    // This ensures the sidebar is always in sync with the main content.
-    const classes = useMemo<ClassGroup[]>(() => {
-      if (!boards || isStudent) return [];
-      
-      // Create a list of classes from the 'targetGrade' property of each board.
-      const allClasses = boards
-        .filter(b => b.targetGrade) // Only consider boards that have a class assigned
-        .map(b => ({ 
-            // Use the class name as the ID for uniqueness
-            id: b.targetGrade!,
-            name: b.targetGrade!,
-            owner_id: b.owner_id 
-        }));
-      
-      // Filter out duplicate class names to create a unique list.
-      const uniqueClasses = Array.from(new Map(allClasses.map(item => [item.name, item])).values());
-      
-      return uniqueClasses;
-    }, [boards, isStudent]);
+    // Classes are now shared and passed as props from the parent (Dashboard -> Home -> useBoardBrowser)
+    // to ensure synchronization across the entire application including the header dropdown.
 
-    // 2. The local state for classes now just mirrors the derived list.
-    const [localClasses, setClasses] = useState<ClassGroup[]>(classes);
-    useEffect(() => {
-        setClasses(classes);
-    }, [classes]);
-    // --- FIX ENDS HERE ---
 
     const [menu, setMenu] = useState<{ visible: boolean; x: number; y: number; boardId: string | null }>({ visible: false, x: 0, y: 0, boardId: null });
     const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
@@ -237,7 +215,7 @@ export const useBoardBrowser = (
     };
 
     return {
-        sidebarFilter, setSidebarFilter, filter, setFilter, sortBy, setSortBy, classes: localClasses, setClasses,
+        sidebarFilter, setSidebarFilter, filter, setFilter, sortBy, setSortBy, classes, setClasses,
         menu, isSortMenuOpen, setIsSortMenuOpen, renamingId, setRenamingId, exitingBoardId, confirmModal, setConfirmModal,
         menuRef, sortMenuRef, filteredBoards, groupedBoards, handleMenuOpen, handleRestore, 
         openConfirmModal, handleConfirmAction, handleMenuAction

@@ -72,7 +72,7 @@ export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(
                     onClick={handleSaveGrades} 
                     disabled={isActionInProgress || !isDirty}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md disabled:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    title="Save the current grades without releasing them to the student."
+                    data-tooltip="Save the current grades without releasing them to the student."
                 >
                     {status === 'saving' ? <><Loader2 size={16} className="animate-spin"/> Saving...</> : <><Save size={16}/> Save Grades</>}
                 </button>
@@ -81,7 +81,7 @@ export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(
                     onClick={onAllowRevision}
                     disabled={isActionInProgress}
                     className="relative px-4 py-2 bg-amber-600 text-white rounded-lg font-bold text-sm hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-md disabled:opacity-50"
-                    title="Allow the student to revise the selected questions."
+                    data-tooltip="Allow the student to revise the selected questions."
                 >
                     <RefreshCcw size={16}/> Allow Revision
                     {questionsToReviseCount > 0 && 
@@ -93,7 +93,7 @@ export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(
                     onClick={handleSaveAndRelease} 
                     disabled={isActionInProgress || isPublished}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2 shadow-md disabled:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    title={isPublished ? "Grades have been released and are up to date." : (localIsReleased && isDirty) ? "Republish the updated grades to the student." : "Save the grades and make them visible to the student."}
+                    data-tooltip={isPublished ? "Grades have been released and are up to date." : (localIsReleased && isDirty) ? "Republish the updated grades to the student." : "Save the grades and make them visible to the student."}
                 >
                     {getReleaseButtonContent()}
                 </button>
@@ -101,7 +101,7 @@ export const GradingModalHeader: React.FC<GradingModalHeaderProps> = React.memo(
                 <button 
                     onClick={onClose} 
                     className="p-2.5 bg-white/5 hover:bg-red-600/20 rounded-lg text-gray-300 hover:text-red-500 border border-white/10 hover:border-red-600/30 transition-colors"
-                    title="Close the grading window."
+                    data-tooltip="Close the grading window."
                 >
                     <X size={16} />
                 </button>

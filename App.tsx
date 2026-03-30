@@ -83,6 +83,8 @@ const LoadingScreen = () => (
     </div>
 );
 
+const APP_VERSION = '1.0.1'; // Update this to force a client refresh
+
 function AppContent() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -119,6 +121,17 @@ function AppContent() {
 
   useEffect(() => {
     const initializeApp = async () => {
+      // --- FORCE REFRESH LOGIC ---
+      const storedVersion = localStorage.getItem('cb_app_version');
+      if (storedVersion !== APP_VERSION) {
+          localStorage.setItem('cb_app_version', APP_VERSION);
+          // If this isn't the first load ever, force a hard reload to bust browser cache
+          if (storedVersion) {
+              window.location.reload();
+              return;
+          }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
@@ -127,21 +140,29 @@ function AppContent() {
 
       if (session) {
         await fetchProfile();
+        // Fetch ALL boards on initial load for authenticated users to ensure dashboard is ready
+        const allBoards = await fetchBoards();
+
         if (boardId) {
-          const board = await boardService.getBoardById(boardId);
+          const board = allBoards.find(b => b.id === boardId) || await boardService.getBoardById(boardId);
           if (board) {
-            setBoards([board]);
+             setBoards(prev => {
+                 // Optimization: avoid duplicates if fetchBoards already got it
+                 if (prev.find(b => b.id === board.id)) return prev;
+                 return [board, ...prev];
+             });
             setActiveBoardId(boardId);
             setView('board');
           } else {
             // Board not found or no access, redirect to dashboard
+            window.history.replaceState({}, '', '/');
             setView('dashboard');
           }
         } else {
-          await fetchBoards();
           setView('dashboard');
         }
       } else if (boardId) {
+          // Guest access logic stays standard...
         // Guest access logic
         setAccessCheckStatus('checking');
         const { data: board, error } = await supabase
@@ -216,8 +237,10 @@ function AppContent() {
     try {
         const data = await boardService.getBoards();
         setBoards(data);
+        return data;
     } catch (e) {
         console.error("Failed to fetch boards", e);
+        return [];
     }
   };
 
@@ -232,13 +255,34 @@ function AppContent() {
 
   // Handle Browser Back/Forward Navigation
   useEffect(() => {
-      const handlePopState = () => {
+      const handlePopState = async () => {
           const params = new URLSearchParams(window.location.search);
           const boardId = params.get('board');
+          
           if (boardId) {
               setBoardError(null);
-              setActiveBoardId(boardId);
-              setView('board');
+              // Ensure we have the board data before switching
+              const exists = boards.find(b => b.id === boardId);
+              if (!exists) {
+                  setLoading(true);
+                  const allBoards = await fetchBoards();
+                  const found = allBoards.find(b => b.id === boardId) || await boardService.getBoardById(boardId);
+                  if (found) {
+                      setBoards(prev => {
+                          if (prev.find(b => b.id === found.id)) return prev;
+                          return [found, ...prev];
+                      });
+                      setActiveBoardId(boardId);
+                      setView('board');
+                  } else {
+                      window.history.replaceState({}, '', '/');
+                      setView('dashboard');
+                  }
+                  setLoading(false);
+              } else {
+                  setActiveBoardId(boardId);
+                  setView('board');
+              }
           } else {
               setActiveBoardId(null);
               setView(session || isGuest ? 'dashboard' : 'auth');
@@ -247,7 +291,7 @@ function AppContent() {
 
       window.addEventListener('popstate', handlePopState);
       return () => window.removeEventListener('popstate', handlePopState);
-  }, [session, isGuest]);
+  }, [session, isGuest, boards]); // Added boards as dependency to check existence during navigation
 
   // REALTIME GATEKEEPER: Listen for Board Status Changes (Draft/Live)
   useEffect(() => {
