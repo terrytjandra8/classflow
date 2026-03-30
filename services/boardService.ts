@@ -56,8 +56,8 @@ export const boardService = {
             disablePaste: board.disablePaste ?? true, // Default to true for all boards
             blockScreenshots: board.blockScreenshots ?? true, // Default to true for all boards
             // Assessment Specific Security
-            disableCopy: isAssessment ? true : (board.disableCopy ?? false),
-            blurOtherPosts: isAssessment ? true : (board.blurOtherPosts ?? false),
+            disableCopy: board.disableCopy ?? true,
+            blurOtherPosts: board.blurOtherPosts ?? true,
             // Interactive Modules
             polls: board.polls,
             quizQuestions: board.quizQuestions,
