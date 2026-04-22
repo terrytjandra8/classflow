@@ -23,10 +23,11 @@ interface BoardCardProps {
     isExiting?: boolean;
     classes?: ClassGroup[];
     userId?: string; // New Prop for Permission Check
+    disableAnimation?: boolean;
 }
 
 export const BoardCard: React.FC<BoardCardProps> = ({ 
-    board, viewMode, onSelect, onDelete, onRestore, onToggleFavorite, onMenuOpen, theme, onUpdate, isRenaming, onRenameClose, isExiting, classes, userId
+    board, viewMode, onSelect, onDelete, onRestore, onToggleFavorite, onMenuOpen, theme, onUpdate, isRenaming, onRenameClose, isExiting, classes, userId, disableAnimation
 }) => {
     // Permission Check from Engine
     const canEdit = onUpdate && BoardRules.canManageBoard(board, userId);
@@ -140,7 +141,7 @@ export const BoardCard: React.FC<BoardCardProps> = ({
         <div 
             onClick={handleCardClick} 
             onContextMenu={(e) => onMenuOpen(e, board.id)}
-            className={`group relative rounded-2xl overflow-hidden h-96 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl border ${isExiting ? 'animate-exit-card' : 'animate-enter-card'} ${
+            className={`group relative rounded-2xl overflow-hidden h-96 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl border ${isExiting ? 'animate-exit-card' : (disableAnimation ? '' : 'animate-enter-card')} ${
                 viewMode === 'trashed' 
                 ? 'opacity-70 bg-[#111] border-white/5' 
                 : (theme === 'light' ? 'bg-white border-slate-200 hover:border-blue-300 cursor-pointer' : 'bg-[#1a1a1a] hover:bg-[#202020] border-white/5 cursor-pointer')

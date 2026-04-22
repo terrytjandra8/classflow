@@ -1,14 +1,14 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Sun, Moon, Hash, Clock, LogOut, Search, Layout, BookOpen, User, Home, Grid, Filter, X, Quote, Sparkles, Trophy, Calendar, Folder, ChevronDown, ListFilter, GraduationCap, Menu, GripVertical } from 'lucide-react';
 import { Board } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { Tooltip } from './Tooltip';
 import { QUOTES } from './Dashboard/constants';
-import { resolveBackgroundStyle } from '../utils/theme';
+import { resolveBackgroundStyle, WALLPAPERS_MAP } from '../utils/theme';
 import { Avatar } from './ui/Avatar';
 import { Documentation } from './Documentation';
 import { StudentGrades } from './StudentGrades';
+import { BoardCard } from './Dashboard/BoardCard';
 
 // This utility function determines the time-based category for a board.
 const getDateCategory = (timestamp: number) => {
@@ -53,6 +53,10 @@ interface StudentDashboardProps {
   userClasses: string[];
   onJoinByCode: (code: string) => Promise<boolean>;
 }
+
+// GLOBAL TRACKER: Persists across component unmounts during the session.
+// This is the "Blink Killer" - it ensures we remember seen boards even during aggressive polling.
+const sessionSeenBoardIds = new Set<string>();
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
   boards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode 
@@ -123,6 +127,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return result.sort((a, b) => b.createdAt - a.createdAt);
   }, [boards, selectedClassFilter, filter]);
 
+  // Update seen boards when filteredBoards changes to prevent re-animation on refresh
+  useEffect(() => {
+    // Mark all currently visible boards as seen immediately
+    filteredBoards.forEach(b => sessionSeenBoardIds.add(b.id));
+  }, [filteredBoards]);
+
   const groupedBoards = useMemo(() => {
       // Only group if there's no active search or class filter
       if (filter.trim() || selectedClassFilter !== 'All Boards') return null; 
@@ -163,29 +173,31 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 const BoardGrid = ({ items, theme, onSelectBoard }: { items: Board[], theme: 'light' | 'dark', onSelectBoard: (id: string) => void }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {items.map((board, idx) => {
-            const bgStyle = resolveBackgroundStyle(board.wallpaper, theme);
+            const isNew = !sessionSeenBoardIds.has(board.id);
+            
+            // Mark as seen immediately so the next render (e.g. 5s poll) knows it's not new
+            if (isNew) {
+                sessionSeenBoardIds.add(board.id);
+            }
+            
             return (
                 <div 
                     key={board.id} 
-                    onClick={() => onSelectBoard(board.id)} 
-                    style={{ 
-                        ...bgStyle,
-                        animationDelay: `${idx * 75}ms` 
-                    }}
-                    className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border border-slate-200 dark:border-white/5 animate-enter-card fill-mode-both shadow-lg"
+                    style={{ animationDelay: isNew ? `${idx * 75}ms` : '0ms' }}
+                    className={isNew ? '' : '[&_.animate-enter-card]:animate-none'}
                 >
-                    <div className="h-32 relative overflow-hidden bg-black/10">
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                        {board.icon && <div className="absolute -bottom-5 left-4 text-5xl drop-shadow-xl font-emoji group-hover:scale-110 transition-transform duration-300 z-10">{board.icon}</div>}
-                    </div>
-                    
-                    <div className="p-5 pt-6 flex-1 flex flex-col justify-between bg-white dark:bg-[#1a1a1a] relative">
-                        <div>
-                            <h4 className="font-bold text-base truncate mb-1 text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{board.title}</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">{board.description || 'No description provided.'}</p>
-                        </div>
-                         {board.targetGrade && <div className="mt-2 bg-black/60 backdrop-blur-md rounded-lg px-2.5 py-1 text-[10px] font-bold text-white shadow-sm border border-white/10 uppercase tracking-wide w-fit">{board.targetGrade}</div>}
-                    </div>
+                    <BoardCard 
+                        board={board}
+                        viewMode="recents"
+                        onSelect={onSelectBoard}
+                        onDelete={() => {}}
+                        onRestore={() => {}}
+                        onToggleFavorite={() => {}}
+                        onMenuOpen={() => {}}
+                        wallpapersMap={WALLPAPERS_MAP}
+                        theme={theme}
+                        disableAnimation={!isNew}
+                    />
                 </div>
             );
         })}
