@@ -170,7 +170,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         ...bgStyle,
                         animationDelay: `${idx * 75}ms` 
                     }}
-                    className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border border-slate-200 dark:border-white/5 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500 fill-mode-both shadow-lg"
+                    className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border border-slate-200 dark:border-white/5 animate-enter-card fill-mode-both shadow-lg"
                 >
                     {/* Header Image Area */}
                     <div className="h-32 relative overflow-hidden bg-black/10">
