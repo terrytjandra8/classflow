@@ -178,7 +178,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     </div>
                 )}
                 
-                {/* Large Answer Tiles - Modern Grid */}
+                {/* Large Answer Tiles - Modern Grid (Expanded Hit-Box) */}
                 <div className="relative z-10 grid grid-cols-2 gap-3 lg:gap-6 flex-1 min-h-0 pb-4">
                     {currentQ?.options.map((opt, idx) => {
                         const isSelected = localSelectedIdx === idx;
@@ -190,13 +190,13 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                                 onClick={() => handleAnswer(idx)}
                                 disabled={isDisabled}
                                 className={`
-                                    relative rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center p-4 lg:p-8 transition-all duration-150 active:scale-90 border-t-2 border-x-2 border-b-8 group
-                                    ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/40' : 'bg-[#e21b3c] border-[#9a1229] hover:brightness-110') : 
-                                      idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/40' : 'bg-[#1368ce] border-[#0a4182] hover:brightness-110') : 
-                                      idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/40' : 'bg-[#d89e00] border-[#8c6a00] hover:brightness-110') : 
-                                      (isSelected ? 'bg-[#26890c] border-white/40' : 'bg-[#26890c] border-[#144a06] hover:brightness-110')}
+                                    relative rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center p-4 lg:p-8 transition-all duration-75 active:scale-[0.98] border-t-2 border-x-2 border-b-8 group touch-manipulation select-none
+                                    ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/60 shadow-[0_4px_20px_rgba(226,27,60,0.4)]' : 'bg-[#e21b3c] border-[#9a1229] active:border-white/20') : 
+                                      idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/60 shadow-[0_4px_20px_rgba(19,104,206,0.4)]' : 'bg-[#1368ce] border-[#0a4182] active:border-white/20') : 
+                                      idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/60 shadow-[0_4px_20px_rgba(216,158,0,0.4)]' : 'bg-[#d89e00] border-[#8c6a00] active:border-white/20') : 
+                                      (isSelected ? 'bg-[#26890c] border-white/60 shadow-[0_4px_20px_rgba(38,137,12,0.4)]' : 'bg-[#26890c] border-[#144a06] active:border-white/20')}
                                     ${isDisabled && !isSelected ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'}
-                                    ${isSelected ? 'translate-y-1 border-b-4' : 'translate-y-0'}
+                                    ${isSelected ? 'translate-y-1 border-b-2 brightness-110 ring-4 ring-white/30' : 'translate-y-0 active:translate-y-1 active:border-b-4'}
                                 `}
                             >
                                 <div className={`absolute top-4 left-4 lg:top-8 lg:left-8 text-2xl lg:text-4xl opacity-50 font-black pointer-events-none text-white drop-shadow-lg`}>
@@ -206,6 +206,9 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                                 <span className={`relative z-10 font-black text-white text-center leading-tight drop-shadow-lg break-words w-full pointer-events-none transition-all ${opt.length > 50 ? 'text-sm lg:text-lg' : opt.length > 20 ? 'text-lg lg:text-2xl' : 'text-2xl lg:text-4xl'}`}>
                                     {isSelected && isSubmitting ? '...' : opt || SHAPES[idx]}
                                 </span>
+
+                                {/* Ripple Effect Overlay */}
+                                <div className="absolute inset-0 bg-white/20 opacity-0 group-active:opacity-100 transition-opacity rounded-[inherit]"></div>
                             </button>
                         );
                     })}
@@ -263,7 +266,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     {state === 'finished' ? 'Game Finished' : 'You are at'}
                 </h2>
                 
-                <div className="bg-white text-black p-10 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] w-full max-w-sm relative">
+                <div className="bg-white text-black p-10 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] w-full max-w-sm relative mb-12">
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#1368ce] text-white px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest shadow-xl">
                         Current Rank
                     </div>
@@ -273,6 +276,14 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     <div className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Total Score</div>
                     <div className="text-4xl font-black text-purple-700 font-mono tracking-tight">{myScore.toLocaleString()}</div>
                 </div>
+
+                <button 
+                    onClick={() => window.location.href = '/'}
+                    className="group bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white px-10 py-5 rounded-[2rem] font-black text-xl transition-all active:scale-95 shadow-2xl flex items-center gap-3"
+                >
+                    EXIT TO HOME
+                </button>
+            </div>
             </div>
         </div>
     );

@@ -153,8 +153,6 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                 author: username || 'Player',
                 author_id: userId,
                 author_role: 'student',
-                color: 'bg-white',
-                x: 0, y: 0,
                 created_at: new Date().toISOString()
             }]);
             if (onActivity) onActivity();
