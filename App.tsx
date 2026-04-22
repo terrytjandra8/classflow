@@ -366,8 +366,8 @@ function AppContent() {
       if (view === 'dashboard' && (session || isGuest)) {
           fetchBoards();
           
-          // Poll every 10 seconds as a fail-proof fallback
-          const interval = setInterval(fetchBoards, 10000);
+          // Poll every 5 seconds as a fail-proof fallback
+          const interval = setInterval(fetchBoards, 5000);
           return () => clearInterval(interval);
       }
   }, [view, session, isGuest]);

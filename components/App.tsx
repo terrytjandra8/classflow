@@ -367,8 +367,8 @@ function AppContent() {
       // Initial fetch
       loadBoards();
 
-      // Poll every 10 seconds so students see newly-published boards without refreshing
-      const interval = setInterval(loadBoards, 10000);
+      // Poll every 5 seconds so students see newly-published boards without refreshing
+      const interval = setInterval(loadBoards, 5000);
 
       return () => {
           isMounted = false;
