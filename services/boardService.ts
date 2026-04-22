@@ -148,9 +148,11 @@ export const boardService = {
                     syncChannel.send({
                         type: 'broadcast',
                         event: 'board-published',
-                        payload: { boardId: id, timestamp: Date.now() }
+                        payload: { 
+                            board: data, // Send the full board data for instant update
+                            timestamp: Date.now() 
+                        }
                     }).then(() => {
-                        // Cleanup after sending
                         setTimeout(() => supabase.removeChannel(syncChannel), 1000);
                     });
                 }

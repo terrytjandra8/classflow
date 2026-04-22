@@ -377,7 +377,21 @@ function AppContent() {
       syncChannel
           .on('broadcast', { event: 'board-published' }, (payload) => {
               console.log("🔔 BOARD PUBLISHED:", payload);
-              fetchBoards();
+              
+              // If the payload contains the board data, update state immediately
+              if (payload.payload?.board) {
+                  const newBoard = mapBoard(payload.payload.board);
+                  setBoards(prev => {
+                      const exists = prev.some(b => b.id === newBoard.id);
+                      if (exists) {
+                          return prev.map(b => b.id === newBoard.id ? { ...b, ...newBoard } : b);
+                      }
+                      return [newBoard, ...prev];
+                  });
+              } else {
+                  // Fallback to full fetch if no board data in payload
+                  fetchBoards();
+              }
           })
           .subscribe((status) => {
               console.log("📡 DASHBOARD SYNC STATUS:", status);
