@@ -154,6 +154,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                     togglePresentation={togglePresentation}
                     onUpdateBoard={onUpdateBoard}
                     resetGame={resetGame}
+                    enterLobby={enterLobby}
                 />
             </div>
 

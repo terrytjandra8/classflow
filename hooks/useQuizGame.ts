@@ -205,7 +205,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
         onUpdateBoard({ 
             quizState: 'setup' as any, 
             currentQuestionIndex: 0,
-            quizStartTime: null, // Clear start time
+            quizStartTime: undefined, // Clear start time
             isPublished: false,
             settings: {
                 ...board.settings,

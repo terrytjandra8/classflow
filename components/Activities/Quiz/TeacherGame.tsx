@@ -37,7 +37,7 @@ const NEON_COLORS = [
 
 export const TeacherGame: React.FC<TeacherGameProps> = ({
     state, board, currentQ, currentQIndex, questions, timeLeft, scores, onlineUsers, notes,
-    startGame, nextStep, openProjectorMode, SoundControl, backgroundStyle, isPresenting, togglePresentation, onUpdateBoard, resetGame
+    startGame, nextStep, openProjectorMode, SoundControl, backgroundStyle, isPresenting, togglePresentation, onUpdateBoard, resetGame, enterLobby
 }) => {
     const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
