@@ -102,38 +102,43 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         }
 
         return (
-            <div className="h-full flex flex-col bg-[#f2f2f2] p-4 md:p-6 gap-4 md:gap-6 relative overflow-hidden font-sans">
+            <div className="h-full flex flex-col bg-[#0a0a0a] p-4 md:p-8 gap-6 relative overflow-hidden font-sans text-white">
+                {/* Background Decoration */}
+                <div className="absolute inset-0 z-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20"></div>
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse [animation-delay:2s]"></div>
+
                 {/* Status Bar */}
-                <div className="flex justify-between items-center z-20">
+                <div className="flex justify-between items-center z-20 relative">
                     <div className="flex gap-2">
                         {myStreak > 1 && (
-                            <div className="flex items-center gap-1 bg-orange-500 px-3 py-1.5 rounded-xl text-white shadow-lg">
-                                <Flame size={16} className="fill-white" />
-                                <span className="text-sm font-black tracking-tighter">{myStreak}</span>
+                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 rounded-2xl text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-bounce">
+                                <Flame size={18} className="fill-white" />
+                                <span className="text-lg font-black tracking-tighter">{myStreak}</span>
                             </div>
                         )}
                     </div>
                     
                     <div className="flex gap-3">
-                        <div className={`px-6 py-2 rounded-2xl font-black text-lg shadow-xl transition-all ${timeLeft <= 5 ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-gray-800'}`}>
+                        <div className={`px-6 py-2 rounded-2xl font-black text-xl shadow-2xl backdrop-blur-md border transition-all ${timeLeft <= 5 ? 'bg-red-500 border-red-400 text-white animate-pulse' : 'bg-white/5 border-white/10 text-white'}`}>
                             {timeLeft}s
                         </div>
                         <SoundControl />
                     </div>
                 </div>
 
-                {/* Optional Question Area */}
+                {/* Question Area */}
                 {board.showQuestionOnStudentDevice && (
-                    <div className="bg-white rounded-2xl shadow-lg border-b-4 border-gray-200 p-6 text-center animate-in slide-in-from-top-4">
-                        <h2 className="text-xl font-black text-gray-800 leading-tight">
+                    <div className="relative z-10 text-center animate-in slide-in-from-top-4 duration-500">
+                        <h2 className="text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-2xl">
                             {currentQ?.question}
                         </h2>
                     </div>
                 )}
                 
-                {/* Media Area (Only if showing question) */}
+                {/* Media Area (Prominent) */}
                 {board.showQuestionOnStudentDevice && currentQ?.mediaUrl && (
-                    <div className="w-full h-40 bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-md relative">
+                    <div className="relative z-10 w-full flex-1 max-h-[35vh] min-h-[20vh] bg-white/5 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group">
                         {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
                             <iframe 
                                 src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
@@ -150,32 +155,37 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                                 }}
                             />
                         )}
-                        <div className="hidden absolute inset-0 items-center justify-center text-gray-500 font-bold text-xs italic bg-gray-50">
+                        <div className="hidden absolute inset-0 items-center justify-center text-gray-500 font-bold text-xs italic bg-white/5">
                             Unsupported Media
                         </div>
                     </div>
                 )}
                 
-                {/* Large Answer Tiles */}
-                <div className="flex-1 grid grid-cols-2 gap-4 md:gap-6 pb-4">
+                {/* Large Answer Tiles - Modern Grid */}
+                <div className="relative z-10 grid grid-cols-2 gap-4 md:gap-6 flex-1 min-h-0">
                     {currentQ?.options.map((opt, idx) => (
                         <button 
                             key={idx}
                             onClick={() => submitAnswer(idx)}
                             className={`
-                                ${BTN_COLORS[idx % 4]} 
-                                rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-75 active:translate-y-2 active:shadow-none
+                                relative rounded-[2rem] flex flex-col items-center justify-center p-6 transition-all duration-200 active:scale-95 border-2
+                                ${idx === 0 ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20' : 
+                                  idx === 1 ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20' : 
+                                  idx === 2 ? 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20' : 
+                                  'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'}
                             `}
                         >
-                            <span className="text-6xl md:text-8xl text-white opacity-40 font-black select-none pointer-events-none transform group-hover:scale-110 transition-transform">
+                            {/* Shape Indicator (Subtle) */}
+                            <div className={`absolute top-6 left-6 text-2xl opacity-40 font-black ${idx === 0 ? 'text-red-400' : idx === 1 ? 'text-blue-400' : idx === 2 ? 'text-yellow-400' : 'text-green-400'}`}>
                                 {SHAPES[idx % 4]}
+                            </div>
+
+                            <span className="text-xl md:text-3xl font-black text-white text-center leading-tight drop-shadow-lg break-words w-full">
+                                {opt}
                             </span>
                             
-                            {board.showQuestionOnStudentDevice && (
-                                <div className="absolute inset-x-0 bottom-0 p-4 bg-black/10 backdrop-blur-sm border-t border-white/10">
-                                    <span className="text-sm md:text-lg font-black text-white line-clamp-2 drop-shadow-md">{opt}</span>
-                                </div>
-                            )}
+                            {/* Glow Effect */}
+                            <div className={`absolute inset-0 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity blur-xl -z-10 ${idx === 0 ? 'bg-red-500/20' : idx === 1 ? 'bg-blue-500/20' : idx === 2 ? 'bg-yellow-500/20' : 'bg-green-500/20'}`}></div>
                         </button>
                     ))}
                 </div>
