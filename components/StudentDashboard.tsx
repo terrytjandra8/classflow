@@ -59,9 +59,11 @@ interface StudentDashboardProps {
 const sessionSeenBoardIds = new Set<string>();
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
-  boards, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode 
+  boards: boardsProp, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode 
 }) => {
   // === STATE MANAGEMENT ===
+  // Local state for boards to handle exit animations
+  const [displayBoards, setDisplayBoards] = useState<Board[]>(boardsProp);
   // Active tab for navigation (home, grades, etc.)
   const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
   // Currently selected class for filtering the board list
@@ -97,10 +99,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     fetchUserId();
   }, []);
 
-  // === FILTERING LOGIC (Inspired by useBoardBrowser) ===
+  // === FILTERING LOGIC (Using displayBoards for animations) ===
   const filteredBoards = useMemo(() => {
-    // Start with all boards passed as props
-    let result = boards;
+    let result = [...displayBoards];
 
     // 1. Filter out any trashed boards and only include published boards.
     // This is the core visibility rule for students.
@@ -125,13 +126,35 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     // 4. Sort the results by creation date (newest first).
     return result.sort((a, b) => b.createdAt - a.createdAt);
-  }, [boards, selectedClassFilter, filter]);
+  }, [displayBoards, selectedClassFilter, filter]);
 
-  // Update seen boards when filteredBoards changes to prevent re-animation on refresh
+  // Sync boardsProp with displayBoards to handle entrance/exit animations
   useEffect(() => {
-    // Mark all currently visible boards as seen immediately
-    filteredBoards.forEach(b => sessionSeenBoardIds.add(b.id));
-  }, [filteredBoards]);
+    // 1. Identify boards that are still there (including newly added ones)
+    const currentIds = new Set(boardsProp.map(b => b.id));
+    
+    // 2. Identify boards that were there but are now missing
+    const exitingBoards = displayBoards.filter(b => !currentIds.has(b.id) && !b.isExiting);
+    
+    if (exitingBoards.length > 0) {
+        // Mark disappearing boards as exiting
+        setDisplayBoards(prev => prev.map(b => 
+            !currentIds.has(b.id) ? { ...b, isExiting: true } : b
+        ));
+        
+        // Remove them after animation finishes (300ms)
+        const timer = setTimeout(() => {
+            setDisplayBoards(boardsProp);
+        }, 350);
+        return () => clearTimeout(timer);
+    } else {
+        // No one is exiting, just update with new list (handles additions and property updates)
+        setDisplayBoards(boardsProp);
+    }
+
+    // Mark all currently visible boards as seen immediately for the blink-killer
+    boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
+  }, [boardsProp]);
 
   const groupedBoards = useMemo(() => {
       // Only group if there's no active search or class filter
@@ -197,6 +220,7 @@ const BoardGrid = ({ items, theme, onSelectBoard }: { items: Board[], theme: 'li
                         wallpapersMap={WALLPAPERS_MAP}
                         theme={theme}
                         disableAnimation={!isNew}
+                        isExiting={board.isExiting}
                     />
                 </div>
             );
