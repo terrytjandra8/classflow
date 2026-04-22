@@ -158,66 +158,58 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
         return 'translateY(0)';
     };
 
+    const [showConfigMobile, setShowConfigMobile] = useState(false);
+
     return (
         <div className="fixed inset-0 z-[200] bg-[#0a0a0a] flex flex-col font-sans text-white animate-in fade-in overflow-hidden">
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
             
-            <header className="h-16 bg-[#161616] border-b border-white/5 flex items-center justify-between px-6 shrink-0 relative z-[210] shadow-2xl">
-                <div className="flex items-center gap-4">
+            {/* Universal Header - Optimized for Space */}
+            <header className="h-16 bg-[#161616] border-b border-white/5 flex items-center justify-between px-4 lg:px-6 shrink-0 relative z-[210] shadow-2xl">
+                <div className="flex items-center gap-2 lg:gap-4">
                     <button onClick={handleSaveAndClose} className="p-2 hover:bg-white/5 rounded-xl transition-all text-gray-400 hover:text-white"><ArrowLeft size={20} /></button>
-                    <div className="h-6 w-px bg-white/10 mx-2"></div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg"><Layout size={20} /></div>
-                        <div><h1 className="font-black text-sm tracking-tight">Visual Quiz Editor</h1><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Editing Slide {activeIndex + 1}</p></div>
+                    <div className="hidden lg:block h-6 w-px bg-white/10 mx-2"></div>
+                    <div className="flex items-center gap-2 lg:gap-3">
+                        <div className="w-8 lg:w-10 h-8 lg:h-10 bg-purple-600 rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg"><Layout size={18} /></div>
+                        <div>
+                            <h1 className="font-black text-xs lg:text-sm tracking-tight truncate max-w-[100px] lg:max-w-none">Quiz Editor</h1>
+                            <p className="text-[8px] lg:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Slide {activeIndex + 1}</p>
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setIsPreviewMode(!isPreviewMode)} className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition-all border ${isPreviewMode ? 'bg-blue-600 border-blue-500' : 'bg-white/5 border-white/5 hover:border-white/10'}`}>{isPreviewMode ? <EyeOff size={16} /> : <Eye size={16} />} {isPreviewMode ? "Exit Preview" : "Preview"}</button>
-                    <button onClick={handleSaveAndClose} className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl font-black text-sm transition-all shadow-[0_10px_20px_rgba(168,85,247,0.3)]">Done</button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setIsPreviewMode(!isPreviewMode)} className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all border ${isPreviewMode ? 'bg-blue-600 border-blue-500' : 'bg-white/5 border-white/5 hover:border-white/10'}`}>{isPreviewMode ? <EyeOff size={14} /> : <Eye size={14} />} {isPreviewMode ? "Exit" : "Preview"}</button>
+                    <button onClick={handleSaveAndClose} className="px-5 lg:px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl font-black text-xs lg:text-sm transition-all shadow-lg">Done</button>
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar */}
-                <aside className="w-64 bg-[#161616] border-r border-white/5 flex flex-col shrink-0 overflow-y-auto custom-scrollbar p-4 gap-2 relative">
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1 px-2">Questions List</div>
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-16 lg:pb-0">
+                {/* Desktop Sidebar / Mobile Top Slide Nav */}
+                <aside className="h-28 lg:h-auto lg:w-72 bg-[#161616] border-b lg:border-b-0 lg:border-r border-white/5 flex lg:flex-col shrink-0 overflow-x-auto lg:overflow-y-auto custom-scrollbar p-3 lg:p-4 gap-3 relative no-scrollbar touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="hidden lg:block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 px-2">Questions List</div>
                     {localQuestions.map((q, idx) => (
-                        <div 
-                            key={q.id}
-                            onDragOver={(e) => onDragOver(e, idx)}
-                            onDrop={(e) => { e.preventDefault(); handleDrop(idx); }}
-                            className="relative"
-                        >
+                        <div key={q.id} className="relative shrink-0 lg:shrink">
                             <div 
-                                draggable
-                                onDragStart={(e) => onDragStart(e, idx)} 
-                                onDragEnd={handleDragEnd}
                                 onClick={() => { setActiveIndex(idx); setIsPreviewMode(false); }} 
-                                style={{ 
-                                    transform: getSlideTransform(idx),
-                                    transition: 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s'
-                                }}
-                                className={`relative group cursor-pointer p-0.5 rounded-2xl ${activeIndex === idx ? 'z-10' : 'opacity-60 hover:opacity-100'}`}
+                                className={`relative group cursor-pointer p-0.5 rounded-xl lg:rounded-2xl ${activeIndex === idx ? 'z-10' : 'opacity-60 hover:opacity-100'}`}
                             >
-                                <div className={`bg-[#222] border-2 rounded-2xl p-3 h-24 flex flex-col gap-1 overflow-hidden transition-all ${activeIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/20 shadow-xl' : 'border-white/5'}`}>
+                                <div className={`bg-[#222] border-2 rounded-xl lg:rounded-2xl p-2 lg:p-3 h-20 lg:h-24 w-32 lg:w-full flex flex-col gap-1 lg:gap-1.5 overflow-hidden transition-all ${activeIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/20' : 'border-white/5'}`}>
                                     <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-1.5"><GripVertical size={12} className="text-gray-700" /><span className="text-[10px] font-black text-gray-500">{idx + 1}</span></div>
-                                        <div className="flex items-center gap-1.5">
-                                            {q.pointsType === 'streak_boost' && <Flame size={10} className="text-orange-500" />}
-                                            {q.pointsType === 'double' && <Zap size={10} className="text-yellow-500" />}
-                                            {q.pointsType === 'competitive' && <Target size={10} className="text-blue-500" />}
-                                            <span className="text-[8px] font-black text-gray-600 flex items-center gap-1 bg-black/30 px-1.5 py-0.5 rounded-md"><Clock size={10} /> {q.timeLimit}s</span>
+                                        <span className="text-[8px] lg:text-[10px] font-black text-gray-600">{idx + 1}</span>
+                                        <div className="flex items-center gap-1">
+                                            {q.pointsType !== 'standard' && <Zap size={8} className="text-yellow-500" />}
+                                            <span className="text-[7px] lg:text-[8px] font-black text-gray-600 px-1 py-0.5 bg-black/30 rounded">{q.timeLimit}s</span>
                                         </div>
                                     </div>
-                                    <div className="text-[10px] font-bold text-gray-300 line-clamp-2 leading-tight">{q.question || "Untitled"}</div>
+                                    <div className="text-[9px] lg:text-[10px] font-bold text-gray-300 line-clamp-2 leading-tight">{q.question || "Untitled"}</div>
                                 </div>
                                 {localQuestions.length > 1 && (
-                                    <button onClick={(e) => { e.stopPropagation(); deleteQuestion(idx); }} className="absolute -right-1 -top-1 w-6 h-6 bg-red-600 border-2 border-[#161616] rounded-lg text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center hover:scale-110 active:scale-95"><X size={10} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteQuestion(idx); }} className="absolute -right-1 -top-1 w-5 h-5 lg:w-6 lg:h-6 bg-red-600 border-2 border-[#161616] rounded-lg text-white shadow-xl flex items-center justify-center z-20"><X size={10} /></button>
                                 )}
                             </div>
                         </div>
                     ))}
-                    <button onClick={addQuestion} className="w-full py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-gray-500 hover:text-purple-400 flex items-center justify-center gap-2 mt-2 font-black text-[10px] uppercase tracking-widest transition-all hover:border-purple-500/50"><Plus size={16} /> New Slide</button>
+                    <button onClick={addQuestion} className="h-20 lg:h-auto min-w-[3rem] lg:w-full lg:py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-xl lg:rounded-2xl text-gray-500 hover:text-purple-400 flex items-center justify-center shrink-0 gap-2 font-black text-[10px] uppercase transition-all"><Plus size={16} /></button>
                 </aside>
 
                 <main className="flex-1 bg-[#0a0a0a] overflow-y-auto p-8 md:p-12 flex flex-col items-center custom-scrollbar relative">
@@ -230,49 +222,69 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                             </>
                         ) : (
                             <>
-                                <div className="bg-[#161616] rounded-[2.5rem] shadow-2xl border border-white/5 p-10 text-center">
-                                    <textarea ref={questionTextareaRef} value={currentQ?.question} onChange={(e) => { updateCurrentQ({ question: e.target.value }); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} placeholder="Start typing your question" className="w-full bg-transparent text-2xl md:text-4xl font-black text-center text-white placeholder-gray-800 outline-none resize-none overflow-hidden leading-tight" />
+                                <div className="bg-[#161616] rounded-3xl lg:rounded-[2.5rem] shadow-2xl border border-white/5 p-6 lg:p-10 text-center">
+                                    <textarea ref={questionTextareaRef} value={currentQ?.question} onChange={(e) => { updateCurrentQ({ question: e.target.value }); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} placeholder="Question Text..." className="w-full bg-transparent text-xl lg:text-4xl font-black text-center text-white placeholder-gray-800 outline-none resize-none overflow-hidden leading-tight" />
                                 </div>
-                                <div className="aspect-video max-w-lg mx-auto w-full bg-white/5 rounded-[2.5rem] shadow-2xl border border-white/5 flex flex-col items-center justify-center gap-4 group transition-all relative overflow-hidden shrink-0">
-                                    {currentQ?.mediaUrl ? <div className="relative w-full h-full"><img src={currentQ.mediaUrl} className="w-full h-full object-contain" alt="Media" /><div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100"><button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-blue-600 rounded-xl text-white hover:scale-110"><Upload size={14}/></button><button onClick={() => updateCurrentQ({ mediaUrl: undefined })} className="p-2.5 bg-red-600 rounded-xl text-white hover:scale-110"><Trash2 size={14}/></button></div></div> : <div className="flex flex-col items-center gap-6"><div className="flex gap-4"><button onClick={() => setShowGiphy(true)} className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:text-purple-400 transition-all"><Film size={20} /><span className="text-[7px] font-black uppercase mt-1">Giphy</span></button><button onClick={() => fileInputRef.current?.click()} className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:text-blue-400 transition-all"><Upload size={20} /><span className="text-[7px] font-black uppercase mt-1">Upload</span></button></div></div>}
+                                <div className="aspect-video max-w-md lg:max-w-lg mx-auto w-full bg-white/5 rounded-3xl lg:rounded-[2.5rem] shadow-2xl border border-white/5 flex flex-col items-center justify-center gap-4 group transition-all relative overflow-hidden shrink-0">
+                                    {currentQ?.mediaUrl ? <div className="relative w-full h-full"><img src={currentQ.mediaUrl} className="w-full h-full object-contain" alt="Media" /><div className="absolute top-4 right-4 flex gap-2"><button onClick={() => fileInputRef.current?.click()} className="p-2 bg-blue-600 rounded-lg text-white"><Upload size={12}/></button><button onClick={() => updateCurrentQ({ mediaUrl: undefined })} className="p-2 bg-red-600 rounded-lg text-white"><Trash2 size={12}/></button></div></div> : <div className="flex flex-col items-center gap-4 lg:gap-6"><div className="flex gap-4"><button onClick={() => setShowGiphy(true)} className="w-16 h-16 lg:w-20 lg:h-20 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:text-purple-400 transition-all"><Film size={20} /><span className="text-[7px] font-black uppercase mt-1">Giphy</span></button><button onClick={() => fileInputRef.current?.click()} className="w-16 h-16 lg:w-20 lg:h-20 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:text-blue-400 transition-all"><Upload size={20} /><span className="text-[7px] font-black uppercase mt-1">Upload</span></button></div></div>}
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">{currentQ?.options.map((opt, i) => { const isActive = currentQ.correctIndex === i; return (<div key={i} className={`group relative flex items-start p-2 rounded-2xl shadow-xl transition-all border-2 ${isActive ? 'border-green-500 ring-4 ring-green-500/10 bg-green-500/5' : 'border-white/5 hover:border-white/10 bg-white/5'}`}><div className={`${COLORS[i]} w-14 h-14 rounded-xl flex items-center justify-center text-xl text-white/90 font-black shrink-0 mt-1`}>{SHAPES[i]}</div><div className="flex-1 min-h-[60px] h-auto flex items-center px-4"><textarea rows={1} value={opt} onChange={(e) => { const newOpts = [...currentQ.options]; newOpts[i] = e.target.value; updateCurrentQ({ options: newOpts }); adjustTextareaHeight(e.target as HTMLTextAreaElement); }} placeholder={`Answer ${i + 1}`} className="answer-textarea w-full bg-transparent text-lg font-bold text-white placeholder-gray-800 outline-none resize-none overflow-hidden" /></div><button onClick={() => updateCurrentQ({ correctIndex: i })} className={`mr-2 p-3 rounded-xl border-2 transition-all mt-1 ${isActive ? 'bg-green-500 border-green-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-700 hover:text-white'}`}><CheckCircle2 size={18} /></button></div>); })}</div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 pb-20">{currentQ?.options.map((opt, i) => { const isActive = currentQ.correctIndex === i; return (<div key={i} className={`group relative flex items-start p-1.5 lg:p-2 rounded-xl lg:rounded-2xl transition-all border-2 ${isActive ? 'border-green-500 bg-green-500/5' : 'border-white/5 bg-white/5'}`}><div className={`${COLORS[i]} w-10 lg:w-14 h-10 lg:h-14 rounded-lg lg:rounded-xl flex items-center justify-center text-base lg:text-xl text-white/90 font-black shrink-0 mt-0.5 lg:mt-1`}>{SHAPES[i]}</div><div className="flex-1 min-h-[40px] h-auto flex items-center px-3 lg:px-4"><textarea rows={1} value={opt} onChange={(e) => { const newOpts = [...currentQ.options]; newOpts[i] = e.target.value; updateCurrentQ({ options: newOpts }); adjustTextareaHeight(e.target as HTMLTextAreaElement); }} placeholder={`Answer ${i + 1}`} className="answer-textarea w-full bg-transparent text-sm lg:text-lg font-bold text-white placeholder-gray-800 outline-none resize-none overflow-hidden" /></div><button onClick={() => updateCurrentQ({ correctIndex: i })} className={`mr-1 lg:mr-2 p-2 lg:p-3 rounded-lg lg:rounded-xl border-2 transition-all mt-0.5 lg:mt-1 ${isActive ? 'bg-green-500 border-green-500 text-white' : 'bg-white/5 border-white/10 text-gray-700'}`}><CheckCircle2 size={16} /></button></div>); })}</div>
                             </>
                         )}
                     </div>
                 </main>
 
-                <aside className="w-72 bg-[#161616] border-l border-white/5 p-6 flex flex-col gap-6 shrink-0 overflow-y-auto custom-scrollbar">
-                    <h3 className="font-black text-[10px] text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2"><Settings2 size={14} className="text-purple-500" /> Slide Config</h3>
+                {/* Desktop Aside / Mobile Bottom Sheet */}
+                <aside className={`
+                    fixed lg:relative inset-x-0 bottom-0 lg:inset-auto z-[220] lg:z-0
+                    lg:w-80 lg:h-auto bg-[#161616] border-t lg:border-t-0 lg:border-l border-white/10
+                    transition-transform duration-500 ease-in-out
+                    ${showConfigMobile ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
+                    p-6 flex flex-col gap-6 shrink-0 max-h-[80vh] overflow-y-auto custom-scrollbar rounded-t-[2.5rem] lg:rounded-none
+                `}>
+                    <div className="flex lg:hidden justify-center mb-2"><div className="w-12 h-1 bg-white/10 rounded-full" onClick={() => setShowConfigMobile(false)}></div></div>
+                    <h3 className="font-black text-[10px] lg:text-xs text-gray-500 uppercase tracking-[0.2em] flex items-center justify-between">
+                        <span className="flex items-center gap-2"><Settings2 size={14} className="text-purple-500" /> Slide Config</span>
+                        <button onClick={() => setShowConfigMobile(false)} className="lg:hidden p-2 text-gray-500"><X size={16}/></button>
+                    </h3>
                     <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Points</label>
-                            <div className="grid grid-cols-1 gap-2">
+                        <div className="space-y-3">
+                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Points Mode</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                                 {[
                                     { id: 'standard', name: 'Standard', icon: Trophy, desc: 'Normal + Streak' },
                                     { id: 'double', name: 'Double', icon: Zap, desc: '2x + Streak' },
-                                    { id: 'streak_boost', name: 'Streak Boost', icon: Flame, desc: 'Massive Streak Rewards', color: 'text-orange-400' },
-                                    { id: 'competitive', name: 'Competitive', icon: Target, desc: 'Fixed points, no streak' },
-                                    { id: 'none', name: 'No points', icon: MinusCircle, desc: 'Survey mode' }
+                                    { id: 'streak_boost', name: 'Streak Boost', icon: Flame, desc: 'Massive Streak', color: 'text-orange-400' },
+                                    { id: 'competitive', name: 'Competitive', icon: Target, desc: 'No streak' },
+                                    { id: 'none', name: 'No points', icon: MinusCircle, desc: 'Survey' }
                                 ].map(p => (
-                                    <button 
-                                        key={p.id}
-                                        onClick={() => updateCurrentQ({ pointsType: p.id as any })}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${currentQ?.pointsType === p.id ? 'border-purple-500 bg-purple-500/10' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
-                                    >
+                                    <button key={p.id} onClick={() => updateCurrentQ({ pointsType: p.id as any })} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${currentQ?.pointsType === p.id ? 'border-purple-500 bg-purple-500/10' : 'border-white/5 bg-white/5'}`}>
                                         <p.icon size={16} className={currentQ?.pointsType === p.id ? (p.color || 'text-purple-400') : 'text-gray-500'} />
-                                        <div><p className="text-[10px] font-black uppercase tracking-tight">{p.name}</p><p className="text-[8px] font-bold text-gray-500">{p.desc}</p></div>
+                                        <div className="flex-1 leading-tight"><p className="text-[10px] font-black uppercase">{p.name}</p><p className="text-[8px] font-bold text-gray-500">{p.desc}</p></div>
                                     </button>
                                 ))}
                             </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3 pb-10 lg:pb-0">
                             <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Time limit</label>
-                            <select value={currentQ?.timeLimit} onChange={(e) => updateCurrentQ({ timeLimit: parseInt(e.target.value) })} className="w-full p-4 bg-[#111] border border-white/10 rounded-xl font-black text-xs outline-none focus:border-purple-500 text-white">{[5, 10, 20, 30, 60, 120].map(s => <option key={s} value={s}>{s} seconds</option>)}</select>
+                            <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
+                                {[5, 10, 20, 30, 60, 120].map(s => (
+                                    <button key={s} onClick={() => updateCurrentQ({ timeLimit: s })} className={`py-2 rounded-lg border-2 font-black text-[10px] transition-all ${currentQ?.timeLimit === s ? 'border-purple-500 bg-purple-500/10 text-white' : 'border-white/5 bg-white/5 text-gray-500'}`}>{s}s</button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </aside>
             </div>
+
+            {/* Mobile Bottom Action Navbar */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#161616]/90 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-4 z-[215]">
+                <button onClick={() => setIsPreviewMode(!isPreviewMode)} className={`flex flex-col items-center gap-1 ${isPreviewMode ? 'text-blue-400' : 'text-gray-400'}`}>{isPreviewMode ? <EyeOff size={18} /> : <Eye size={18} />}<span className="text-[8px] font-black uppercase">Preview</span></button>
+                <button onClick={addQuestion} className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-purple-400 active:scale-90 transition-all"><Plus size={24} /></button>
+                <button onClick={() => setShowConfigMobile(!showConfigMobile)} className={`flex flex-col items-center gap-1 ${showConfigMobile ? 'text-purple-400' : 'text-gray-400'}`}><Settings2 size={18} /><span className="text-[8px] font-black uppercase">Config</span></button>
+            </nav>
+            
+            {showConfigMobile && <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[219]" onClick={() => setShowConfigMobile(false)}></div>}
 
             {showGiphy && (
                 <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in" onClick={() => setShowGiphy(false)}>

@@ -51,17 +51,19 @@ export const StudentGame: React.FC<StudentGameProps> = ({
             <div className="h-full flex flex-col items-center justify-center bg-[#46178f] text-white p-6 text-center relative overflow-hidden font-sans">
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
                 
-                <div className="absolute inset-0 pointer-events-none opacity-20">
-                    <div className="absolute top-[20%] left-[10%] w-64 h-64 bg-white/20 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-white/20 rounded-full blur-3xl animate-pulse [animation-delay:1s]"></div>
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white/5 rounded-full blur-[100px] animate-pulse"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-400/10 rounded-full blur-[100px] animate-pulse [animation-delay:2s]"></div>
                 </div>
 
                 <div className="relative z-10 flex flex-col items-center animate-in zoom-in duration-500">
-                    <div className="w-32 h-32 bg-white/10 backdrop-blur-2xl rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl border border-white/20 rotate-6 animate-bounce">
-                        <Star size={64} className="text-yellow-400 fill-yellow-400" />
+                    <div className="w-40 h-40 bg-white/5 backdrop-blur-3xl rounded-[3rem] flex items-center justify-center mb-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 rotate-6 animate-bounce">
+                        <Star size={80} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" />
                     </div>
-                    <h2 className="text-5xl font-black mb-4 tracking-tighter drop-shadow-xl">Get Ready!</h2>
-                    <p className="text-white/60 text-xl font-bold uppercase tracking-widest animate-pulse">Waiting for host to start...</p>
+                    <h2 className="text-6xl font-black mb-6 tracking-tighter drop-shadow-2xl">Get Ready!</h2>
+                    <div className="bg-black/20 px-8 py-3 rounded-2xl border border-white/10 backdrop-blur-md">
+                        <p className="text-white/80 text-lg font-black uppercase tracking-widest animate-pulse">Waiting for host...</p>
+                    </div>
                 </div>
             </div>
         );
@@ -94,20 +96,20 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     if (state === 'question') {
         if (hasAnswered) {
             return (
-                <div className="h-full flex flex-col items-center justify-center bg-[#1368ce] text-white p-6 relative overflow-hidden">
-                    <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
+                <div className="h-full flex flex-col items-center justify-center bg-[#1368ce] text-white p-8 relative overflow-hidden">
+                    <div className="absolute top-6 right-6 z-50 scale-125 origin-top-right"><SoundControl /></div>
                     
                     <div className="relative z-10 flex flex-col items-center text-center">
-                        <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mb-10 border-4 border-white/40 shadow-2xl animate-bounce">
-                            <CheckCircle size={64} className="text-white drop-shadow-lg" />
+                        <div className="w-40 h-40 bg-white/10 backdrop-blur-3xl rounded-full flex items-center justify-center mb-12 border-4 border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.1)] animate-bounce">
+                            <CheckCircle size={80} className="text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.2)]" />
                         </div>
-                        <h3 className="text-5xl font-black mb-3 tracking-tighter drop-shadow-xl">Got it!</h3>
-                        <p className="text-white/70 text-xl font-bold uppercase tracking-widest">Waiting for others...</p>
+                        <h3 className="text-6xl font-black mb-4 tracking-tighter drop-shadow-2xl">Answered!</h3>
+                        <p className="text-white/60 text-xl font-bold uppercase tracking-widest bg-black/20 px-8 py-2 rounded-full border border-white/10">Waiting for others...</p>
                         
                         {myStreak > 1 && (
-                            <div className="mt-12 flex items-center gap-3 bg-orange-500 px-6 py-3 rounded-2xl shadow-xl animate-in slide-in-from-bottom-4">
-                                <Flame size={24} className="fill-white" />
-                                <span className="font-black text-2xl tracking-tighter">{myStreak}x STREAK!</span>
+                            <div className="mt-16 flex items-center gap-4 bg-gradient-to-r from-orange-500 to-red-600 px-10 py-5 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
+                                <Flame size={32} className="fill-white" />
+                                <span className="font-black text-3xl tracking-tighter">{myStreak}x STREAK!</span>
                             </div>
                         )}
                     </div>
@@ -123,18 +125,19 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse [animation-delay:2s]"></div>
 
                 {/* Status Bar */}
-                <div className="flex justify-between items-center z-20 relative">
-                    <div className="flex gap-2">
+                <div className="flex justify-between items-center z-20 relative px-2">
+                    <div className="flex items-center gap-3">
                         {myStreak > 1 && (
-                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 rounded-2xl text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-bounce">
-                                <Flame size={18} className="fill-white" />
-                                <span className="text-lg font-black tracking-tighter">{myStreak}</span>
+                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-600 px-5 py-2.5 rounded-2xl text-white shadow-2xl ring-4 ring-orange-500/20 animate-bounce">
+                                <Flame size={20} className="fill-white" />
+                                <span className="text-xl font-black tracking-tighter">{myStreak}</span>
                             </div>
                         )}
+                        <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Question {board.currentQuestionIndex + 1}</div>
                     </div>
                     
-                    <div className="flex gap-3">
-                        <div className={`px-6 py-2 rounded-2xl font-black text-xl shadow-2xl backdrop-blur-md border transition-all ${timeLeft <= 5 ? 'bg-red-500 border-red-400 text-white animate-pulse' : 'bg-white/5 border-white/10 text-white'}`}>
+                    <div className="flex gap-3 scale-110 origin-right">
+                        <div className={`px-6 py-2.5 rounded-2xl font-black text-2xl shadow-2xl backdrop-blur-xl border-2 transition-all ${timeLeft <= 5 ? 'bg-red-600 border-red-400 text-white animate-pulse scale-110' : 'bg-black/40 border-white/10 text-white'}`}>
                             {timeLeft}s
                         </div>
                         <SoundControl />
@@ -143,8 +146,8 @@ export const StudentGame: React.FC<StudentGameProps> = ({
 
                 {/* Question Area */}
                 {board.showQuestionOnStudentDevice && (
-                    <div className="relative z-10 text-center animate-in slide-in-from-top-4 duration-500">
-                        <h2 className="text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-2xl">
+                    <div className="relative z-10 text-center animate-in slide-in-from-top-6 duration-500 px-2">
+                        <h2 className="text-2xl lg:text-4xl font-black text-white leading-tight drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
                             {currentQ?.question}
                         </h2>
                     </div>
@@ -176,7 +179,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                 )}
                 
                 {/* Large Answer Tiles - Modern Grid */}
-                <div className="relative z-10 grid grid-cols-2 gap-4 md:gap-6 flex-1 min-h-0">
+                <div className="relative z-10 grid grid-cols-2 gap-3 lg:gap-6 flex-1 min-h-0 pb-4">
                     {currentQ?.options.map((opt, idx) => {
                         const isSelected = localSelectedIdx === idx;
                         const isDisabled = isSubmitting || hasAnswered;
@@ -187,25 +190,22 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                                 onClick={() => handleAnswer(idx)}
                                 disabled={isDisabled}
                                 className={`
-                                    relative rounded-[2rem] flex flex-col items-center justify-center p-6 transition-all duration-200 active:scale-95 border-2 group
-                                    ${idx === 0 ? (isSelected ? 'bg-red-500 border-red-300' : 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20 active:bg-red-500/40') : 
-                                      idx === 1 ? (isSelected ? 'bg-blue-500 border-blue-300' : 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 active:bg-blue-500/40') : 
-                                      idx === 2 ? (isSelected ? 'bg-yellow-500 border-yellow-300' : 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20 active:bg-yellow-500/40') : 
-                                      (isSelected ? 'bg-green-500 border-green-300' : 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20 active:bg-green-500/40')}
-                                    ${isDisabled && !isSelected ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}
+                                    relative rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center p-4 lg:p-8 transition-all duration-150 active:scale-90 border-t-2 border-x-2 border-b-8 group
+                                    ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/40' : 'bg-[#e21b3c] border-[#9a1229] hover:brightness-110') : 
+                                      idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/40' : 'bg-[#1368ce] border-[#0a4182] hover:brightness-110') : 
+                                      idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/40' : 'bg-[#d89e00] border-[#8c6a00] hover:brightness-110') : 
+                                      (isSelected ? 'bg-[#26890c] border-white/40' : 'bg-[#26890c] border-[#144a06] hover:brightness-110')}
+                                    ${isDisabled && !isSelected ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'}
+                                    ${isSelected ? 'translate-y-1 border-b-4' : 'translate-y-0'}
                                 `}
                             >
-                                {/* Shape Indicator (Subtle) */}
-                                <div className={`absolute top-6 left-6 text-2xl opacity-40 font-black pointer-events-none ${idx === 0 ? 'text-red-400' : idx === 1 ? 'text-blue-400' : idx === 2 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                <div className={`absolute top-4 left-4 lg:top-8 lg:left-8 text-2xl lg:text-4xl opacity-50 font-black pointer-events-none text-white drop-shadow-lg`}>
                                     {SHAPES[idx % 4]}
                                 </div>
 
-                                <span className="relative z-10 text-xl md:text-3xl font-black text-white text-center leading-tight drop-shadow-lg break-words w-full pointer-events-none">
-                                    {isSelected && isSubmitting ? 'Submitting...' : opt}
+                                <span className={`relative z-10 font-black text-white text-center leading-tight drop-shadow-lg break-words w-full pointer-events-none transition-all ${opt.length > 50 ? 'text-sm lg:text-lg' : opt.length > 20 ? 'text-lg lg:text-2xl' : 'text-2xl lg:text-4xl'}`}>
+                                    {isSelected && isSubmitting ? '...' : opt || SHAPES[idx]}
                                 </span>
-                                
-                                {/* Glow Effect */}
-                                <div className={`absolute inset-0 rounded-[2rem] opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity blur-xl -z-10 pointer-events-none ${idx === 0 ? 'bg-red-500/30' : idx === 1 ? 'bg-blue-500/30' : idx === 2 ? 'bg-yellow-500/30' : 'bg-green-500/30'}`}></div>
                             </button>
                         );
                     })}

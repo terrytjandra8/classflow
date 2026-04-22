@@ -159,35 +159,17 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {/* Action Bar - Only show in Lobby or Results to avoid clutter during questions */}
+            {/* Floating Top Actions - Simplified */}
             {(state === 'lobby' || state === 'leaderboard' || state === 'finished') && (
                 <div className="absolute top-6 left-6 z-50 flex gap-2 items-center">
-                <button 
-                    onClick={() => {
-                        if (window.confirm("Return to Setup? This will end the current session.")) {
-                            resetGame();
-                        }
-                    }}
-                    className="bg-black/50 text-white px-4 py-2 rounded-full hover:bg-purple-600 backdrop-blur-md border border-white/10 transition-colors flex items-center gap-2 font-bold text-xs shadow-xl"
-                    title="Edit Quiz"
-                >
-                    <Edit2 size={16} /> Edit Quiz
-                </button>
-                <button 
-                    onClick={() => setShowHistory(true)}
-                    className="bg-black/50 text-white px-4 py-2 rounded-full hover:bg-yellow-600 backdrop-blur-md border border-white/10 transition-colors flex items-center gap-2 font-bold text-xs shadow-xl"
-                    title="View History"
-                >
-                    <Trophy size={16} /> History
-                </button>
-                <button 
-                    onClick={() => setShowResetConfirm(true)}
-                    className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 backdrop-blur-md border border-white/10 transition-colors shadow-xl"
-                    title="End Game"
-                >
-                    <XCircle size={20} />
-                </button>
-            </div>
+                    <button 
+                        onClick={() => setShowHistory(true)}
+                        className="bg-black/50 text-white px-5 py-2.5 rounded-full hover:bg-yellow-600 backdrop-blur-md border border-white/10 transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95"
+                        title="View History"
+                    >
+                        <Trophy size={14} /> History
+                    </button>
+                </div>
             )}
 
             {isPresenting && (
@@ -199,60 +181,60 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {/* SCENE: LOBBY */}
+            {/* SCENE: LOBBY - Optimized and Centered */}
             {state === 'lobby' && (
-                <div className="flex-1 flex flex-col p-10 relative z-10">
-                    <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-20 max-w-7xl mx-auto w-full">
-                        <div className="flex-1 text-left space-y-8 animate-in slide-in-from-left-10 duration-700">
-                            <h1 className="text-8xl md:text-[10rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-[0.8]">
-                                JOIN<br/>THE<br/>GAME
+                <div className="flex-1 flex flex-col p-6 lg:p-10 relative z-10 overflow-y-auto no-scrollbar">
+                    <div className="flex-1 flex flex-col items-center justify-center gap-10 lg:gap-16 max-w-7xl mx-auto w-full py-10">
+                        <div className="text-center space-y-6 lg:space-y-8 animate-in slide-in-from-top-10 duration-700">
+                            <h1 className="text-6xl sm:text-8xl lg:text-[10rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-[0.8] py-4">
+                                JOIN THE GAME
                             </h1>
-                            <div className="flex items-center gap-4 text-white/50 font-mono text-xl animate-in fade-in delay-300">
-                                <div className="flex gap-1">
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-75"></span>
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-150"></span>
+                            <div className="flex items-center justify-center gap-4 text-white/40 font-mono text-base lg:text-xl animate-in fade-in delay-300">
+                                <div className="flex gap-1.5">
+                                    <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                                    <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse delay-75"></span>
+                                    <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse delay-150"></span>
                                 </div>
-                                Waiting for players to join...
+                                <span className="font-black uppercase tracking-[0.2em] text-xs lg:text-sm">Waiting for players to enter...</span>
                             </div>
                         </div>
 
-                        {/* Holographic Ticket */}
-                        <div className="relative group perspective-1000 animate-in slide-in-from-right-10 duration-700">
-                            <div className="absolute -inset-4 bg-gradient-to-r from-blue-600/30 to-pink-600/30 rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-                            <div className="relative bg-black/40 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] p-12 text-center w-96 transform transition-all hover:scale-[1.05] shadow-2xl overflow-hidden">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                                <div className="text-sm font-black text-gray-500 uppercase tracking-[0.4em] mb-4">Class Code</div>
-                                <div className="text-7xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] mb-8">
+                        {/* Holographic Ticket - Focused Focal Point */}
+                        <div className="relative group perspective-1000 animate-in zoom-in duration-700 delay-200">
+                            <div className="absolute -inset-6 bg-gradient-to-r from-blue-600/40 via-purple-600/40 to-pink-600/40 rounded-[4rem] blur-3xl opacity-30 group-hover:opacity-60 transition duration-1000"></div>
+                            <div className="relative bg-black/40 backdrop-blur-3xl border-2 border-white/20 rounded-[3rem] p-10 lg:p-14 text-center w-full max-w-[22rem] lg:w-[28rem] transform transition-all hover:scale-[1.02] shadow-2xl overflow-hidden ring-1 ring-white/10">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                                <div className="text-[10px] lg:text-xs font-black text-gray-500 uppercase tracking-[0.5em] mb-6">Class Access Code</div>
+                                <div className="text-7xl lg:text-9xl font-mono font-black text-white tracking-[0.1em] drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] mb-10 selection:bg-purple-500">
                                     {board.classCode}
                                 </div>
-                                <div className="flex flex-col items-center gap-2 pt-6 border-t border-white/10">
-                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-widest">Join now at</div>
-                                    <div className="text-2xl text-white font-black tracking-tight">classboards.ai</div>
+                                <div className="flex flex-col items-center gap-3 pt-8 border-t border-white/10">
+                                    <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em]">Step 1: Go to</div>
+                                    <div className="text-3xl lg:text-4xl text-white font-black tracking-tight bg-white/5 px-6 py-2 rounded-2xl border border-white/5">classboards.ai</div>
                                 </div>
-                                <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+                                <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-auto w-full max-w-7xl mx-auto pt-10">
-                        <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                                    <Users size={32} className="text-blue-400" />
+                    <div className="mt-auto w-full max-w-7xl mx-auto pt-6 border-t border-white/5">
+                        <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-10">
+                            <div className="flex items-center gap-6">
+                                <div className="p-5 bg-blue-500/10 rounded-[2rem] border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+                                    <Users size={40} className="text-blue-400" />
                                 </div>
                                 <div>
-                                    <div className="text-4xl font-black text-white tabular-nums">{onlineUsers?.length || 0}</div>
-                                    <div className="text-xs text-gray-500 font-black uppercase tracking-[0.2em]">Players Ready</div>
+                                    <div className="text-6xl font-black text-white tabular-nums tracking-tighter">{onlineUsers?.length || 0}</div>
+                                    <div className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em]">Players in Lobby</div>
                                 </div>
                             </div>
                             <button 
                                 onClick={startGame} 
-                                className="group relative bg-white text-black px-16 py-6 rounded-2xl font-black text-2xl shadow-[0_20px_50px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all flex items-center gap-4 overflow-hidden"
+                                className="group relative bg-white text-black px-20 py-7 rounded-[2.5rem] font-black text-3xl shadow-[0_20px_60px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all flex items-center gap-4 overflow-hidden ring-4 ring-white/10"
                             >
                                 <span className="relative z-10">START GAME</span>
-                                <Play fill="currentColor" size={24} className="relative z-10" />
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                                <Play fill="currentColor" size={28} className="relative z-10" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                             </button>
                         </div>
 

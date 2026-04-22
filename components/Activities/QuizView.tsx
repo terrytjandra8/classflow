@@ -113,7 +113,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
     // --- TEACHER VIEW (LIVE) ---
     return (
         <>
-            <div className={`h-full flex flex-col bg-[#111] text-white font-sans ${isPresenting ? 'fixed inset-0 z-[100]' : ''}`}>
+            <div className={`h-full w-full flex flex-col bg-[#111] text-white font-sans overflow-hidden ${isPresenting ? 'fixed inset-0 z-[100]' : 'relative'}`}>
                 
                 {/* Header for Live Mode when not presenting */}
                 <div className={`bg-[#161616] border-b border-white/10 px-6 py-3 flex items-center justify-between shrink-0 ${isPresenting || isPresentationMode ? 'hidden' : 'flex'}`}>
