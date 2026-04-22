@@ -1,4 +1,4 @@
-
+// v1.0.1 - Final scoring logic with TS fix
 export type PointSystemType = 'standard' | 'double' | 'none' | 'competitive' | 'streak_boost';
 
 export interface PointSystemConfig {
