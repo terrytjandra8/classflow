@@ -142,11 +142,19 @@ export const boardService = {
 
         // If the board was published or made public, broadcast a refresh event for dashboards
         if (dbUpdates.is_published === true || dbUpdates.is_public === true) {
-            supabase.channel('dashboard-sync').send({
-                type: 'broadcast',
-                event: 'board-published',
-                payload: { boardId: id }
-            }).catch(console.error);
+            const syncChannel = supabase.channel('dashboard-sync');
+            syncChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    syncChannel.send({
+                        type: 'broadcast',
+                        event: 'board-published',
+                        payload: { boardId: id, timestamp: Date.now() }
+                    }).then(() => {
+                        // Cleanup after sending
+                        setTimeout(() => supabase.removeChannel(syncChannel), 1000);
+                    });
+                }
+            });
         }
 
         return mapBoard(data as BoardRow);

@@ -367,19 +367,26 @@ function AppContent() {
 
   // Dashboard Sync Listener (Real-time visibility refresh)
   useEffect(() => {
-      if (!session && !isGuest) return;
+      // Create the sync channel
+      const syncChannel = supabase.channel('dashboard-sync', {
+          config: {
+              broadcast: { self: true },
+          }
+      });
 
-      const syncChannel = supabase.channel('dashboard-sync')
-          .on('broadcast', { event: 'board-published' }, () => {
-              console.log("Board published broadcast received! Refreshing dashboard...");
+      syncChannel
+          .on('broadcast', { event: 'board-published' }, (payload) => {
+              console.log("🔔 BOARD PUBLISHED:", payload);
               fetchBoards();
           })
-          .subscribe();
+          .subscribe((status) => {
+              console.log("📡 DASHBOARD SYNC STATUS:", status);
+          });
 
       return () => {
           supabase.removeChannel(syncChannel);
       };
-  }, [session, isGuest, fetchBoards]);
+  }, [fetchBoards]);
 
   // Subscribe to board changes in real-time
   useEffect(() => {
