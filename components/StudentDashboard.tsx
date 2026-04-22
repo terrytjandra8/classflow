@@ -144,7 +144,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         
         // Remove them after animation finishes (300ms)
         const timer = setTimeout(() => {
-            setDisplayBoards(boardsProp);
+            setDisplayBoards(prev => prev.filter(b => currentIds.has(b.id)));
         }, 350);
         return () => clearTimeout(timer);
     } else {

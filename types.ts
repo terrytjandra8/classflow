@@ -300,6 +300,7 @@ export interface Board {
   guideDismissed?: boolean;
   
   settings?: any; 
+  isExiting?: boolean; // NEW: Track local animation state
 }
 
 export interface GeneratedIdea {
