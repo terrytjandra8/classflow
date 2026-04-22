@@ -156,6 +156,8 @@ export interface QuizQuestion {
     options: string[];
     correctIndex: number;
     timeLimit: number;
+    mediaUrl?: string;
+    pointsType?: 'standard' | 'double' | 'none' | 'competitive' | 'streak_boost';
 }
 
 // Assessment Question Type

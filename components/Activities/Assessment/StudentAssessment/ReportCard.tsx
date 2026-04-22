@@ -18,14 +18,14 @@ interface ReportCardProps {
     onReturnHome: () => void;
 }
 
-export const ReportCard: React.FC<ReportCardProps> = ({ 
-    board, questions, submissionData, submittedAt, isPreviewMode, onExitPreview, onReturnHome 
+export const ReportCard: React.FC<ReportCardProps> = ({
+    board, questions, submissionData, submittedAt, isPreviewMode, onExitPreview, onReturnHome
 }) => {
     const { username } = useBoard();
-    const [printInfo, setPrintInfo] = useState<{mode: PrintMode, isPrinting: boolean} | null>(null);
+    const [printInfo, setPrintInfo] = useState<{ mode: PrintMode, isPrinting: boolean } | null>(null);
     const [showPrintDropdown, setShowPrintDropdown] = useState(false);
     const printDropdownRef = useRef<HTMLDivElement>(null);
-    
+
     const ipekaLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/ipeka.png').data.publicUrl;
     const ibLogoUrl = supabase.storage.from('uploads').getPublicUrl('Logo/IB.png').data.publicUrl;
 
@@ -77,9 +77,9 @@ export const ReportCard: React.FC<ReportCardProps> = ({
             )}
 
             {printInfo?.isPrinting && (
-                <AssessmentPrintView 
+                <AssessmentPrintView
                     participants={[{
-                        id: 'student-self', 
+                        id: 'student-self',
                         name: username || 'Student',
                         score: submissionData?.score || 0,
                         submittedAt: submittedAt || submissionData?.created_at,
@@ -98,7 +98,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 <div className="flex justify-between items-center pt-4">
                     <button onClick={onReturnHome} className="bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-colors flex items-center gap-2"><Home size={16} /> Dashboard</button>
                     <div className="relative" ref={printDropdownRef}>
-                        <button 
+                        <button
                             onClick={() => setShowPrintDropdown(s => !s)}
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 shadow-lg"
                         >
@@ -135,7 +135,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     if (q.type === 'section') {
                         return (
                             <div key={q.id} className="pt-8 first:pt-0">
-                                <h3 
+                                <h3
                                     className="text-xl font-black border-b-2 border-blue-500/30 pb-2 text-blue-500 uppercase tracking-widest mb-4 rich-text-content"
                                     dangerouslySetInnerHTML={{ __html: parseMath(q.text) }}
                                 />
@@ -160,7 +160,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                             </div>
                             <div className="p-6 space-y-6">
                                 <div className="text-lg font-bold leading-relaxed rich-text-content" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
-                                
+
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {/* Left: Student Answer */}
                                     <div className="bg-black/30 p-5 rounded-xl border border-white/5">
@@ -206,9 +206,9 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                                                 <div className="text-emerald-50 font-bold" dangerouslySetInnerHTML={{ __html: q.options?.[parseInt(q.correctAnswer || '0')] || '' }} />
                                             </div>
                                         ) : (
-                                            <div 
-                                                className="text-sm text-emerald-100 rich-text-content leading-relaxed" 
-                                                dangerouslySetInnerHTML={{ __html: parseMath(q.modelAnswer || q.notes || '<em>No reference answer provided.</em>') }} 
+                                            <div
+                                                className="text-sm text-emerald-100 rich-text-content leading-relaxed"
+                                                dangerouslySetInnerHTML={{ __html: parseMath(q.modelAnswer || q.notes || '<em>No reference answer provided.</em>') }}
                                             />
                                         )}
                                     </div>

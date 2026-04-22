@@ -23,10 +23,11 @@ interface QuizViewProps {
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
     isPresentationMode?: boolean;
+    username?: string;
 }
 
 export const QuizView: React.FC<QuizViewProps> = (props) => {
-    const { board, onUpdateBoard, isStudent, userId, onlineUsers, onBack, onOpenSettings, onOpenShare, isPresentationMode } = props;
+    const { board, onUpdateBoard, isStudent, userId, username, onlineUsers, onBack, onOpenSettings, onOpenShare, isPresentationMode } = props;
     const [isPresenting, setIsPresenting] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -35,7 +36,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
         questions, state, currentQIndex, currentQ, timeLeft, 
         hasAnswered, myAnswerNote, scores, myStreak,
         submitAnswer, enterLobby, startGame, nextStep, resetGame
-    } = useQuizGame(board, props.notes, userId, isStudent, onUpdateBoard, props.onActivity);
+    } = useQuizGame(board, props.notes, userId, username, isStudent, onUpdateBoard, props.onActivity);
 
     // Audio Logic Hook - Use setting or default to 'lofi'
     const selectedMusicId = (board.settings?.quizMusic as string) || 'lofi';
@@ -143,7 +144,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                     timeLeft={timeLeft}
                     scores={scores}
                     onlineUsers={onlineUsers}
-                    enterLobby={enterLobby}
+                    notes={props.notes}
                     startGame={startGame}
                     nextStep={nextStep}
                     openProjectorMode={openProjectorMode}
@@ -152,6 +153,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                     isPresenting={isPresenting}
                     togglePresentation={togglePresentation}
                     onUpdateBoard={onUpdateBoard}
+                    resetGame={resetGame}
                 />
             </div>
 

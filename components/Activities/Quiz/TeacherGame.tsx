@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { QuizState, QuizQuestion, Board } from '../../../types';
-import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass } from 'lucide-react';
+import { QuizState, QuizQuestion, Board, Note } from '../../../types';
+import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass, XCircle, ShieldAlert, Edit2 } from 'lucide-react';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
 
 interface TeacherGameProps {
@@ -22,6 +22,8 @@ interface TeacherGameProps {
     isPresenting: boolean;
     togglePresentation: (val: boolean) => void;
     onUpdateBoard: (updates: Partial<Board>) => void; 
+    resetGame: () => void;
+    notes: Note[];
 }
 
 const SHAPES = ['▲', '◆', '●', '■'];
@@ -34,10 +36,12 @@ const NEON_COLORS = [
 ];
 
 export const TeacherGame: React.FC<TeacherGameProps> = ({
-    state, board, currentQ, currentQIndex, questions, timeLeft, scores, onlineUsers, 
-    startGame, nextStep, openProjectorMode, SoundControl, backgroundStyle, isPresenting, togglePresentation, onUpdateBoard
+    state, board, currentQ, currentQIndex, questions, timeLeft, scores, onlineUsers, notes,
+    startGame, nextStep, openProjectorMode, SoundControl, backgroundStyle, isPresenting, togglePresentation, onUpdateBoard, resetGame
 }) => {
     const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showResetConfirm, setShowResetConfirm] = useState(false); // Added confirmation state
     const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -154,6 +158,27 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     </div>
                 </div>
             )}
+
+            <div className="absolute top-6 left-6 z-50 flex gap-2 items-center">
+                <button 
+                    onClick={() => {
+                        if (window.confirm("Return to Setup? This will end the current session.")) {
+                            resetGame();
+                        }
+                    }}
+                    className="bg-black/50 text-white px-4 py-2 rounded-full hover:bg-purple-600 backdrop-blur-md border border-white/10 transition-colors flex items-center gap-2 font-bold text-xs shadow-xl"
+                    title="Edit Quiz"
+                >
+                    <Edit2 size={16} /> Edit Quiz
+                </button>
+                <button 
+                    onClick={() => setShowResetConfirm(true)}
+                    className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 backdrop-blur-md border border-white/10 transition-colors shadow-xl"
+                    title="End Game"
+                >
+                    <XCircle size={20} />
+                </button>
+            </div>
 
             {isPresenting && (
                 <div className="absolute top-6 right-6 z-50 flex gap-2">
@@ -308,26 +333,78 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
             {/* SCENE: LEADERBOARD */}
             {(state === 'leaderboard' || state === 'finished') && (
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-10">
-                    <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 mb-12 tracking-tight drop-shadow-[0_0_30px_rgba(234,179,8,0.3)] uppercase">
-                        {state === 'finished' ? 'Final Standings' : 'Top Players'}
-                    </h1>
+                    <div className="flex flex-col items-center gap-4 mb-8">
+                        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
+                            <button 
+                                onClick={() => setShowHistory(false)}
+                                className={`px-8 py-2 rounded-xl font-bold text-sm transition-all ${!showHistory ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                Leaderboard
+                            </button>
+                            <button 
+                                onClick={() => setShowHistory(true)}
+                                className={`px-8 py-2 rounded-xl font-bold text-sm transition-all ${showHistory ? 'bg-yellow-500 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                Session History
+                            </button>
+                        </div>
+                        <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 tracking-tight drop-shadow-[0_0_30px_rgba(234,179,8,0.3)] uppercase">
+                            {showHistory ? 'All-Time Results' : (state === 'finished' ? 'Final Standings' : 'Top Players')}
+                        </h1>
+                    </div>
 
                     <div className="w-full max-w-4xl space-y-3">
-                        {scores.slice(0, 5).map(({ name, score }, idx) => (
-                            <div 
-                                key={idx} 
-                                className="flex items-center justify-between p-5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl transform transition-all hover:scale-105 hover:bg-white/10 animate-in slide-in-from-bottom-10 fade-in duration-500 group"
-                                style={{ animationDelay: `${idx * 100}ms` }}
-                            >
-                                <div className="flex items-center gap-6">
-                                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black shadow-lg ${idx === 0 ? 'bg-yellow-400 text-black' : idx === 1 ? 'bg-gray-300 text-black' : idx === 2 ? 'bg-orange-400 text-black' : 'bg-white/10 text-white'}`}>
-                                        {idx + 1}
+                        {!showHistory ? (
+                            scores.slice(0, 5).map(({ name, score }, idx) => (
+                                <div 
+                                    key={idx} 
+                                    className="flex items-center justify-between p-5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl transform transition-all hover:scale-105 hover:bg-white/10 animate-in slide-in-from-bottom-10 fade-in duration-500 group"
+                                    style={{ animationDelay: `${idx * 100}ms` }}
+                                >
+                                    <div className="flex items-center gap-6">
+                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black shadow-lg ${idx === 0 ? 'bg-yellow-400 text-black' : idx === 1 ? 'bg-gray-300 text-black' : idx === 2 ? 'bg-orange-400 text-black' : 'bg-white/10 text-white'}`}>
+                                            {idx + 1}
+                                        </div>
+                                        <span className="text-2xl font-bold text-white group-hover:text-pink-200 transition-colors">{name}</span>
                                     </div>
-                                    <span className="text-2xl font-bold text-white group-hover:text-pink-200 transition-colors">{name}</span>
+                                    <div className="text-3xl font-black text-white/50 group-hover:text-white transition-colors tabular-nums">{score}</div>
                                 </div>
-                                <div className="text-3xl font-black text-white/50 group-hover:text-white transition-colors tabular-nums">{score}</div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            // Render History
+                            Object.entries(
+                                notes.filter(n => n.type === 'quiz_answer' && (n.title?.includes('_Q') || n.title?.includes('Q_')))
+                                    .reduce((acc: any, n) => {
+                                        const sId = n.title?.includes('_Q') ? n.title?.split('_')[0] : 'legacy';
+                                        if (!acc[sId]) acc[sId] = [];
+                                        acc[sId].push(n);
+                                        return acc;
+                                    }, {})
+                            )
+                            .sort((a: any, b: any) => b[0].localeCompare(a[0])) // Newest sessions first
+                            .map(([sId, sNotes]: [string, any]) => {
+                                // Calculate winner for this session
+                                const sessionScores: any = {};
+                                sNotes.forEach((n: any) => {
+                                    if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
+                                    // Simple count for history or use complex logic if we want to re-run it
+                                    // For now, let's just show a summary
+                                    sessionScores[n.author_id].score += 1000; 
+                                });
+                                const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
+                                const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleTimeString() : 'Legacy';
+
+                                return (
+                                    <div key={sId} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex justify-between items-center hover:bg-white/10 transition-colors">
+                                        <div>
+                                            <div className="text-xs font-bold text-gray-500 uppercase mb-1">Session {date}</div>
+                                            <div className="text-lg font-bold text-white">Winner: {winner?.name || 'Unknown'}</div>
+                                        </div>
+                                        <div className="text-xl font-black text-yellow-500">{winner?.score || 0} pts</div>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
 
                     <div className="mt-16 flex gap-4">
@@ -344,6 +421,22 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                                 NEXT QUESTION <SkipForward fill="currentColor" size={24} />
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+            {/* Confirmation Modal */}
+            {showResetConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-200">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                            <ShieldAlert size={32} className="text-red-500" />
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">End Game?</h2>
+                        <p className="text-gray-400 text-sm mb-8">This will return you to the setup screen. Session data will be saved in history.</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowResetConfirm(false)} className="flex-1 px-6 py-3 rounded-xl font-bold bg-white/5 hover:bg-white/10 transition-colors">Cancel</button>
+                            <button onClick={() => { setShowResetConfirm(false); resetGame(); }} className="flex-1 px-6 py-3 rounded-xl font-bold bg-red-600 hover:bg-red-500 transition-colors">End Game</button>
+                        </div>
                     </div>
                 </div>
             )}

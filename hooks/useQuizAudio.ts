@@ -6,35 +6,31 @@ export const MUSIC_TRACKS = [
     { 
         id: 'lofi', 
         label: '☕ Lo-Fi Beat', 
-        // "Lofi Study" - Pure instrumental chill hop
-        url: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3' 
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' 
     },
     { 
         id: 'minecraft', 
         label: '⛏️ Cubic Calm', 
-        // "Abstract World" - Atmospheric Piano (C418 Style)
-        url: 'https://cdn.pixabay.com/audio/2021/09/06/audio_9829391781.mp3' 
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' 
     },
     { 
         id: 'synthwave', 
         label: '⚡ The Grid', 
-        // "Cyberpunk City" - Dark Electronic (Tron Style)
-        url: 'https://cdn.pixabay.com/audio/2021/11/01/audio_026778f56e.mp3' 
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' 
     },
     { 
         id: 'upbeat', 
         label: '🍄 Super 8-Bit', 
-        // "Arcade" - Retro Platformer (Mario Style)
-        url: 'https://cdn.pixabay.com/audio/2021/08/09/audio_a4631e239b.mp3' 
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' 
     }
 ];
 
 export const SOUNDS = {
-    lobby: 'https://commondatastorage.googleapis.com/codeskulptor-demos/pyman_assets/intromusic.ogg', 
-    correct: 'https://commondatastorage.googleapis.com/codeskulptor-assets/week7-brrring.m4a',
-    wrong: 'https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/missile.mp3',
-    reveal: 'https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/soundtrack.mp3',
-    tick: 'https://commondatastorage.googleapis.com/codeskulptor-demos/pyman_assets/eatedible.ogg'
+    lobby: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
+    correct: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3',
+    wrong: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3',
+    reveal: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3',
+    tick: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3'
 };
 
 export const useQuizAudio = (

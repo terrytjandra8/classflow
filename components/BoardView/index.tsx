@@ -483,6 +483,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                         board={board}
                         notes={notes}
                         userId={userId}
+                        username={username}
                         isStudent={isStudent || isSimulatingStudent}
                         onlineUsers={onlineUsers}
                         onUpdateBoard={onUpdateBoard}

@@ -83,7 +83,7 @@ const LoadingScreen = () => (
     </div>
 );
 
-const APP_VERSION = '1.0.1'; // Update this to force a client refresh
+const APP_VERSION = '1.0.2'; // Force refresh for new security gates
 
 function AppContent() {
   const [session, setSession] = useState<any>(null);
@@ -177,7 +177,7 @@ function AppContent() {
             const isPublic = board.is_public;
             const isLive = board.is_published;
             const settings = board.settings as any;
-            const isQuizActive = board.format === 'quiz' && settings?.quizState && settings?.quizState !== 'setup';
+            const isQuizActive = board.format === 'quiz';
             const isAssessmentActive = board.format === 'assessment' && settings?.assessmentState === 'active';
 
             if (isPublic || isLive || isQuizActive || isAssessmentActive) {
@@ -319,7 +319,7 @@ function AppContent() {
                       // Also update access check status for guests immediately
                       const isPublic = updatedBoard.isPublic;
                       const isLive = updatedBoard.isPublished;
-                      const isQuizActive = updatedBoard.format === 'quiz' && updatedBoard.quizState && updatedBoard.quizState !== 'setup';
+                      const isQuizActive = updatedBoard.format === 'quiz';
                       
                       if (isPublic || isLive || isQuizActive) {
                           setAccessCheckStatus('allowed');
@@ -440,8 +440,20 @@ function AppContent() {
   };
 
   const handleUpdateBoard = async (id: string, updates: Partial<Board>) => {
-      setBoards(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
-      await boardService.updateBoard(id, updates);
+      try {
+          // Optimistic UI Update
+          setBoards(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+          
+          const result = await boardService.updateBoard(id, updates);
+          
+          if (!result) throw new Error("Update returned no data");
+          
+          // Sync back with result to be safe
+          setBoards(prev => prev.map(b => b.id === id ? result : b));
+      } catch (error) {
+          console.error("CRITICAL: Board update failed", error);
+          alert("Connection Error: Your changes may not have been saved to the database. Please check your internet connection or reload.");
+      }
   };
 
   const handleDuplicateBoard = async (id: string) => {
@@ -647,7 +659,7 @@ function AppContent() {
       const isStudent = effectiveRole === 'student';
       
       // SECURITY CHECK: Draft Boards
-      const isQuizActive = activeBoard.format === 'quiz' && activeBoard.quizState && activeBoard.quizState !== 'setup';
+      const isQuizActive = activeBoard.format === 'quiz';
       const isAssessmentActive = activeBoard.format === 'assessment' && (activeBoard.assessmentConfig?.status === 'active' || activeBoard.assessmentConfig?.status === 'reading');
       
       const isAllowed = !isStudent || activeBoard.isPublished || isQuizActive || isAssessmentActive || activeBoard.owner_id === effectiveUserId;
