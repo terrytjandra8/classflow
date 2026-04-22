@@ -144,7 +144,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         
         // Remove them after animation finishes (300ms)
         const timer = setTimeout(() => {
-            setDisplayBoards(prev => prev.filter(b => currentIds.has(b.id)));
+            setDisplayBoards(boardsProp);
         }, 350);
         return () => clearTimeout(timer);
     } else {
@@ -152,8 +152,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         setDisplayBoards(boardsProp);
     }
 
-    // Mark all currently visible boards as seen immediately for the blink-killer
-    boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
+    // Mark boards as seen only AFTER they have had time to animate in
+    const seenTimer = setTimeout(() => {
+        boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
+    }, 2000); // 2s is safely longer than the entrance animation
+    
+    return () => clearTimeout(seenTimer);
   }, [boardsProp]);
 
   const groupedBoards = useMemo(() => {
@@ -191,17 +195,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   // === RENDER COMPONENTS ===
-// --- SUB-COMPONENTS (Moved outside to prevent re-mounting on every refresh) ---
-
-const BoardGrid = ({ items, theme, onSelectBoard }: { items: Board[], theme: 'light' | 'dark', onSelectBoard: (id: string) => void }) => (
+const renderBoardGrid = (items: Board[]) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {items.map((board, idx) => {
             const isNew = !sessionSeenBoardIds.has(board.id);
-            
-            // Mark as seen immediately so the next render (e.g. 5s poll) knows it's not new
-            if (isNew) {
-                sessionSeenBoardIds.add(board.id);
-            }
             
             return (
                 <div 
@@ -430,9 +427,9 @@ const Sidebar = ({
                               {groupedBoards ? groupedBoards.map((group) => (
                                   <div key={group.title} className="animate-fade-in">
                                       <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
-                                      <BoardGrid items={group.items} theme={theme} onSelectBoard={onSelectBoard} />
+                                      {renderBoardGrid(group.items)}
                                   </div>
-                              )) : <BoardGrid items={filteredBoards} theme={theme} onSelectBoard={onSelectBoard} />}
+                              )) : renderBoardGrid(filteredBoards)}
                           </div>
                       )}
                   </>
