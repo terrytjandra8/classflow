@@ -44,15 +44,15 @@ const test = () => {
         let correctRank = 0;
         qAnswers.forEach(n => {
             if (!playerMap[n.author_id]) playerMap[n.author_id] = { score: 0 };
-            
+
             const answerIdx = Number(n.content);
             const isCorrect = !isNaN(answerIdx) && Number(q.correctIndex) === answerIdx;
-            
+
             console.log(`Q${qIdx} User:${n.author_id} Answer:${answerIdx} Correct:${q.correctIndex} isCorrect:${isCorrect}`);
 
             const timeRemaining = Math.max(0, (q.timeLimit * 1000) - (n.createdAt - (board.quizStartTime || n.createdAt)));
             const pointsResult = calculatePoints('standard', timeRemaining, q.timeLimit * 1000, isCorrect, 0, correctRank);
-            
+
             playerMap[n.author_id].score += pointsResult.total;
             if (isCorrect) correctRank++;
         });

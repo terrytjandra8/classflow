@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Play, Pause, Lock, BookOpen, SkipForward, Eye, Share2, Settings, Radio, EyeOff, Printer, Users, ChevronDown, Rocket, FileText } from 'lucide-react';
-import { AssessmentConfig } from '../../../../types';
+import { AssessmentConfig, ClassGroup } from '../../../../types';
 
 interface ControlHeaderProps {
     title: string;
@@ -20,7 +20,7 @@ interface ControlHeaderProps {
     onPrint?: (mode: 'BLANK' | 'MODEL_ANSWER_ONLY') => void;
     onUpdateTitle: (newTitle: string) => void;
     // New Class Props
-    classList?: string[];
+    classList?: ClassGroup[];
     currentClass?: string;
     onUpdateClass?: (cls: string) => void;
 }

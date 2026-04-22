@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Board, Note } from '../../types';
+import { Board, Note, ClassGroup } from '../../types';
 
 export interface BoardProps {
     board: Board;
@@ -27,7 +26,7 @@ export interface BoardProps {
     onDuplicateNote?: (note: Note) => void; 
     onlineUsers?: any[];
     userId?: string;
-    classList?: string[];
+    classList?: ClassGroup[];
     // New Props for Embedding
     sectionIdFilter?: string;
     embeddedMode?: boolean;

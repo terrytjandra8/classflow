@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { Board, Note } from '../../types';
+import { Board, Note, ClassGroup } from '../../types';
 import { BarChart2, Cloud, RefreshCw, Send, Check, Settings, Plus, X, MonitorPlay, Minimize2, Radio, EyeOff, ChevronRight, ChevronLeft, Trash2, Users, ChevronDown, Share2, Edit2, ArrowLeft } from 'lucide-react';
 import { ConfirmModal } from '../ConfirmModal';
 import { usePollManager } from '../../hooks/usePollManager';
@@ -12,7 +11,7 @@ interface PollViewProps {
     userId?: string;
     isStudent?: boolean;
     onUpdateBoard: (updates: Partial<Board>) => void;
-    classList?: string[];
+    classList?: ClassGroup[];
     onActivity?: () => void;
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
