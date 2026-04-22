@@ -104,12 +104,9 @@ export const calculatePoints = (
     }
 
     // 4. RANK BONUS (Dynamic based on system)
-    let rankBonus = 0;
-    if (system !== 'none') {
-        const rankStep = system === 'competitive' ? 100 : 50;
-        const maxRankBonus = system === 'competitive' ? 1000 : 500;
-        rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
-    }
+    const rankStep = system === 'competitive' ? 100 : 50;
+    const maxRankBonus = system === 'competitive' ? 1000 : 500;
+    const rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
 
     // 5. STREAK BONUS (Capped at level 5)
     let streakBonus = 0;
