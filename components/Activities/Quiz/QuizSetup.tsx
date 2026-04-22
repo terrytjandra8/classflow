@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Board, QuizQuestion } from '../../../types';
-import { ArrowLeft, Share2, Settings, Play, Plus, Edit2, Trash2, Music, Pause, Volume2, Gamepad2, Layout, Sparkles, CheckCircle2, MonitorPlay, Save, X, Check, GripHorizontal, Move, Zap, Trophy, MinusCircle, Flame, Target } from 'lucide-react';
+import { Board, QuizQuestion, Note } from '../../../types';
+import { ArrowLeft, Share2, Settings, Play, Plus, Edit2, Trash2, Music, Pause, Volume2, Gamepad2, Layout, Sparkles, CheckCircle2, MonitorPlay, Save, X, Check, GripHorizontal, Move, Zap, Trophy, MinusCircle, Flame, Target, XCircle } from 'lucide-react';
 import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
 
@@ -15,12 +15,14 @@ interface QuizSetupProps {
     enterLobby: () => void;
     backgroundStyle: any;
     isPresentationMode?: boolean;
+    notes: Note[];
 }
 
 export const QuizSetup: React.FC<QuizSetupProps> = ({ 
-    board, questions, onUpdateBoard, onBack, onOpenSettings, onOpenShare, enterLobby, backgroundStyle, isPresentationMode 
+    board, questions, onUpdateBoard, onBack, onOpenSettings, onOpenShare, enterLobby, backgroundStyle, isPresentationMode, notes
 }) => {
     const [isEditing, setIsEditing] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
     const [quickEditId, setQuickEditId] = useState<string | null>(null);
     const [quickEditData, setQuickEditData] = useState<QuizQuestion | null>(null);
 
@@ -144,6 +146,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <button onClick={() => setShowHistory(true)} className="h-12 px-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-gray-400 hover:text-yellow-400 transition-all font-bold text-xs"><Trophy size={18} /> History</button>
                         <button onClick={onOpenSettings} className="h-12 w-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-gray-400 hover:text-white transition-all"><Settings size={20} /></button>
                         <button onClick={enterLobby} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-sm shadow-[0_10px_30px_rgba(168,85,247,0.3)] flex items-center gap-3 hover:scale-105 transition-all tracking-widest border border-white/10"><MonitorPlay size={18} fill="currentColor" /> Host Live</button>
                     </div>
@@ -250,6 +253,79 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                 </div>
                 {isEditing && <QuizEditor questions={localQuestions} onUpdateBoard={onUpdateBoard} onClose={() => setIsEditing(false)} />}
             </div>
+            {/* History Modal */}
+            {showHistory && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-yellow-500/10 rounded-lg">
+                                    <Trophy size={20} className="text-yellow-500" />
+                                </div>
+                                <h2 className="text-xl font-bold text-white">Session History</h2>
+                            </div>
+                            <button 
+                                onClick={() => setShowHistory(false)}
+                                className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors"
+                            >
+                                <XCircle size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+                            {Object.entries(
+                                notes.filter(n => n.type === 'quiz_answer' && (n.title?.includes('_Q') || n.title?.includes('Q_')))
+                                    .reduce((acc: any, n) => {
+                                        const sId = n.title?.includes('_Q') ? n.title?.split('_')[0] : 'legacy';
+                                        if (!acc[sId]) acc[sId] = [];
+                                        acc[sId].push(n);
+                                        return acc;
+                                    }, {})
+                            )
+                            .sort((a: any, b: any) => b[0].localeCompare(a[0]))
+                            .map(([sId, sNotes]: [string, any]) => {
+                                const sessionScores: any = {};
+                                sNotes.forEach((n: any) => {
+                                    if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
+                                    sessionScores[n.author_id].score += 1000; 
+                                });
+                                const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
+                                const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleString() : 'Legacy Session';
+
+                                return (
+                                    <div key={sId} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex justify-between items-center hover:bg-white/10 transition-colors group">
+                                        <div>
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{date}</div>
+                                            <div className="text-lg font-bold text-white group-hover:text-yellow-200 transition-colors">
+                                                Winner: {winner?.name || 'Unknown'}
+                                            </div>
+                                        </div>
+                                        <div className="text-2xl font-black text-yellow-500 tabular-nums">
+                                            {winner?.score || 0} <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">pts</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {notes.filter(n => n.type === 'quiz_answer').length === 0 && (
+                                <div className="text-center py-20">
+                                    <div className="text-gray-500 font-bold mb-2">No game history yet.</div>
+                                    <div className="text-gray-600 text-sm">Results will appear here after a live session.</div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 bg-black/20 border-t border-white/5">
+                            <button 
+                                onClick={() => setShowHistory(false)}
+                                className="w-full py-3 rounded-xl font-bold bg-white text-black hover:bg-gray-200 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -173,11 +173,8 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                 quizState: 'question', 
                 currentQuestionIndex: 0, 
                 quizStartTime: Date.now(),
-                settings: {
-                    ...board.settings,
-                    currentSessionId: newSessionId
-                }
-            });
+                currentSessionId: newSessionId as any,
+            } as any);
         }
     };
 

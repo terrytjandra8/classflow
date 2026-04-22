@@ -45,12 +45,13 @@ export const useQuizAudio = (
     const [isMuted, setIsMuted] = useState(false);
     const bgmRef = useRef<HTMLAudioElement | null>(null);
     const sfxRef = useRef<HTMLAudioElement | null>(null);
+    const tickRef = useRef<HTMLAudioElement | null>(null);
 
     // Initialize Audio Objects
     useEffect(() => {
         bgmRef.current = new Audio();
         bgmRef.current.loop = true;
-        bgmRef.current.volume = 0.3; // Increased slightly for better ambience
+        bgmRef.current.volume = 0.3;
 
         sfxRef.current = new Audio();
         sfxRef.current.volume = 0.6;
@@ -64,7 +65,13 @@ export const useQuizAudio = (
             }
             if (sfxRef.current) {
                 sfxRef.current.pause();
+                sfxRef.current.src = '';
                 sfxRef.current = null;
+            }
+            if (tickRef.current) {
+                tickRef.current.pause();
+                tickRef.current.src = '';
+                tickRef.current = null;
             }
         };
     }, []);
@@ -73,6 +80,7 @@ export const useQuizAudio = (
     useEffect(() => {
         if (bgmRef.current) bgmRef.current.muted = isMuted;
         if (sfxRef.current) sfxRef.current.muted = isMuted;
+        if (tickRef.current) tickRef.current.muted = isMuted;
     }, [isMuted]);
 
     // BGM Logic
@@ -81,42 +89,35 @@ export const useQuizAudio = (
         if (!bgm) return;
 
         const stopBgm = () => {
-            if (!bgm.paused) {
-                bgm.pause();
-            }
+            bgm.pause();
+            bgm.currentTime = 0;
+            // Only clear src if we are really stopping for good (like setup mode)
+            if (state === 'setup') bgm.src = ''; 
         };
 
         const playBgm = (url: string) => {
             if (!url) return;
-            // If the source is different, change it and play
             if (bgm.src !== url) {
                 bgm.src = url;
                 bgm.play().catch(e => console.warn("Auto-play prevented:", e));
-            } 
-            // If source is same but paused, play it
-            else if (bgm.paused) {
+            } else if (bgm.paused) {
                 bgm.play().catch(e => console.warn("Auto-play prevented:", e));
             }
         };
 
         const selectedTrack = MUSIC_TRACKS.find(t => t.id === selectedMusicId) || MUSIC_TRACKS[0];
 
-        // LOGIC: When to play music?
         if (state === 'lobby') {
             playBgm(selectedTrack.url);
         } else if (state === 'question') {
             if (!isStudent || isPresentationMode) {
-                // Teacher/Projector gets music
                 playBgm(selectedTrack.url);
             } else {
-                // Student gets silence to focus
                 stopBgm(); 
             }
         } else if (state === 'reveal' || state === 'leaderboard') {
-            // Keep the vibe going during results
             playBgm(selectedTrack.url);
         } else {
-            // Setup mode or finished -> Silence
             stopBgm();
         }
     }, [state, isStudent, isPresentationMode, isMuted, selectedMusicId]);
@@ -135,10 +136,26 @@ export const useQuizAudio = (
 
     // Ticking Clock SFX
     useEffect(() => {
-        if (state === 'question' && timeLeft <= 5 && timeLeft > 0 && !isMuted) {
-            const tick = new Audio(SOUNDS.tick);
-            tick.volume = 0.3;
-            tick.play().catch(() => {});
+        // If state changes away from question, stop the tick
+        if (state !== 'question') {
+            if (tickRef.current) {
+                tickRef.current.pause();
+                tickRef.current.currentTime = 0;
+            }
+            return;
+        }
+
+        if (timeLeft <= 5 && timeLeft > 0 && !isMuted) {
+            if (!tickRef.current) {
+                tickRef.current = new Audio(SOUNDS.tick);
+                tickRef.current.volume = 0.3;
+            }
+            tickRef.current.play().catch(() => {});
+        } else if (timeLeft === 0 || isMuted) {
+            if (tickRef.current) {
+                tickRef.current.pause();
+                tickRef.current.currentTime = 0;
+            }
         }
     }, [timeLeft, state, isMuted]);
 

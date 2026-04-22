@@ -159,7 +159,9 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            <div className="absolute top-6 left-6 z-50 flex gap-2 items-center">
+            {/* Action Bar - Only show in Lobby or Results to avoid clutter during questions */}
+            {(state === 'lobby' || state === 'leaderboard' || state === 'finished') && (
+                <div className="absolute top-6 left-6 z-50 flex gap-2 items-center">
                 <button 
                     onClick={() => {
                         if (window.confirm("Return to Setup? This will end the current session.")) {
@@ -172,6 +174,13 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     <Edit2 size={16} /> Edit Quiz
                 </button>
                 <button 
+                    onClick={() => setShowHistory(true)}
+                    className="bg-black/50 text-white px-4 py-2 rounded-full hover:bg-yellow-600 backdrop-blur-md border border-white/10 transition-colors flex items-center gap-2 font-bold text-xs shadow-xl"
+                    title="View History"
+                >
+                    <Trophy size={16} /> History
+                </button>
+                <button 
                     onClick={() => setShowResetConfirm(true)}
                     className="bg-black/50 text-white p-2 rounded-full hover:bg-red-600 backdrop-blur-md border border-white/10 transition-colors shadow-xl"
                     title="End Game"
@@ -179,6 +188,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     <XCircle size={20} />
                 </button>
             </div>
+            )}
 
             {isPresenting && (
                 <div className="absolute top-6 right-6 z-50 flex gap-2">
@@ -287,6 +297,33 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                                 {currentQ.question}
                             </h2>
                         </div>
+                        
+                        {/* Question Media */}
+                        {currentQ.mediaUrl && (
+                            <div className="w-full max-w-2xl h-64 md:h-80 bg-white/5 rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative group">
+                                {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
+                                    <iframe 
+                                        src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                                        className="w-full h-full border-0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowFullScreen
+                                    />
+                                ) : (
+                                    <img 
+                                        src={currentQ.mediaUrl} 
+                                        alt="Question Media" 
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => {
+                                            (e.target as any).style.display = 'none';
+                                            (e.target as any).nextSibling.style.display = 'flex';
+                                        }}
+                                    />
+                                )}
+                                <div className="hidden absolute inset-0 items-center justify-center text-gray-500 font-bold italic bg-white/5">
+                                    Unsupported Media Format
+                                </div>
+                            </div>
+                        )}
 
                         {/* Answer Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-6xl flex-1 max-h-[50vh]">
@@ -424,6 +461,80 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     </div>
                 </div>
             )}
+            {/* History Modal (Overlay for Lobby/Questions) */}
+            {showHistory && state !== 'leaderboard' && state !== 'finished' && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-yellow-500/10 rounded-lg">
+                                    <Trophy size={20} className="text-yellow-500" />
+                                </div>
+                                <h2 className="text-xl font-bold text-white">Session History</h2>
+                            </div>
+                            <button 
+                                onClick={() => setShowHistory(false)}
+                                className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors"
+                            >
+                                <XCircle size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+                            {Object.entries(
+                                notes.filter(n => n.type === 'quiz_answer' && (n.title?.includes('_Q') || n.title?.includes('Q_')))
+                                    .reduce((acc: any, n) => {
+                                        const sId = n.title?.includes('_Q') ? n.title?.split('_')[0] : 'legacy';
+                                        if (!acc[sId]) acc[sId] = [];
+                                        acc[sId].push(n);
+                                        return acc;
+                                    }, {})
+                            )
+                            .sort((a: any, b: any) => b[0].localeCompare(a[0]))
+                            .map(([sId, sNotes]: [string, any]) => {
+                                const sessionScores: any = {};
+                                sNotes.forEach((n: any) => {
+                                    if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
+                                    sessionScores[n.author_id].score += 1000; 
+                                });
+                                const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
+                                const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleString() : 'Legacy Session';
+
+                                return (
+                                    <div key={sId} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex justify-between items-center hover:bg-white/10 transition-colors group">
+                                        <div>
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{date}</div>
+                                            <div className="text-lg font-bold text-white group-hover:text-yellow-200 transition-colors">
+                                                Winner: {winner?.name || 'Unknown'}
+                                            </div>
+                                        </div>
+                                        <div className="text-2xl font-black text-yellow-500 tabular-nums">
+                                            {winner?.score || 0} <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">pts</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {notes.filter(n => n.type === 'quiz_answer').length === 0 && (
+                                <div className="text-center py-20">
+                                    <div className="text-gray-500 font-bold mb-2">No game history yet.</div>
+                                    <div className="text-gray-600 text-sm">Start a game to see results here!</div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 bg-black/20 border-t border-white/5">
+                            <button 
+                                onClick={() => setShowHistory(false)}
+                                className="w-full py-3 rounded-xl font-bold bg-white text-black hover:bg-gray-200 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Confirmation Modal */}
             {showResetConfirm && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">

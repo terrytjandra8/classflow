@@ -103,6 +103,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                 enterLobby={enterLobby}
                 backgroundStyle={backgroundStyle}
                 isPresentationMode={isPresentationMode}
+                notes={props.notes}
             />
         );
     }

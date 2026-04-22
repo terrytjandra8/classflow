@@ -130,7 +130,32 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                         </h2>
                     </div>
                 )}
-
+                
+                {/* Media Area (Only if showing question) */}
+                {board.showQuestionOnStudentDevice && currentQ?.mediaUrl && (
+                    <div className="w-full h-40 bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-md relative">
+                        {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
+                            <iframe 
+                                src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                                className="w-full h-full border-0"
+                            />
+                        ) : (
+                            <img 
+                                src={currentQ.mediaUrl} 
+                                alt="Media" 
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                    (e.target as any).style.display = 'none';
+                                    (e.target as any).nextSibling.style.display = 'flex';
+                                }}
+                            />
+                        )}
+                        <div className="hidden absolute inset-0 items-center justify-center text-gray-500 font-bold text-xs italic bg-gray-50">
+                            Unsupported Media
+                        </div>
+                    </div>
+                )}
+                
                 {/* Large Answer Tiles */}
                 <div className="flex-1 grid grid-cols-2 gap-4 md:gap-6 pb-4">
                     {currentQ?.options.map((opt, idx) => (
