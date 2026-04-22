@@ -19,7 +19,6 @@ interface AssessmentManagerProps {
     onlineUsers?: any[];
     onOpenSettings?: () => void;
     onOpenShare?: () => void;
-    classList?: ClassGroup[];
 }
 
 export const AssessmentManager: React.FC<AssessmentManagerProps> = ({ 
