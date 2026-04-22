@@ -160,18 +160,29 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   // === RENDER COMPONENTS ===
   const BoardGrid = ({ items }: { items: Board[] }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {items.map(board => {
+        {items.map((board, idx) => {
             const bgStyle = resolveBackgroundStyle(board.wallpaper, theme);
             return (
-                <div key={board.id} onClick={() => onSelectBoard(board.id)} className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border bg-white dark:bg-[#1a1a1a] border-slate-200 dark:border-white/5">
-                    <div className="h-32 relative overflow-hidden" style={bgStyle}>
+                <div 
+                    key={board.id} 
+                    onClick={() => onSelectBoard(board.id)} 
+                    style={{ 
+                        ...bgStyle,
+                        animationDelay: `${idx * 75}ms` 
+                    }}
+                    className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border border-slate-200 dark:border-white/5 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500 fill-mode-both shadow-lg"
+                >
+                    {/* Header Image Area */}
+                    <div className="h-32 relative overflow-hidden bg-black/10">
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                        {board.icon && <div className="absolute -bottom-5 left-4 text-5xl drop-shadow-xl font-emoji group-hover:scale-110 transition-transform duration-300">{board.icon}</div>}
+                        {board.icon && <div className="absolute -bottom-5 left-4 text-5xl drop-shadow-xl font-emoji group-hover:scale-110 transition-transform duration-300 z-10">{board.icon}</div>}
                     </div>
-                    <div className="p-5 pt-6 flex-1 flex flex-col justify-between">
+                    
+                    {/* Content Area */}
+                    <div className="p-5 pt-6 flex-1 flex flex-col justify-between bg-white dark:bg-[#1a1a1a] relative">
                         <div>
-                            <h4 className="font-bold text-base truncate mb-1 text-slate-800 dark:text-white">{board.title}</h4>
-                            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{board.description || 'No description provided.'}</p>
+                            <h4 className="font-bold text-base truncate mb-1 text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{board.title}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">{board.description || 'No description provided.'}</p>
                         </div>
                          {board.targetGrade && <div className="mt-2 bg-black/60 backdrop-blur-md rounded-lg px-2.5 py-1 text-[10px] font-bold text-white shadow-sm border border-white/10 uppercase tracking-wide w-fit">{board.targetGrade}</div>}
                     </div>
