@@ -202,16 +202,17 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
     const resetGame = async () => {
         if (!onUpdateBoard) return;
         
+        // IMPORTANT: Do NOT pass a nested `settings: { ...board.settings }` here.
+        // The boardService merges settings via Object.assign, so spreading the old
+        // board.settings would re-introduce stale values (e.g. quizState: 'lobby')
+        // and overwrite the reset values set at the top level.
         onUpdateBoard({ 
             quizState: 'setup' as any, 
             currentQuestionIndex: 0,
-            quizStartTime: undefined, // Clear start time
+            quizStartTime: undefined,
             isPublished: false,
-            settings: {
-                ...board.settings,
-                currentSessionId: null
-            }
-        });
+            currentSessionId: null as any,
+        } as any);
     };
 
     return {
