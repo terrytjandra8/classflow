@@ -133,7 +133,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                                 <span className="text-xl font-black tracking-tighter">{myStreak}</span>
                             </div>
                         )}
-                        <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Question {board.currentQuestionIndex + 1}</div>
+                        <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Question {(board.currentQuestionIndex ?? 0) + 1}</div>
                     </div>
                     
                     <div className="flex gap-3 scale-110 origin-right">

@@ -5,22 +5,22 @@ import { QuizState, Note, QuizQuestion } from '../types';
 export const MUSIC_TRACKS = [
     { 
         id: 'lofi', 
-        label: '☕ Lo-Fi Beat', 
+        label: '🕹️ Digital Dash', 
         url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' 
     },
     { 
         id: 'minecraft', 
-        label: '⛏️ Cubic Calm', 
+        label: '⛏️ Crafty Calm', 
         url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' 
     },
     { 
         id: 'synthwave', 
-        label: '⚡ The Grid', 
+        label: '⚡ Neon Pulse', 
         url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' 
     },
     { 
         id: 'upbeat', 
-        label: '🍄 Super 8-Bit', 
+        label: '🍄 Pixel Party', 
         url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' 
     }
 ];

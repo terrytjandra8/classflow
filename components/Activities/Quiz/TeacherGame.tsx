@@ -117,15 +117,15 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     <div className="relative" ref={menuRef}>
                         <button 
                             onClick={() => setIsMusicMenuOpen(!isMusicMenuOpen)}
-                            className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-white/20 transition-colors text-xs font-bold shadow-lg"
+                            className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-white/20 transition-all text-[10px] font-black uppercase tracking-widest shadow-xl"
                         >
-                            <Music size={14} className="text-pink-400" />
+                            <Music size={12} className="text-pink-400" />
                             <span>{MUSIC_TRACKS.find(t => t.id === currentMusicId)?.label || 'Music'}</span>
                         </button>
 
                         {isMusicMenuOpen && (
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 z-[60]">
-                                <div className="p-3 border-b border-white/5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 z-[100]">
+                                <div className="p-3 border-b border-white/5 text-[9px] font-black text-gray-500 uppercase tracking-widest text-center">
                                     Vibe Selection
                                 </div>
                                 <div className="p-1 max-h-60 overflow-y-auto custom-scrollbar">
@@ -181,38 +181,38 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {/* SCENE: LOBBY - Optimized and Centered */}
+            {/* SCENE: LOBBY - Optimized for All Screens */}
             {state === 'lobby' && (
                 <div className="flex-1 flex flex-col p-6 lg:p-10 relative z-10 overflow-y-auto no-scrollbar">
-                    <div className="flex-1 flex flex-col items-center justify-center gap-10 lg:gap-16 max-w-7xl mx-auto w-full py-10">
-                        <div className="text-center space-y-6 lg:space-y-8 animate-in slide-in-from-top-10 duration-700">
-                            <h1 className="text-6xl sm:text-8xl lg:text-[10rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-[0.8] py-4">
+                    <div className="flex-1 flex flex-col items-center justify-center gap-10 lg:gap-12 max-w-7xl mx-auto w-full py-4 lg:py-8">
+                        <div className="text-center space-y-4 lg:space-y-6 animate-in slide-in-from-top-10 duration-700">
+                            <h1 className="text-5xl sm:text-7xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-none py-2">
                                 JOIN THE GAME
                             </h1>
-                            <div className="flex items-center justify-center gap-4 text-white/40 font-mono text-base lg:text-xl animate-in fade-in delay-300">
+                            <div className="flex items-center justify-center gap-4 text-white/30 font-mono animate-in fade-in delay-300">
                                 <div className="flex gap-1.5">
-                                    <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                                    <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse delay-75"></span>
-                                    <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse delay-150"></span>
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-75"></span>
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-150"></span>
                                 </div>
-                                <span className="font-black uppercase tracking-[0.2em] text-xs lg:text-sm">Waiting for players to enter...</span>
+                                <span className="font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs">Waiting for players to enter...</span>
                             </div>
                         </div>
 
-                        {/* Holographic Ticket - Focused Focal Point */}
+                        {/* Holographic Ticket - Optimized Width to prevent clipping */}
                         <div className="relative group perspective-1000 animate-in zoom-in duration-700 delay-200">
-                            <div className="absolute -inset-6 bg-gradient-to-r from-blue-600/40 via-purple-600/40 to-pink-600/40 rounded-[4rem] blur-3xl opacity-30 group-hover:opacity-60 transition duration-1000"></div>
-                            <div className="relative bg-black/40 backdrop-blur-3xl border-2 border-white/20 rounded-[3rem] p-10 lg:p-14 text-center w-full max-w-[22rem] lg:w-[28rem] transform transition-all hover:scale-[1.02] shadow-2xl overflow-hidden ring-1 ring-white/10">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                                <div className="text-[10px] lg:text-xs font-black text-gray-500 uppercase tracking-[0.5em] mb-6">Class Access Code</div>
-                                <div className="text-7xl lg:text-9xl font-mono font-black text-white tracking-[0.1em] drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] mb-10 selection:bg-purple-500">
+                            <div className="absolute -inset-10 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 rounded-[4rem] blur-3xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                            <div className="relative bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 lg:p-12 text-center w-full max-w-[24rem] lg:max-w-[32rem] transform transition-all hover:scale-[1.01] shadow-2xl ring-1 ring-white/5">
+                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                <div className="text-[9px] lg:text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-4">Class Access Code</div>
+                                <div className="text-6xl lg:text-8xl font-mono font-black text-white tracking-[0.05em] drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] mb-8 break-all lg:break-normal">
                                     {board.classCode}
                                 </div>
-                                <div className="flex flex-col items-center gap-3 pt-8 border-t border-white/10">
-                                    <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em]">Step 1: Go to</div>
-                                    <div className="text-3xl lg:text-4xl text-white font-black tracking-tight bg-white/5 px-6 py-2 rounded-2xl border border-white/5">classboards.ai</div>
+                                <div className="flex flex-col items-center gap-2 pt-6 border-t border-white/5">
+                                    <div className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em]">Step 1: Go to</div>
+                                    <div className="text-2xl lg:text-3xl text-white font-black tracking-tight bg-white/5 px-6 py-2 rounded-2xl border border-white/5">classboards.ai</div>
                                 </div>
-                                <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl"></div>
+                                <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-purple-600/5 rounded-full blur-3xl"></div>
                             </div>
                         </div>
                     </div>
