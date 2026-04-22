@@ -158,7 +158,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   // === RENDER COMPONENTS ===
-  const BoardGrid = ({ items }: { items: Board[] }) => (
+// --- SUB-COMPONENTS (Moved outside to prevent re-mounting on every refresh) ---
+
+const BoardGrid = ({ items, theme, onSelectBoard }: { items: Board[], theme: 'light' | 'dark', onSelectBoard: (id: string) => void }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {items.map((board, idx) => {
             const bgStyle = resolveBackgroundStyle(board.wallpaper, theme);
@@ -172,13 +174,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     }}
                     className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl h-64 flex flex-col border border-slate-200 dark:border-white/5 animate-enter-card fill-mode-both shadow-lg"
                 >
-                    {/* Header Image Area */}
                     <div className="h-32 relative overflow-hidden bg-black/10">
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                         {board.icon && <div className="absolute -bottom-5 left-4 text-5xl drop-shadow-xl font-emoji group-hover:scale-110 transition-transform duration-300 z-10">{board.icon}</div>}
                     </div>
                     
-                    {/* Content Area */}
                     <div className="p-5 pt-6 flex-1 flex flex-col justify-between bg-white dark:bg-[#1a1a1a] relative">
                         <div>
                             <h4 className="font-bold text-base truncate mb-1 text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{board.title}</h4>
@@ -190,9 +190,25 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             );
         })}
     </div>
-  );
+);
 
-  const SidebarNav = ({ isMobile }: { isMobile: boolean }) => {
+const SidebarNav = ({ 
+    isMobile, 
+    activeTab, 
+    selectedClassFilter, 
+    userClasses, 
+    onTabChange, 
+    onFilterChange, 
+    onCloseMobileMenu 
+}: { 
+    isMobile: boolean, 
+    activeTab: string, 
+    selectedClassFilter: string, 
+    userClasses: string[],
+    onTabChange: (tab: any) => void,
+    onFilterChange: (filter: string) => void,
+    onCloseMobileMenu: () => void
+}) => {
     const buttonClass = (tab: string, filter?: string) => `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
         activeTab === tab && (filter === undefined || selectedClassFilter === filter)
         ? 'bg-slate-100 dark:bg-[#222] text-slate-900 dark:text-white'
@@ -200,16 +216,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }`;
 
     const handleFilterClick = (filterName: string) => {
-        setActiveTab('home');
-        setSelectedClassFilter(filterName);
-        if(isMobile) setIsMobileMenuOpen(false);
+        onTabChange('home');
+        onFilterChange(filterName);
+        if(isMobile) onCloseMobileMenu();
     }
 
     return (
         <nav className={`space-y-1 flex-1 overflow-y-auto custom-scrollbar ${isMobile ? 'px-4' : 'pr-2'}`}>
             <button onClick={() => handleFilterClick('All Boards')} className={buttonClass('home', 'All Boards')}><Home size={16} /> All Boards</button>
-            <button onClick={() => { setActiveTab('grades'); if(isMobile) setIsMobileMenuOpen(false); }} className={buttonClass('grades')}><GraduationCap size={16} /> Grades</button>
-            <button onClick={() => { setActiveTab('documentation'); if(isMobile) setIsMobileMenuOpen(false); }} className={buttonClass('documentation')}><BookOpen size={16} /> Guide</button>
+            <button onClick={() => { onTabChange('grades'); if(isMobile) onCloseMobileMenu(); }} className={buttonClass('grades')}><GraduationCap size={16} /> Grades</button>
+            <button onClick={() => { onTabChange('documentation'); if(isMobile) onCloseMobileMenu(); }} className={buttonClass('documentation')}><BookOpen size={16} /> Guide</button>
             
             <div className="h-px my-4 bg-slate-200 dark:bg-white/10"></div>
             <p className="px-3 mb-2 text-[10px] uppercase font-bold text-gray-500">My Classes</p>
@@ -225,9 +241,35 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             ) : <div className="px-3 py-4 text-center border-2 border-dashed border-gray-500/10 rounded-lg"><p className="text-xs text-gray-500">No classes yet</p></div>}
         </nav>
     );
-  };
-  
-  const Sidebar = ({ isMobile = false }) => (
+};
+
+const Sidebar = ({ 
+    isMobile = false, 
+    userAvatar, 
+    username, 
+    activeTab, 
+    selectedClassFilter, 
+    userClasses, 
+    theme, 
+    onTabChange, 
+    onFilterChange, 
+    onCloseMobileMenu, 
+    onToggleTheme, 
+    onLogout 
+}: {
+    isMobile?: boolean,
+    userAvatar: string | null,
+    username: string,
+    activeTab: string,
+    selectedClassFilter: string,
+    userClasses: string[],
+    theme: 'light' | 'dark',
+    onTabChange: (tab: any) => void,
+    onFilterChange: (filter: string) => void,
+    onCloseMobileMenu: () => void,
+    onToggleTheme: () => void,
+    onLogout: () => void
+}) => (
     <div className={`flex flex-col h-full ${isMobile ? 'flex w-full' : 'hidden md:flex w-64 shrink-0'} bg-white dark:bg-[#111] ${!isMobile ? 'py-6 pr-4 pl-6 border-r border-slate-200 dark:border-white/5' : ''}`}>
         <div className={isMobile ? 'px-6 pt-6' : ''}>
             <div className="flex mb-8 items-center gap-3">
@@ -237,27 +279,62 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
                 </div>
             </div>
-            <button onClick={() => { setActiveTab('join'); if (isMobile) setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+            <button onClick={() => { onTabChange('join'); if (isMobile) onCloseMobileMenu(); }} className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
               <Hash size={16} /> Join a Class
             </button>
         </div>
-        <SidebarNav isMobile={isMobile} />
+        <SidebarNav 
+            isMobile={isMobile} 
+            activeTab={activeTab} 
+            selectedClassFilter={selectedClassFilter} 
+            userClasses={userClasses} 
+            onTabChange={onTabChange} 
+            onFilterChange={onFilterChange} 
+            onCloseMobileMenu={onCloseMobileMenu} 
+        />
         <div className={`mt-auto pt-4 space-y-3 ${isMobile ? 'px-6 pb-6' : ''} border-t border-slate-200 dark:border-white/5`}>
             <button onClick={onToggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-[#1a1a1a]"><Sun size={16} /><span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>
-            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"><LogOut size={16} /> Sign Out</button>
+            <button onClick={onLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"><LogOut size={16} /> Sign Out</button>
         </div>
     </div>
-  );
+);
 
   // === MAIN RENDER ===
   return (
     <div className="h-screen flex bg-slate-50 text-slate-900 dark:bg-[#050505] dark:text-white transition-colors duration-300 font-sans overflow-hidden">
       {/* Mobile Sidebar */}
       <div className={`md:hidden fixed inset-0 bg-black/50 z-30 transition-opacity ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}></div>
-      <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}><Sidebar isMobile={true} /></div>
+      <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <Sidebar 
+            isMobile={true} 
+            userAvatar={userAvatar} 
+            username={username} 
+            activeTab={activeTab} 
+            selectedClassFilter={selectedClassFilter} 
+            userClasses={userClasses} 
+            theme={theme} 
+            onTabChange={setActiveTab} 
+            onFilterChange={setSelectedClassFilter} 
+            onCloseMobileMenu={() => setIsMobileMenuOpen(false)} 
+            onToggleTheme={onToggleTheme} 
+            onLogout={handleLogout} 
+          />
+      </div>
       
       {/* Desktop Sidebar */}
-      <Sidebar />
+      <Sidebar 
+        userAvatar={userAvatar} 
+        username={username} 
+        activeTab={activeTab} 
+        selectedClassFilter={selectedClassFilter} 
+        userClasses={userClasses} 
+        theme={theme} 
+        onTabChange={setActiveTab} 
+        onFilterChange={setSelectedClassFilter} 
+        onCloseMobileMenu={() => setIsMobileMenuOpen(false)} 
+        onToggleTheme={onToggleTheme} 
+        onLogout={handleLogout} 
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
@@ -317,9 +394,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                               {groupedBoards ? groupedBoards.map((group) => (
                                   <div key={group.title} className="animate-fade-in">
                                       <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
-                                      <BoardGrid items={group.items} />
+                                      <BoardGrid items={group.items} theme={theme} onSelectBoard={onSelectBoard} />
                                   </div>
-                              )) : <BoardGrid items={filteredBoards} />}
+                              )) : <BoardGrid items={filteredBoards} theme={theme} onSelectBoard={onSelectBoard} />}
                           </div>
                       )}
                   </>
