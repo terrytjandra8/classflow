@@ -35,7 +35,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
     const { 
         questions, state, currentQIndex, currentQ, timeLeft, 
         hasAnswered, myAnswerNote, scores, myStreak,
-        submitAnswer, enterLobby, startGame, nextStep, resetGame
+        submitAnswer, enterLobby, startGame, nextStep, resetGame, isSubmitting
     } = useQuizGame(board, props.notes, userId, username, isStudent, onUpdateBoard, props.onActivity);
 
     // Audio Logic Hook - Use setting or default to 'lofi'
@@ -86,6 +86,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                 submitAnswer={submitAnswer}
                 SoundControl={SoundControl}
                 backgroundStyle={backgroundStyle}
+                isSubmitting={isSubmitting}
             />
         );
     }

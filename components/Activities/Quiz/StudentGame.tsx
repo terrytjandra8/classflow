@@ -16,6 +16,7 @@ interface StudentGameProps {
     submitAnswer: (index: number) => void;
     SoundControl: React.FC;
     backgroundStyle: any;
+    isSubmitting: boolean;
 }
 
 const SHAPES = ['▲', '◆', '●', '■'];
@@ -28,9 +29,22 @@ const BTN_COLORS = [
 ];
 
 export const StudentGame: React.FC<StudentGameProps> = ({
-    state, board, currentQ, timeLeft, hasAnswered, myStreak, myAnswerNote, scores, userId, submitAnswer, SoundControl, backgroundStyle
+    state, board, currentQ, timeLeft, hasAnswered, myStreak, myAnswerNote, scores, userId, submitAnswer, SoundControl, backgroundStyle, isSubmitting
 }) => {
     
+    // Local state for immediate feedback
+    const [localSelectedIdx, setLocalSelectedIdx] = React.useState<number | null>(null);
+
+    // Reset local selection when question changes
+    React.useEffect(() => {
+        setLocalSelectedIdx(null);
+    }, [currentQ?.id]);
+
+    const handleAnswer = (idx: number) => {
+        if (isSubmitting || hasAnswered) return;
+        setLocalSelectedIdx(idx);
+        submitAnswer(idx);
+    };
     // --- SETUP SCREEN ---
     if (state === 'setup') {
         return (
@@ -163,31 +177,38 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                 
                 {/* Large Answer Tiles - Modern Grid */}
                 <div className="relative z-10 grid grid-cols-2 gap-4 md:gap-6 flex-1 min-h-0">
-                    {currentQ?.options.map((opt, idx) => (
-                        <button 
-                            key={idx}
-                            onClick={() => submitAnswer(idx)}
-                            className={`
-                                relative rounded-[2rem] flex flex-col items-center justify-center p-6 transition-all duration-200 active:scale-95 border-2
-                                ${idx === 0 ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20' : 
-                                  idx === 1 ? 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20' : 
-                                  idx === 2 ? 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20' : 
-                                  'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'}
-                            `}
-                        >
-                            {/* Shape Indicator (Subtle) */}
-                            <div className={`absolute top-6 left-6 text-2xl opacity-40 font-black ${idx === 0 ? 'text-red-400' : idx === 1 ? 'text-blue-400' : idx === 2 ? 'text-yellow-400' : 'text-green-400'}`}>
-                                {SHAPES[idx % 4]}
-                            </div>
+                    {currentQ?.options.map((opt, idx) => {
+                        const isSelected = localSelectedIdx === idx;
+                        const isDisabled = isSubmitting || hasAnswered;
 
-                            <span className="text-xl md:text-3xl font-black text-white text-center leading-tight drop-shadow-lg break-words w-full">
-                                {opt}
-                            </span>
-                            
-                            {/* Glow Effect */}
-                            <div className={`absolute inset-0 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity blur-xl -z-10 ${idx === 0 ? 'bg-red-500/20' : idx === 1 ? 'bg-blue-500/20' : idx === 2 ? 'bg-yellow-500/20' : 'bg-green-500/20'}`}></div>
-                        </button>
-                    ))}
+                        return (
+                            <button 
+                                key={idx}
+                                onClick={() => handleAnswer(idx)}
+                                disabled={isDisabled}
+                                className={`
+                                    relative rounded-[2rem] flex flex-col items-center justify-center p-6 transition-all duration-200 active:scale-95 border-2 group
+                                    ${idx === 0 ? (isSelected ? 'bg-red-500 border-red-300' : 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20 active:bg-red-500/40') : 
+                                      idx === 1 ? (isSelected ? 'bg-blue-500 border-blue-300' : 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 active:bg-blue-500/40') : 
+                                      idx === 2 ? (isSelected ? 'bg-yellow-500 border-yellow-300' : 'bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20 active:bg-yellow-500/40') : 
+                                      (isSelected ? 'bg-green-500 border-green-300' : 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20 active:bg-green-500/40')}
+                                    ${isDisabled && !isSelected ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}
+                                `}
+                            >
+                                {/* Shape Indicator (Subtle) */}
+                                <div className={`absolute top-6 left-6 text-2xl opacity-40 font-black pointer-events-none ${idx === 0 ? 'text-red-400' : idx === 1 ? 'text-blue-400' : idx === 2 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                    {SHAPES[idx % 4]}
+                                </div>
+
+                                <span className="relative z-10 text-xl md:text-3xl font-black text-white text-center leading-tight drop-shadow-lg break-words w-full pointer-events-none">
+                                    {isSelected && isSubmitting ? 'Submitting...' : opt}
+                                </span>
+                                
+                                {/* Glow Effect */}
+                                <div className={`absolute inset-0 rounded-[2rem] opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity blur-xl -z-10 pointer-events-none ${idx === 0 ? 'bg-red-500/30' : idx === 1 ? 'bg-blue-500/30' : idx === 2 ? 'bg-yellow-500/30' : 'bg-green-500/30'}`}></div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         );

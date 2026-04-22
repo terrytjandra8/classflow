@@ -95,7 +95,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
 
                 const answerIdx = parseInt(n.content);
                 if (q.correctIndex === answerIdx) {
-                    // STREAK for this specific user up to THIS question
+                    // Calculate streak for this specific user up to THIS question
                     let streak = 0;
                     for (let prevIdx = qIdx - 1; prevIdx >= 0; prevIdx--) {
                         const prevQ = questions[prevIdx];
@@ -104,22 +104,41 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                         else break;
                     }
 
-                    // BASE + SPEED (max 500)
-                    const totalTime = q.timeLimit * 1000;
-                    const responseTime = Math.max(0, n.createdAt - (board.quizStartTime || n.createdAt)); // Fallback to 0 if no startTime
-                    const speedMultiplier = Math.max(0, 1 - (responseTime / totalTime));
-                    const speedBonus = Math.floor(500 * speedMultiplier);
+                    // --- SCORING FACTORS ---
+                    const pointsType = q.pointsType || 'standard';
+                    if (pointsType === 'none') {
+                        playerMap[n.author_id].score += 0;
+                        correctRank++;
+                        return;
+                    }
 
-                    // RANK BONUS (max 500 for 1st, decreases)
-                    const rankBonus = Math.max(0, 500 - (correctRank * 50));
+                    const multiplier = pointsType === 'double' ? 2 : 1;
                     
-                    // STREAK BONUS (max 500)
-                    const streakBonus = Math.min(streak, 5) * 100;
+                    // 1. BASE POINTS
+                    const basePoints = 1000 * multiplier;
 
-                    // RANDOM JITTER (0-99) based on note ID for consistency across clients
+                    // 2. SPEED BONUS (max 500)
+                    const totalTime = q.timeLimit * 1000;
+                    const responseTime = Math.max(0, n.createdAt - (board.quizStartTime || n.createdAt));
+                    const speedMultiplier = Math.max(0, 1 - (responseTime / totalTime));
+                    const speedBonus = Math.floor(500 * speedMultiplier * multiplier);
+
+                    // 3. RANK BONUS (max 500 for 1st, decreases)
+                    // Competitive mode doubles the rank bonus impact
+                    const rankStep = pointsType === 'competitive' ? 100 : 50;
+                    const maxRankBonus = pointsType === 'competitive' ? 1000 : 500;
+                    const rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
+                    
+                    // 4. STREAK BONUS (max 500)
+                    // Streak boost adds 200 per streak level instead of 100
+                    const streakStep = pointsType === 'streak_boost' ? 200 : 100;
+                    const streakBonus = Math.min(streak, 5) * streakStep * multiplier;
+
+                    // 5. RANDOM JITTER (0-99)
                     const jitter = n.id ? (n.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100) : 0;
 
-                    playerMap[n.author_id].score += 1000 + speedBonus + rankBonus + streakBonus + jitter;
+                    // TOTAL
+                    playerMap[n.author_id].score += basePoints + speedBonus + rankBonus + streakBonus + jitter;
                     correctRank++;
                 }
             });
@@ -227,6 +246,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
         startGame,
         nextStep,
         resetGame,
-        currentSessionId
+        currentSessionId,
+        isSubmitting
     };
 };
