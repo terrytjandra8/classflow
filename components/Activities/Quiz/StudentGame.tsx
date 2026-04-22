@@ -216,7 +216,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
 
     // --- REVEAL SCREEN ---
     if (state === 'reveal') {
-        const isCorrect = myAnswerNote?.content === currentQ?.correctIndex.toString();
+        const isCorrect = myAnswerNote && currentQ && Number(myAnswerNote.content) === Number(currentQ.correctIndex);
         return (
             <div className={`h-full flex flex-col items-center justify-center ${isCorrect ? 'bg-[#26890c]' : 'bg-[#e21b3c]'} text-white transition-colors duration-300 relative overflow-hidden`}>
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>

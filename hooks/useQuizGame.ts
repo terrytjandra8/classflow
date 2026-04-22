@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Board, Note, QuizQuestion, QuizState } from '../types';
+import { calculatePoints } from '../utils/quizUtils';
 
 export const useQuizGame = (board: Board, notes: Note[], userId?: string, username?: string, isStudent?: boolean, onUpdateBoard?: (updates: Partial<Board>) => void, onActivity?: () => void) => {
     const questions: QuizQuestion[] = board.quizQuestions || [];
@@ -96,9 +97,9 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                 const answerIdx = Number(n.content);
                 const isCorrect = !isNaN(answerIdx) && Number(q.correctIndex) === answerIdx;
 
-                // WRONG ANSWER = 0 points, skip entirely
-                if (!isCorrect) return;
-
+                // Calculate points using the central utility
+                const timeRemaining = Math.max(0, (q.timeLimit * 1000) - (n.createdAt - (board.quizStartTime || n.createdAt)));
+                
                 // Calculate streak for this specific user up to THIS question
                 let streak = 0;
                 for (let prevIdx = qIdx - 1; prevIdx >= 0; prevIdx--) {
@@ -108,36 +109,17 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                     else break;
                 }
 
-                // --- SCORING FACTORS ---
-                const pointsType = q.pointsType || 'standard';
-                if (pointsType === 'none') {
-                    correctRank++;
-                    return;
-                }
+                const pointsResult = calculatePoints(
+                    q.pointsType || 'standard',
+                    timeRemaining,
+                    q.timeLimit * 1000,
+                    isCorrect,
+                    streak,
+                    correctRank
+                );
 
-                const multiplier = pointsType === 'double' ? 2 : 1;
-                
-                // 1. BASE POINTS
-                const basePoints = 1000 * multiplier;
-
-                // 2. SPEED BONUS (max 500)
-                const totalTime = q.timeLimit * 1000;
-                const responseTime = Math.max(0, n.createdAt - (board.quizStartTime || n.createdAt));
-                const speedMultiplier = Math.max(0, 1 - (responseTime / totalTime));
-                const speedBonus = Math.floor(500 * speedMultiplier * multiplier);
-
-                // 3. RANK BONUS (max 500 for 1st, decreases)
-                const rankStep = pointsType === 'competitive' ? 100 : 50;
-                const maxRankBonus = pointsType === 'competitive' ? 1000 : 500;
-                const rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
-                
-                // 4. STREAK BONUS (max 500)
-                const streakStep = pointsType === 'streak_boost' ? 200 : 100;
-                const streakBonus = Math.min(streak, 5) * streakStep * multiplier;
-
-                // TOTAL (no jitter — clean scoring)
-                playerMap[n.author_id].score += basePoints + speedBonus + rankBonus + streakBonus;
-                correctRank++;
+                playerMap[n.author_id].score += pointsResult.total;
+                if (isCorrect) correctRank++;
             });
         }
 

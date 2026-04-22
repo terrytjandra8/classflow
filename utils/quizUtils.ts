@@ -73,35 +73,56 @@ export const getStreakBonus = (streak: number, system: PointSystemType): number 
 };
 
 /**
- * Calculates total points for a given answer including time and streak factors
+ * Calculates total points for a given answer including time, rank, and streak factors.
+ * This is the SINGLE SOURCE OF TRUTH for scoring in the application.
  */
 export const calculatePoints = (
     system: PointSystemType,
-    timeRemaining: number,
-    timeLimit: number,
+    timeRemainingMs: number,
+    timeLimitMs: number,
     isCorrect: boolean,
-    currentStreak: number = 0
-): { base: number; bonus: number; total: number } => {
-    if (!isCorrect) return { base: 0, bonus: 0, total: 0 };
-
-    const config = POINT_SYSTEMS.find(p => p.id === system) || POINT_SYSTEMS[0];
-    
-    if (config.id === 'none') return { base: 0, bonus: 0, total: 0 };
-
-    let basePoints = config.maxPoints;
-    
-    // Apply timer factor if enabled
-    if (config.useTimer && timeLimit > 0) {
-        const timeFactor = timeRemaining / timeLimit;
-        basePoints = Math.round(config.maxPoints * (0.5 + 0.5 * timeFactor));
+    currentStreak: number = 0,
+    correctRank: number = 0 // 0 = first person to answer correctly
+): { base: number; speed: number; rank: number; streak: number; total: number } => {
+    // 1. ABSOLUTE GUARD: If not correct, zero points across the board.
+    if (!isCorrect || system === 'none') {
+        return { base: 0, speed: 0, rank: 0, streak: 0, total: 0 };
     }
 
-    // Apply streak bonus if enabled
-    const bonusPoints = config.hasStreak ? getStreakBonus(currentStreak, system) : 0;
+    const config = POINT_SYSTEMS.find(p => p.id === system) || POINT_SYSTEMS[0];
+    const multiplier = system === 'double' ? 2 : 1;
     
+    // 2. BASE POINTS (Standard is 1000)
+    const basePoints = config.maxPoints;
+
+    // 3. SPEED BONUS (max 500)
+    let speedBonus = 0;
+    if (config.useTimer && timeLimitMs > 0) {
+        // Linear decay from 500 to 0 based on time elapsed
+        const timeFactor = Math.max(0, Math.min(1, timeRemainingMs / timeLimitMs));
+        speedBonus = Math.floor(500 * timeFactor * multiplier);
+    }
+
+    // 4. RANK BONUS (Dynamic based on system)
+    let rankBonus = 0;
+    if (system !== 'none') {
+        const rankStep = system === 'competitive' ? 100 : 50;
+        const maxRankBonus = system === 'competitive' ? 1000 : 500;
+        rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
+    }
+
+    // 5. STREAK BONUS (Capped at level 5)
+    let streakBonus = 0;
+    if (config.hasStreak) {
+        const streakStep = system === 'streak_boost' ? 200 : 100;
+        streakBonus = Math.min(currentStreak, 5) * streakStep * multiplier;
+    }
+
     return {
         base: basePoints,
-        bonus: bonusPoints,
-        total: basePoints + bonusPoints
+        speed: speedBonus,
+        rank: rankBonus,
+        streak: streakBonus,
+        total: basePoints + speedBonus + rankBonus + streakBonus
     };
 };
