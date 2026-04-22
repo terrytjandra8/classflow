@@ -293,20 +293,33 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                                                 }}
                                                 className={`bg-[#1a1a1a] border-2 rounded-2xl lg:rounded-[2.5rem] flex flex-col gap-2 lg:gap-4 group cursor-grab active:cursor-grabbing relative overflow-hidden shadow-2xl h-full w-full ${dragOverIndex === idx && draggedIndex !== idx ? 'border-purple-500 ring-4 ring-purple-500/10 z-20' : 'border-white/5 hover:border-purple-500/30'}`}
                                             >
-                                            <div className="p-4 lg:p-6 pb-0 flex justify-between items-center relative z-10">
-                                                <div className="w-8 h-8 lg:w-10 lg:h-10 bg-black/40 rounded-xl lg:rounded-2xl flex items-center justify-center font-black text-gray-500 text-xs lg:text-sm border border-white/5">{idx + 1}</div>
-                                                <div className="flex gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
-                                                    {q.pointsType === 'streak_boost' && <Flame size={14} className="text-orange-500" />}
-                                                    {q.pointsType === 'double' && <Zap size={14} className="text-yellow-500" />}
-                                                    {q.pointsType === 'competitive' && <Target size={14} className="text-blue-500" />}
-                                                    <button onClick={(e) => { e.stopPropagation(); startQuickEdit(q); }} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-blue-400 border border-white/5"><Edit2 size={14}/></button>
-                                                    <button onClick={(e) => { e.stopPropagation(); persistQuestions(localQuestions.filter(item => item.id !== q.id)); }} className="p-2.5 bg-white/5 hover:bg-red-500/20 rounded-xl text-red-400 border border-white/5"><Trash2 size={14}/></button>
+                                            <div className="p-4 lg:p-5 flex flex-col h-full relative z-10">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 bg-black/40 rounded-lg flex items-center justify-center font-black text-gray-500 text-[10px] border border-white/5 shadow-inner">{idx + 1}</div>
+                                                        {q.mediaUrl && (
+                                                            <div className="w-12 h-8 lg:w-16 lg:h-10 rounded-lg overflow-hidden border border-white/10 bg-black/40 group-hover:border-purple-500/50 transition-colors">
+                                                                <img src={q.mediaUrl} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
+                                                        {q.pointsType === 'streak_boost' && <Flame size={14} className="text-orange-500" />}
+                                                        {q.pointsType === 'double' && <Zap size={14} className="text-yellow-500" />}
+                                                        {q.pointsType === 'competitive' && <Target size={14} className="text-blue-500" />}
+                                                        <button onClick={(e) => { e.stopPropagation(); startQuickEdit(q); }} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-blue-400 border border-white/5"><Edit2 size={12}/></button>
+                                                        <button onClick={(e) => { e.stopPropagation(); persistQuestions(localQuestions.filter(item => item.id !== q.id)); }} className="p-2 bg-white/5 hover:bg-red-500/20 rounded-lg text-red-400 border border-white/5"><Trash2 size={12}/></button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="px-4 lg:px-6 flex-1 relative z-10">
-                                                <h4 className="font-bold text-[13px] lg:text-sm text-gray-200 line-clamp-2 lg:line-clamp-3 leading-relaxed mb-4 lg:mb-6 h-10 lg:h-12">{q.question || "Untitled Question"}</h4>
-                                                <div className="grid grid-cols-2 gap-1 lg:gap-2">
-                                                    {q.options.map((opt, i) => <div key={i} className={`h-1.5 lg:h-2 rounded-full ${q.correctIndex === i ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-white/5'}`}></div>)}
+
+                                                <h4 className="font-bold text-[13px] lg:text-sm text-gray-100 leading-relaxed mb-6 break-words">
+                                                    {q.question || "Untitled Question"}
+                                                </h4>
+                                                
+                                                <div className="grid grid-cols-2 gap-2 mt-auto">
+                                                    {q.options.map((opt, i) => (
+                                                        <div key={i} className={`h-1.5 lg:h-2 rounded-full transition-all ${q.correctIndex === i ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-white/10'}`}></div>
+                                                    ))}
                                                 </div>
                                             </div>
                                             <div className="p-4 lg:p-6 pt-3 lg:pt-4 mt-2 border-t border-white/5 flex items-center justify-between text-[8px] lg:text-[9px] font-black text-gray-500 uppercase tracking-widest bg-black/20">
