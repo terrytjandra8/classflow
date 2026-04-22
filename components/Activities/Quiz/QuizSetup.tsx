@@ -1,9 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Board, QuizQuestion, Note, ClassGroup } from '../../../types';
 import { ArrowLeft, Share2, Settings, Play, Plus, Edit2, Trash2, Music, Pause, Volume2, Gamepad2, Layout, Sparkles, CheckCircle2, MonitorPlay, Save, X, Check, GripHorizontal, Move, Zap, Trophy, MinusCircle, Flame, Target, XCircle, Users, ChevronDown, Trash } from 'lucide-react';
 import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
+import { calculatePoints } from '../../../utils/quizUtils';
 import { noteService } from '../../../services/noteService';
 
 interface QuizSetupProps {
@@ -391,20 +391,41 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                             )
                             .sort((a: any, b: any) => b[0].localeCompare(a[0]))
                             .map(([sId, sNotes]: [string, any]) => {
-                                const sessionScores: any = {};
-                                sNotes.forEach((n: any) => {
-                                    if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
+                                const sessionAnswers = sNotes.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+                                const playerMap: Record<string, { name: string, score: number }> = {};
+                                
+                                for (let qIdx = 0; qIdx < localQuestions.length; qIdx++) {
+                                    const q = localQuestions[qIdx];
+                                    const qAnswers = sessionAnswers.filter((n: any) => n.title === `${sId}_Q${qIdx}`);
                                     
-                                    // Robust correctness check for history
-                                    const qIdx = n.title?.includes('_Q') ? parseInt(n.title.split('_Q')[1]) : -1;
-                                    const q = questions[qIdx];
-                                    const isCorrect = q && Number(n.content) === Number(q.correctIndex);
-                                    
-                                    if (isCorrect) {
-                                        sessionScores[n.author_id].score += 1000; 
-                                    }
-                                });
-                                const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
+                                    let correctRank = 0;
+                                    qAnswers.forEach((n: any) => {
+                                        if (!playerMap[n.author_id]) playerMap[n.author_id] = { name: n.author, score: 0 };
+                                        
+                                        const isCorrect = Number(n.content) === Number(q.correctIndex);
+                                        
+                                        let streak = 0;
+                                        for (let prev = qIdx - 1; prev >= 0; prev--) {
+                                            const prevQ = localQuestions[prev];
+                                            const prevAns = sessionAnswers.find((pa: any) => pa.author_id === n.author_id && pa.title === `${sId}_Q${prev}`);
+                                            if (prevAns && Number(prevAns.content) === Number(prevQ.correctIndex)) streak++;
+                                            else break;
+                                        }
+
+                                        const points = calculatePoints(
+                                            q.pointsType || 'standard',
+                                            0,
+                                            q.timeLimit * 1000,
+                                            isCorrect,
+                                            streak,
+                                            correctRank
+                                        );
+
+                                        playerMap[n.author_id].score += points.total;
+                                        if (isCorrect) correctRank++;
+                                    });
+                                }
+                                const winner = Object.values(playerMap).sort((a: any, b: any) => b.score - a.score)[0] as any;
                                 const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleString() : 'Legacy Session';
 
                                 return (

@@ -1,8 +1,10 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { QuizState, QuizQuestion, Board, Note } from '../../../types';
 import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass, XCircle, ShieldAlert, Edit2 } from 'lucide-react';
+import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
+import { noteService } from '../../../services/noteService';
+import { calculatePoints } from '../../../utils/quizUtils';
 
 interface TeacherGameProps {
     state: QuizState | 'setup';
@@ -422,21 +424,43 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                             )
                             .sort((a: any, b: any) => b[0].localeCompare(a[0])) // Newest sessions first
                             .map(([sId, sNotes]: [string, any]) => {
-                                // Calculate winner for this session
-                                const sessionScores: any = {};
-                                sNotes.forEach((n: any) => {
-                                    if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
+                                    const sessionAnswers = sNotes.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+                                    const playerMap: Record<string, { name: string, score: number }> = {};
                                     
-                                    // Robust correctness check for history
-                                    const qIdx = n.title?.includes('_Q') ? parseInt(n.title.split('_Q')[1]) : -1;
-                                    const q = questions[qIdx];
-                                    const isCorrect = q && Number(n.content) === Number(q.correctIndex);
-                                    
-                                    if (isCorrect) {
-                                        sessionScores[n.author_id].score += 1000; 
+                                    // Process question by question for Rank Bonus
+                                    for (let qIdx = 0; qIdx < questions.length; qIdx++) {
+                                        const q = questions[qIdx];
+                                        const qAnswers = sessionAnswers.filter((n: any) => n.title === `${sId}_Q${qIdx}`);
+                                        
+                                        let correctRank = 0;
+                                        qAnswers.forEach((n: any) => {
+                                            if (!playerMap[n.author_id]) playerMap[n.author_id] = { name: n.author, score: 0 };
+                                            
+                                            const isCorrect = Number(n.content) === Number(q.correctIndex);
+                                            
+                                            // Calculate streak up to this question
+                                            let streak = 0;
+                                            for (let prev = qIdx - 1; prev >= 0; prev--) {
+                                                const prevQ = questions[prev];
+                                                const prevAns = sessionAnswers.find((pa: any) => pa.author_id === n.author_id && pa.title === `${sId}_Q${prev}`);
+                                                if (prevAns && Number(prevAns.content) === Number(prevQ.correctIndex)) streak++;
+                                                else break;
+                                            }
+
+                                            const points = calculatePoints(
+                                                q.pointsType || 'standard',
+                                                0, // Time remaining (not stored in history)
+                                                q.timeLimit * 1000,
+                                                isCorrect,
+                                                streak,
+                                                correctRank
+                                            );
+
+                                            playerMap[n.author_id].score += points.total;
+                                            if (isCorrect) correctRank++;
+                                        });
                                     }
-                                });
-                                const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
+                                    const winner = Object.values(playerMap).sort((a: any, b: any) => b.score - a.score)[0] as any;
                                 const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleTimeString() : 'Legacy';
 
                                 return (
@@ -500,20 +524,41 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                             )
                             .sort((a: any, b: any) => b[0].localeCompare(a[0]))
                             .map(([sId, sNotes]: [string, any]) => {
-                                const sessionScores: any = {};
-                                sNotes.forEach((n: any) => {
-                                    if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
-                                    
-                                    // Robust correctness check for history
-                                    const qIdx = n.title?.includes('_Q') ? parseInt(n.title.split('_Q')[1]) : -1;
+                                const sessionAnswers = sNotes.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+                                const playerMap: Record<string, { name: string, score: number }> = {};
+                                
+                                for (let qIdx = 0; qIdx < questions.length; qIdx++) {
                                     const q = questions[qIdx];
-                                    const isCorrect = q && Number(n.content) === Number(q.correctIndex);
+                                    const qAnswers = sessionAnswers.filter((n: any) => n.title === `${sId}_Q${qIdx}`);
                                     
-                                    if (isCorrect) {
-                                        sessionScores[n.author_id].score += 1000; 
-                                    }
-                                });
-                                const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
+                                    let correctRank = 0;
+                                    qAnswers.forEach((n: any) => {
+                                        if (!playerMap[n.author_id]) playerMap[n.author_id] = { name: n.author, score: 0 };
+                                        
+                                        const isCorrect = Number(n.content) === Number(q.correctIndex);
+                                        
+                                        let streak = 0;
+                                        for (let prev = qIdx - 1; prev >= 0; prev--) {
+                                            const prevQ = questions[prev];
+                                            const prevAns = sessionAnswers.find((pa: any) => pa.author_id === n.author_id && pa.title === `${sId}_Q${prev}`);
+                                            if (prevAns && Number(prevAns.content) === Number(prevQ.correctIndex)) streak++;
+                                            else break;
+                                        }
+
+                                        const points = calculatePoints(
+                                            q.pointsType || 'standard',
+                                            0,
+                                            q.timeLimit * 1000,
+                                            isCorrect,
+                                            streak,
+                                            correctRank
+                                        );
+
+                                        playerMap[n.author_id].score += points.total;
+                                        if (isCorrect) correctRank++;
+                                    });
+                                }
+                                const winner = Object.values(playerMap).sort((a: any, b: any) => b.score - a.score)[0] as any;
                                 const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleString() : 'Legacy Session';
 
                                 return (
