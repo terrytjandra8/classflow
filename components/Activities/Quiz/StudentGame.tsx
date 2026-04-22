@@ -218,8 +218,32 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     }
 
     // --- REVEAL SCREEN ---
+    const [revealMessage, setRevealMessage] = React.useState('');
+    
+    React.useEffect(() => {
+        if (state === 'reveal') {
+            const correctMsgs = [
+                "Genius move!", "On fire! 🔥", "Unstoppable!", 
+                "Pure brilliance!", "Perfectly executed!", "Absolute legend!"
+            ];
+            const incorrectMsgs = [
+                "Almost had it!", "Stay focused, you got this!", 
+                "Shake it off, next one's yours!", "Nice try! Keep pushing!", 
+                "Mistakes are lessons! Go again!", "So close! Don't give up!"
+            ];
+            
+            const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
+            const isCorrect = submittedIndex !== null && currentQ && Number(submittedIndex) === Number(currentQ.correctIndex);
+            
+            const list = isCorrect ? correctMsgs : incorrectMsgs;
+            setRevealMessage(list[Math.floor(Math.random() * list.length)]);
+        }
+    }, [state]);
+
     if (state === 'reveal') {
-        const isCorrect = myAnswerNote && currentQ && Number(myAnswerNote.content) === Number(currentQ.correctIndex);
+        const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
+        const isCorrect = submittedIndex !== null && currentQ && Number(submittedIndex) === Number(currentQ.correctIndex);
+        
         return (
             <div className={`h-full flex flex-col items-center justify-center ${isCorrect ? 'bg-[#26890c]' : 'bg-[#e21b3c]'} text-white transition-colors duration-300 relative overflow-hidden`}>
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
@@ -234,14 +258,10 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     </h3>
                     
                     <div className="bg-black/20 px-10 py-4 rounded-3xl border-2 border-white/20 backdrop-blur-md shadow-2xl">
-                        {isCorrect ? (
-                            <div className="space-y-1">
-                                <p className="text-xl font-black text-white/80">Great job!</p>
-                                {myStreak > 1 && <p className="text-yellow-300 text-sm font-black tracking-[0.2em] uppercase">Streak Saved! 🔥</p>}
-                            </div>
-                        ) : (
-                            <p className="text-xl font-bold text-white/70">Better luck next time!</p>
-                        )}
+                        <div className="space-y-1">
+                            <p className="text-xl font-black text-white/80">{revealMessage}</p>
+                            {isCorrect && myStreak > 1 && <p className="text-yellow-300 text-sm font-black tracking-[0.2em] uppercase">Streak Saved! 🔥</p>}
+                        </div>
                     </div>
                 </div>
             </div>
