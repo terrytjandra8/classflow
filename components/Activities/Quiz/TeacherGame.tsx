@@ -201,62 +201,82 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
 
             {/* SCENE: LOBBY */}
             {state === 'lobby' && (
-                <div className="flex-1 flex flex-col items-center justify-center p-10 relative z-10">
-                    <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-12">
-                        <div className="text-left space-y-6">
-                            <h1 className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl animate-in slide-in-from-left-10 duration-700">
+                <div className="flex-1 flex flex-col p-10 relative z-10">
+                    <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-20 max-w-7xl mx-auto w-full">
+                        <div className="flex-1 text-left space-y-8 animate-in slide-in-from-left-10 duration-700">
+                            <h1 className="text-8xl md:text-[10rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-[0.8]">
                                 JOIN<br/>THE<br/>GAME
                             </h1>
-                            <div className="flex items-center gap-3 text-white/50 font-mono text-lg animate-in fade-in delay-300">
-                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                Waiting for players...
+                            <div className="flex items-center gap-4 text-white/50 font-mono text-xl animate-in fade-in delay-300">
+                                <div className="flex gap-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-75"></span>
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-150"></span>
+                                </div>
+                                Waiting for players to join...
                             </div>
                         </div>
 
                         {/* Holographic Ticket */}
-                        <div className="relative group perspective-1000">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-pink-600 rounded-3xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-                            <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center w-80 transform transition-transform hover:scale-[1.02] shadow-2xl">
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mb-2">Class Code</div>
-                                <div className="text-6xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+                        <div className="relative group perspective-1000 animate-in slide-in-from-right-10 duration-700">
+                            <div className="absolute -inset-4 bg-gradient-to-r from-blue-600/30 to-pink-600/30 rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+                            <div className="relative bg-black/40 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] p-12 text-center w-96 transform transition-all hover:scale-[1.05] shadow-2xl overflow-hidden">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                <div className="text-sm font-black text-gray-500 uppercase tracking-[0.4em] mb-4">Class Code</div>
+                                <div className="text-7xl font-mono font-black text-white tracking-widest drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] mb-8">
                                     {board.classCode}
                                 </div>
-                                <div className="mt-6 text-sm text-gray-400 border-t border-white/10 pt-4">
-                                    Join at <span className="text-white font-bold">classboards.ai</span>
+                                <div className="flex flex-col items-center gap-2 pt-6 border-t border-white/10">
+                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-widest">Join now at</div>
+                                    <div className="text-2xl text-white font-black tracking-tight">classboards.ai</div>
                                 </div>
+                                <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-20 w-full max-w-6xl">
-                        <div className="flex justify-between items-end mb-6 border-b border-white/10 pb-2">
-                            <div className="flex items-center gap-3 text-white">
-                                <Users size={24} className="text-blue-400" />
-                                <span className="text-2xl font-bold">{onlineUsers?.length || 0}</span>
-                                <span className="text-sm text-gray-500 font-bold uppercase tracking-wide">Ready</span>
+                    <div className="mt-auto w-full max-w-7xl mx-auto pt-10">
+                        <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                                    <Users size={32} className="text-blue-400" />
+                                </div>
+                                <div>
+                                    <div className="text-4xl font-black text-white tabular-nums">{onlineUsers?.length || 0}</div>
+                                    <div className="text-xs text-gray-500 font-black uppercase tracking-[0.2em]">Players Ready</div>
+                                </div>
                             </div>
                             <button 
                                 onClick={startGame} 
-                                className="bg-white text-black px-12 py-4 rounded-full font-black text-xl shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 hover:shadow-[0_0_50px_rgba(255,255,255,0.5)] transition-all flex items-center gap-3"
+                                className="group relative bg-white text-black px-16 py-6 rounded-2xl font-black text-2xl shadow-[0_20px_50px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all flex items-center gap-4 overflow-hidden"
                             >
-                                START <Play fill="currentColor" size={20} />
+                                <span className="relative z-10">START GAME</span>
+                                <Play fill="currentColor" size={24} className="relative z-10" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                             </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-4 max-h-48 overflow-y-auto custom-scrollbar p-2">
                             {onlineUsers?.map((u, i) => (
                                 <div 
                                     key={i} 
-                                    className="bg-white/5 backdrop-blur-md border border-white/10 px-5 py-2 rounded-full font-bold text-sm text-white shadow-lg animate-in zoom-in duration-300 hover:bg-white/10 hover:scale-105 transition-all cursor-default" 
-                                    style={{ animationDelay: `${i * 50}ms` }}
+                                    className="bg-white/5 backdrop-blur-md border border-white/10 px-6 py-3 rounded-2xl font-bold text-lg text-white shadow-xl animate-in zoom-in duration-300 hover:bg-white/10 hover:scale-110 hover:border-white/20 transition-all cursor-default flex items-center gap-3" 
+                                    style={{ animationDelay: `${i * 30}ms` }}
                                 >
+                                    <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>
                                     {u.user}
                                 </div>
                             ))}
+                            {(!onlineUsers || onlineUsers.length === 0) && (
+                                <div className="w-full text-center py-10 text-gray-600 font-bold italic">
+                                    Tell your students to enter the code to join!
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
+
 
             {/* SCENE: QUESTION & REVEAL */}
             {(state === 'question' || state === 'reveal') && currentQ && (

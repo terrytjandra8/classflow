@@ -361,6 +361,16 @@ function AppContent() {
 
       return () => { supabase.removeChannel(channel); };
   }, [session, isGuest]);
+  // Initial fetch and auto-refresh for dashboard
+  useEffect(() => {
+      if (view === 'dashboard' && (session || isGuest)) {
+          fetchBoards();
+          
+          // Poll every 10 seconds as a fail-proof fallback
+          const interval = setInterval(fetchBoards, 10000);
+          return () => clearInterval(interval);
+      }
+  }, [view, session, isGuest]);
 
   const createBoard = (format: BoardFormat, templateData?: Partial<Board>, initialNotes?: Note[]) => {
       if (!templateData) {
