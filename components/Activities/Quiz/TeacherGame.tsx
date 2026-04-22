@@ -444,9 +444,15 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                                 const sessionScores: any = {};
                                 sNotes.forEach((n: any) => {
                                     if (!sessionScores[n.author_id]) sessionScores[n.author_id] = { name: n.author, score: 0 };
-                                    // Simple count for history or use complex logic if we want to re-run it
-                                    // For now, let's just show a summary
-                                    sessionScores[n.author_id].score += 1000; 
+                                    
+                                    // Robust correctness check for history
+                                    const qIdx = n.title?.includes('_Q') ? parseInt(n.title.split('_Q')[1]) : -1;
+                                    const q = questions[qIdx];
+                                    const isCorrect = q && Number(n.content) === Number(q.correctIndex);
+                                    
+                                    if (isCorrect) {
+                                        sessionScores[n.author_id].score += 1000; 
+                                    }
                                 });
                                 const winner = Object.values(sessionScores).sort((a: any, b: any) => b.score - a.score)[0] as any;
                                 const date = sId.startsWith('S') ? new Date(parseInt(sId.substring(1))).toLocaleTimeString() : 'Legacy';

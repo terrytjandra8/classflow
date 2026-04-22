@@ -95,10 +95,16 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                 }
 
                 const answerIdx = Number(n.content);
-                const isCorrect = !isNaN(answerIdx) && Number(q.correctIndex) === answerIdx;
+                const correctIdx = Number(q.correctIndex);
+                const isCorrect = !isNaN(answerIdx) && correctIdx === answerIdx;
 
-                // Calculate points using the central utility
-                const timeRemaining = Math.max(0, (q.timeLimit * 1000) - (n.createdAt - (board.quizStartTime || n.createdAt)));
+                // Only calculate speed bonus for the CURRENT question. 
+                // For previous questions, we don't have the start time stored anymore, 
+                // so we fallback to a 0 speed bonus to prevent score inflation.
+                let timeRemaining = 0;
+                if (qIdx === currentQIndex && board.quizStartTime) {
+                    timeRemaining = Math.max(0, (q.timeLimit * 1000) - (n.createdAt - board.quizStartTime));
+                }
                 
                 // Calculate streak for this specific user up to THIS question
                 let streak = 0;
@@ -117,6 +123,11 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                     streak,
                     correctRank
                 );
+
+                // DEBUG LOG: The user can see this in their browser console
+                if (qIdx === currentQIndex) {
+                    console.log(`[QuizScore] Q:${qIdx} Player:${n.author} Answered:${answerIdx} Correct:${correctIdx} isCorrect:${isCorrect} Points:${pointsResult.total}`);
+                }
 
                 playerMap[n.author_id].score += pointsResult.total;
                 if (isCorrect) correctRank++;
