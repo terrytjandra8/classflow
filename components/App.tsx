@@ -348,20 +348,38 @@ function AppContent() {
       checkAccess();
   }, [session, isGuest]); // removed activeBoardId dep to prevent loops, relying on URL param
 
+  const fetchBoards = React.useCallback(async () => {
+      if (view !== 'dashboard' && !activeBoardId) return; // Only fetch if on dashboard or in a board
+      try {
+          const data = await boardService.getBoards();
+          setBoards(data);
+      } catch (e) {
+          console.error("Failed to fetch boards", e);
+      }
+  }, [view, activeBoardId]);
+
   // Fetch boards whenever the user navigates to the dashboard
   useEffect(() => {
       if (view === 'dashboard' && (session || isGuest)) {
-          const fetchBoards = async () => {
-              try {
-                  const data = await boardService.getBoards();
-                  setBoards(data);
-              } catch (e) {
-                  console.error("Failed to fetch boards", e);
-              }
-          };
           fetchBoards();
       }
-  }, [view, session, isGuest]);
+  }, [view, session, isGuest, fetchBoards]);
+
+  // Dashboard Sync Listener (Real-time visibility refresh)
+  useEffect(() => {
+      if (!session && !isGuest) return;
+
+      const syncChannel = supabase.channel('dashboard-sync')
+          .on('broadcast', { event: 'board-published' }, () => {
+              console.log("Board published broadcast received! Refreshing dashboard...");
+              fetchBoards();
+          })
+          .subscribe();
+
+      return () => {
+          supabase.removeChannel(syncChannel);
+      };
+  }, [session, isGuest, fetchBoards]);
 
   // Subscribe to board changes in real-time
   useEffect(() => {
