@@ -348,53 +348,34 @@ function AppContent() {
       checkAccess();
   }, [session, isGuest]); // removed activeBoardId dep to prevent loops, relying on URL param
 
-  const fetchBoards = React.useCallback(async () => {
-      if (view !== 'dashboard' && !activeBoardId) return;
-      try {
-          const data = await boardService.getBoards();
-          setBoards(data);
-      } catch (e) {
-          console.error("Failed to fetch boards", e);
-      }
-  }, [view, activeBoardId]);
-
-  // Fetch boards whenever the user navigates to the dashboard + 10s safety poll
+  // Fetch boards on dashboard load + auto-refresh every 10 seconds for live updates
   useEffect(() => {
-      if (view === 'dashboard' && (session || isGuest)) {
-          fetchBoards();
-          
-          // Safety poll: Check for newly published boards every 10 seconds
-          // This is a fail-safe in case the real-time broadcast is missed.
-          const interval = setInterval(fetchBoards, 10000);
-          return () => clearInterval(interval);
-      }
-  }, [view, session, isGuest, fetchBoards]);
+      if (view !== 'dashboard' || (!session && !isGuest)) return;
 
-  // Dashboard Sync Listener (Real-time visibility refresh)
-  useEffect(() => {
-      // Create the sync channel
-      const syncChannel = supabase.channel('classboard-global-sync');
+      let isMounted = true;
 
-      syncChannel
-          .on('broadcast', { event: 'board-published' }, (payload) => {
-              console.log("🔔 BOARD PUBLISHED:", payload);
-              if (payload.payload?.board) {
-                  const newBoard = mapBoard(payload.payload.board);
-                  setBoards(prev => {
-                      const exists = prev.some(b => b.id === newBoard.id);
-                      if (exists) return prev.map(b => b.id === newBoard.id ? { ...b, ...newBoard } : b);
-                      return [newBoard, ...prev];
-                  });
-              } else {
-                  fetchBoards();
-              }
-          })
-          .subscribe();
+      const loadBoards = async () => {
+          try {
+              const data = await boardService.getBoards();
+              if (isMounted) setBoards(data);
+          } catch (e) {
+              // Silent fail — guest users without auth will hit this
+              console.error("Board fetch error:", e);
+          }
+      };
+
+      // Initial fetch
+      loadBoards();
+
+      // Poll every 10 seconds so students see newly-published boards without refreshing
+      const interval = setInterval(loadBoards, 10000);
 
       return () => {
-          supabase.removeChannel(syncChannel);
+          isMounted = false;
+          clearInterval(interval);
       };
-  }, [fetchBoards]);
+  }, [view, session, isGuest]);
+
 
   // Subscribe to board changes in real-time
   useEffect(() => {

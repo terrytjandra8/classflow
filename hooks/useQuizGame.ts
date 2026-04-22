@@ -61,7 +61,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
             const q = questions[i];
             const ansNote = notes.find(n => n.author_id === userId && n.title === `S${currentSessionId}_Q${i}`);
             
-            if (ansNote && parseInt(ansNote.content) === q.correctIndex) {
+            if (ansNote && Number(ansNote.content) === Number(q.correctIndex)) {
                 streak++;
             } else {
                 break;
@@ -93,54 +93,51 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                     playerMap[n.author_id] = { name: n.author || 'Player', score: 0 };
                 }
 
-                const answerIdx = parseInt(n.content);
-                if (q.correctIndex === answerIdx) {
-                    // Calculate streak for this specific user up to THIS question
-                    let streak = 0;
-                    for (let prevIdx = qIdx - 1; prevIdx >= 0; prevIdx--) {
-                        const prevQ = questions[prevIdx];
-                        const prevAns = sessionAnswers.find(pa => pa.author_id === n.author_id && pa.title === `S${currentSessionId}_Q${prevIdx}`);
-                        if (prevAns && parseInt(prevAns.content) === prevQ.correctIndex) streak++;
-                        else break;
-                    }
+                const answerIdx = Number(n.content);
+                const isCorrect = !isNaN(answerIdx) && Number(q.correctIndex) === answerIdx;
 
-                    // --- SCORING FACTORS ---
-                    const pointsType = q.pointsType || 'standard';
-                    if (pointsType === 'none') {
-                        playerMap[n.author_id].score += 0;
-                        correctRank++;
-                        return;
-                    }
+                // WRONG ANSWER = 0 points, skip entirely
+                if (!isCorrect) return;
 
-                    const multiplier = pointsType === 'double' ? 2 : 1;
-                    
-                    // 1. BASE POINTS
-                    const basePoints = 1000 * multiplier;
-
-                    // 2. SPEED BONUS (max 500)
-                    const totalTime = q.timeLimit * 1000;
-                    const responseTime = Math.max(0, n.createdAt - (board.quizStartTime || n.createdAt));
-                    const speedMultiplier = Math.max(0, 1 - (responseTime / totalTime));
-                    const speedBonus = Math.floor(500 * speedMultiplier * multiplier);
-
-                    // 3. RANK BONUS (max 500 for 1st, decreases)
-                    // Competitive mode doubles the rank bonus impact
-                    const rankStep = pointsType === 'competitive' ? 100 : 50;
-                    const maxRankBonus = pointsType === 'competitive' ? 1000 : 500;
-                    const rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
-                    
-                    // 4. STREAK BONUS (max 500)
-                    // Streak boost adds 200 per streak level instead of 100
-                    const streakStep = pointsType === 'streak_boost' ? 200 : 100;
-                    const streakBonus = Math.min(streak, 5) * streakStep * multiplier;
-
-                    // 5. RANDOM JITTER (0-99)
-                    const jitter = n.id ? (n.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100) : 0;
-
-                    // TOTAL
-                    playerMap[n.author_id].score += basePoints + speedBonus + rankBonus + streakBonus + jitter;
-                    correctRank++;
+                // Calculate streak for this specific user up to THIS question
+                let streak = 0;
+                for (let prevIdx = qIdx - 1; prevIdx >= 0; prevIdx--) {
+                    const prevQ = questions[prevIdx];
+                    const prevAns = sessionAnswers.find(pa => pa.author_id === n.author_id && pa.title === `S${currentSessionId}_Q${prevIdx}`);
+                    if (prevAns && Number(prevAns.content) === Number(prevQ.correctIndex)) streak++;
+                    else break;
                 }
+
+                // --- SCORING FACTORS ---
+                const pointsType = q.pointsType || 'standard';
+                if (pointsType === 'none') {
+                    correctRank++;
+                    return;
+                }
+
+                const multiplier = pointsType === 'double' ? 2 : 1;
+                
+                // 1. BASE POINTS
+                const basePoints = 1000 * multiplier;
+
+                // 2. SPEED BONUS (max 500)
+                const totalTime = q.timeLimit * 1000;
+                const responseTime = Math.max(0, n.createdAt - (board.quizStartTime || n.createdAt));
+                const speedMultiplier = Math.max(0, 1 - (responseTime / totalTime));
+                const speedBonus = Math.floor(500 * speedMultiplier * multiplier);
+
+                // 3. RANK BONUS (max 500 for 1st, decreases)
+                const rankStep = pointsType === 'competitive' ? 100 : 50;
+                const maxRankBonus = pointsType === 'competitive' ? 1000 : 500;
+                const rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
+                
+                // 4. STREAK BONUS (max 500)
+                const streakStep = pointsType === 'streak_boost' ? 200 : 100;
+                const streakBonus = Math.min(streak, 5) * streakStep * multiplier;
+
+                // TOTAL (no jitter — clean scoring)
+                playerMap[n.author_id].score += basePoints + speedBonus + rankBonus + streakBonus;
+                correctRank++;
             });
         }
 

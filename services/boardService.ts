@@ -140,24 +140,6 @@ export const boardService = {
 
         if (error) throw error;
 
-        // If the board was published or made public, broadcast a refresh event for dashboards
-        if (dbUpdates.is_published === true || dbUpdates.is_public === true) {
-            // Use a specific global sync channel
-            const syncChannel = supabase.channel('classboard-global-sync');
-            syncChannel.subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    syncChannel.send({
-                        type: 'broadcast',
-                        event: 'board-published',
-                        payload: { board: data, timestamp: Date.now() }
-                    }).finally(() => {
-                        // Keep channel alive briefly to ensure delivery then cleanup
-                        setTimeout(() => supabase.removeChannel(syncChannel), 2000);
-                    });
-                }
-            });
-        }
-
         return mapBoard(data as BoardRow);
     },
 
