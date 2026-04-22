@@ -349,7 +349,7 @@ function AppContent() {
   }, [session, isGuest]); // removed activeBoardId dep to prevent loops, relying on URL param
 
   const fetchBoards = React.useCallback(async () => {
-      if (view !== 'dashboard' && !activeBoardId) return; // Only fetch if on dashboard or in a board
+      if (view !== 'dashboard' && !activeBoardId) return;
       try {
           const data = await boardService.getBoards();
           setBoards(data);
@@ -358,44 +358,38 @@ function AppContent() {
       }
   }, [view, activeBoardId]);
 
-  // Fetch boards whenever the user navigates to the dashboard
+  // Fetch boards whenever the user navigates to the dashboard + 10s safety poll
   useEffect(() => {
       if (view === 'dashboard' && (session || isGuest)) {
           fetchBoards();
+          
+          // Safety poll: Check for newly published boards every 10 seconds
+          // This is a fail-safe in case the real-time broadcast is missed.
+          const interval = setInterval(fetchBoards, 10000);
+          return () => clearInterval(interval);
       }
   }, [view, session, isGuest, fetchBoards]);
 
   // Dashboard Sync Listener (Real-time visibility refresh)
   useEffect(() => {
       // Create the sync channel
-      const syncChannel = supabase.channel('dashboard-sync', {
-          config: {
-              broadcast: { self: true },
-          }
-      });
+      const syncChannel = supabase.channel('classboard-global-sync');
 
       syncChannel
           .on('broadcast', { event: 'board-published' }, (payload) => {
               console.log("🔔 BOARD PUBLISHED:", payload);
-              
-              // If the payload contains the board data, update state immediately
               if (payload.payload?.board) {
                   const newBoard = mapBoard(payload.payload.board);
                   setBoards(prev => {
                       const exists = prev.some(b => b.id === newBoard.id);
-                      if (exists) {
-                          return prev.map(b => b.id === newBoard.id ? { ...b, ...newBoard } : b);
-                      }
+                      if (exists) return prev.map(b => b.id === newBoard.id ? { ...b, ...newBoard } : b);
                       return [newBoard, ...prev];
                   });
               } else {
-                  // Fallback to full fetch if no board data in payload
                   fetchBoards();
               }
           })
-          .subscribe((status) => {
-              console.log("📡 DASHBOARD SYNC STATUS:", status);
-          });
+          .subscribe();
 
       return () => {
           supabase.removeChannel(syncChannel);
