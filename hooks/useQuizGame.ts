@@ -162,9 +162,10 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
                 content: index.toString(),
                 author: username || 'Player',
                 author_id: userId,
+                author_role: 'student',
                 color: 'bg-white',
                 x: 0, y: 0,
-                createdAt: Date.now() // Precise timestamp for scoring
+                created_at: new Date().toISOString()
             }]);
             if (onActivity) onActivity();
         } catch (e) {

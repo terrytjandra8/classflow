@@ -414,7 +414,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     ]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
-        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
+        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent) && board.format !== 'quiz';
         
         return (
             <ScreenshotGuard isEnabled={protectionEnabled}>
