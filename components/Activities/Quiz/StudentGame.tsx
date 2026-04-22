@@ -284,7 +284,6 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                     EXIT TO HOME
                 </button>
             </div>
-            </div>
         </div>
     );
 };
