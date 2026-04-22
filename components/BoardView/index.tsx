@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Board, Note, LockMode } from '../../types';
+import { Board, Note, LockMode, ClassGroup } from '../../types';
 import { useBoardData } from './logic/useBoardData';
 import { useNoteActions } from '../../hooks/useNoteActions';
 import { BoardLayout } from './Board';
@@ -46,7 +46,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const [isSimulating, setIsSimulating] = useState(false);
     const [isSimulatingStudent, setIsSimulatingStudent] = useState(false);
     const [addNoteLocation, setAddNoteLocation] = useState<any>(null); 
-    const [classList, setClassList] = useState<string[]>([]);
+    const [classList, setClassList] = useState<ClassGroup[]>([]);
     const [highlightedUserId, setHighlightedUserId] = useState<string | null>(null);
     
     const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -116,7 +116,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
             if (!isStudent && !isPresentationMode) {
                 try {
                     const classes = await classService.getClasses();
-                    setClassList(classes.map(c => c.name));
+                    setClassList(classes);
                 } catch (e) {
                     console.error("Failed to load classes for board header", e);
                 }
@@ -492,6 +492,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                         onOpenSettings={() => setIsSettingsOpen(true)}
                         onOpenShare={() => setIsShareModalOpen(true)}
                         isPresentationMode={isPresentationMode}
+                        classList={classList}
                     />
                     {!isPresentationMode && (
                         <BoardOverlays 
@@ -533,6 +534,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                         onOpenSettings={() => setIsSettingsOpen(true)}
                         onOpenShare={() => setIsShareModalOpen(true)}
                         isPresentationMode={isPresentationMode}
+                        classList={classList}
                     />
                     {!isPresentationMode && (
                         <BoardOverlays 
@@ -573,6 +575,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                             onlineUsers={onlineUsers}
                             onOpenSettings={() => setIsSettingsOpen(true)}
                             onOpenShare={() => setIsShareModalOpen(true)}
+                            classList={classList}
                         />
                         {!isPresentationMode && !isStudent && !isSimulatingStudent && (
                             <BoardOverlays 

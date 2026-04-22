@@ -35,15 +35,15 @@ export const HeaderBadges: React.FC = () => {
                                 {classList && classList.length > 0 ? (
                                     classList.map(cls => (
                                         <button
-                                            key={cls}
+                                            key={cls.id}
                                             onClick={() => {
-                                                updateBoard({ targetGrade: cls });
+                                                updateBoard({ targetGrade: cls.name });
                                                 setIsClassMenuOpen(false);
                                             }}
-                                            className={`w-full text-left px-3 py-2 text-xs hover:bg-white/10 transition-colors truncate ${board.targetGrade === cls ? 'text-blue-400 font-bold bg-blue-500/10' : 'text-gray-300'}`}
-                                            title={cls}
+                                            className={`w-full text-left px-3 py-2 text-xs hover:bg-white/10 transition-colors truncate ${board.targetGrade === cls.name ? 'text-blue-400 font-bold bg-blue-500/10' : 'text-gray-300'}`}
+                                            title={cls.name}
                                         >
-                                            {cls}
+                                            {cls.name}
                                         </button>
                                     ))
                                 ) : (

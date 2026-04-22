@@ -136,18 +136,18 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
                                     {classList && classList.length > 0 ? (
                                         classList.map(cls => (
                                             <button
-                                                key={cls}
+                                                key={cls.id}
                                                 onClick={() => {
-                                                    if(onUpdateClass) onUpdateClass(cls);
+                                                    if(onUpdateClass) onUpdateClass(cls.name);
                                                     setIsClassMenuOpen(false);
                                                 }}
-                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-white/10 transition-colors truncate ${currentClass === cls ? 'text-blue-400 font-bold bg-blue-500/10' : 'text-gray-300'}`}
+                                                className={`w-full text-left px-4 py-2 text-xs hover:bg-white/10 transition-colors ${currentClass === cls.name ? 'text-blue-400 font-bold' : 'text-gray-300'}`}
                                             >
-                                                {cls}
+                                                {cls.name}
                                             </button>
                                         ))
                                     ) : (
-                                        <div className="px-3 py-2 text-xs text-gray-500 italic">No classes available</div>
+                                        <div className="px-4 py-2 text-xs text-gray-500 italic text-center">No classes found</div>
                                     )}
                                 </div>
                             </div>

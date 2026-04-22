@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Board, Note, AssessmentConfig, AssessmentState } from '../../../../types';
+import { Board, Note, AssessmentConfig, AssessmentState, ClassGroup } from '../../../../types';
 import { Editor } from '../Editor';
 import { StudentAssessment } from '../StudentAssessment/index';
 import { TeacherMonitor } from '../TeacherMonitor';
@@ -12,6 +12,7 @@ interface AssessmentManagerProps {
     board: Board;
     notes: Note[];
     userId?: string;
+    classList?: ClassGroup[];
     isStudent: boolean;
     onUpdateBoard: (updates: Partial<Board>) => void;
     onBack: () => void;
@@ -21,7 +22,7 @@ interface AssessmentManagerProps {
 }
 
 export const AssessmentManager: React.FC<AssessmentManagerProps> = ({ 
-    board, notes, userId, isStudent, onUpdateBoard, onBack, onlineUsers,
+    board, notes, userId, classList: propClassList, isStudent, onUpdateBoard, onBack, onlineUsers,
     onOpenSettings, onOpenShare
 }) => {
     const questions = board.assessmentQuestions || [];
@@ -39,21 +40,25 @@ export const AssessmentManager: React.FC<AssessmentManagerProps> = ({
 
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isPrinting, setIsPrinting] = useState<{ isOpen: boolean; mode: PrintMode }>({ isOpen: false, mode: 'BLANK' });
-    const [classList, setClassList] = useState<string[]>([]);
+    const [classList, setClassList] = useState<ClassGroup[]>(propClassList || []);
 
     useEffect(() => {
-        const fetchClasses = async () => {
-            if (!isStudent) {
-                try {
-                    const classes = await classService.getClasses();
-                    setClassList(['General', ...classes.map(c => c.name)]);
-                } catch (e) {
-                    console.error("Failed to load classes", e);
+        if (propClassList) {
+            setClassList(propClassList);
+        } else {
+            const fetchClasses = async () => {
+                if (!isStudent) {
+                    try {
+                        const classes = await classService.getClasses();
+                        setClassList(classes);
+                    } catch (e) {
+                        console.error("Failed to load classes", e);
+                    }
                 }
-            }
-        };
-        fetchClasses();
-    }, [isStudent]);
+            };
+            fetchClasses();
+        }
+    }, [isStudent, propClassList]);
 
     const setViewWithPersistence = (v: 'editor' | 'monitor') => {
         setView(v);

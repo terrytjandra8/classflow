@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Board, Note } from '../../types';
+import { Board, Note, ClassGroup } from '../../types';
 
 export interface BoardContextType {
     board: Board;
@@ -39,7 +39,7 @@ export interface BoardContextType {
     onlineUsers?: any[];
     typingUsers: string[]; // List of names currently typing
     setTypingStatus: (isTyping: boolean) => void; // Function to broadcast typing state
-    classList?: string[];
+    classList?: ClassGroup[];
     
     // Filters for embedding
     sectionIdFilter?: string;

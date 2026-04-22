@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Board, Note } from '../../types';
+import { Board, Note, ClassGroup } from '../../types';
 import { Volume2, VolumeX, ArrowLeft, MonitorPlay } from 'lucide-react';
 import { useQuizGame } from '../../hooks/useQuizGame';
 import { useQuizAudio } from '../../hooks/useQuizAudio';
@@ -17,7 +17,7 @@ interface QuizViewProps {
     isStudent?: boolean;
     onlineUsers?: any[];
     onUpdateBoard: (updates: Partial<Board>) => void;
-    classList?: string[];
+    classList?: ClassGroup[];
     onActivity?: () => void;
     onBack?: () => void;
     onOpenSettings?: () => void;
@@ -105,6 +105,7 @@ export const QuizView: React.FC<QuizViewProps> = (props) => {
                 backgroundStyle={backgroundStyle}
                 isPresentationMode={isPresentationMode}
                 notes={props.notes}
+                classList={props.classList}
             />
         );
     }

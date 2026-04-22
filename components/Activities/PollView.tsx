@@ -149,14 +149,14 @@ export const PollView: React.FC<PollViewProps> = ({ board, notes, userId, isStud
                                         <div className="absolute top-full left-0 mt-2 w-48 bg-[#222] border border-white/20 rounded-lg shadow-xl z-50 py-1">
                                             {classList?.map((cls) => (
                                                 <button
-                                                    key={cls}
+                                                    key={cls.id}
                                                     onClick={() => {
-                                                        onUpdateBoard({ targetGrade: cls });
+                                                        onUpdateBoard({ targetGrade: cls.name });
                                                         setIsClassDropdownOpen(false);
                                                     }}
-                                                    className={`w-full text-left px-4 py-2 text-xs hover:bg-white/10 transition-colors ${board.targetGrade === cls ? 'text-blue-400 font-bold' : 'text-gray-300'}`}
+                                                    className={`w-full text-left px-4 py-2 text-xs hover:bg-white/10 transition-colors ${board.targetGrade === cls.name ? 'text-blue-400 font-bold' : 'text-gray-300'}`}
                                                 >
-                                                    {cls}
+                                                    {cls.name}
                                                 </button>
                                             ))}
                                         </div>

@@ -83,6 +83,12 @@ export const noteService = {
         if (error) throw error;
     },
 
+    async deleteNotes(ids: string[]) {
+        if (ids.length === 0) return;
+        const { error } = await supabase.from('notes').delete().in('id', ids);
+        if (error) throw error;
+    },
+
     async toggleLike(noteId: string, userId: string) {
         const { error } = await supabase.rpc('toggle_like', { 
             target_note_id: noteId, 

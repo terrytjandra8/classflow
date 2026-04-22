@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Board, QuizQuestion, Note } from '../../../types';
-import { ArrowLeft, Share2, Settings, Play, Plus, Edit2, Trash2, Music, Pause, Volume2, Gamepad2, Layout, Sparkles, CheckCircle2, MonitorPlay, Save, X, Check, GripHorizontal, Move, Zap, Trophy, MinusCircle, Flame, Target, XCircle } from 'lucide-react';
+import { Board, QuizQuestion, Note, ClassGroup } from '../../../types';
+import { ArrowLeft, Share2, Settings, Play, Plus, Edit2, Trash2, Music, Pause, Volume2, Gamepad2, Layout, Sparkles, CheckCircle2, MonitorPlay, Save, X, Check, GripHorizontal, Move, Zap, Trophy, MinusCircle, Flame, Target, XCircle, Users, ChevronDown, Trash } from 'lucide-react';
 import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
+import { noteService } from '../../../services/noteService';
 
 interface QuizSetupProps {
     board: Board;
@@ -16,15 +17,20 @@ interface QuizSetupProps {
     backgroundStyle: any;
     isPresentationMode?: boolean;
     notes: Note[];
+    classList?: ClassGroup[];
 }
 
 export const QuizSetup: React.FC<QuizSetupProps> = ({ 
-    board, questions, onUpdateBoard, onBack, onOpenSettings, onOpenShare, enterLobby, backgroundStyle, isPresentationMode, notes
+    board, questions, onUpdateBoard, onBack, onOpenSettings, onOpenShare, enterLobby, backgroundStyle, isPresentationMode, notes, classList
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [quickEditId, setQuickEditId] = useState<string | null>(null);
     const [quickEditData, setQuickEditData] = useState<QuizQuestion | null>(null);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+    const [newTitle, setNewTitle] = useState(board.title);
+    const [isDeletingHistory, setIsDeletingHistory] = useState(false);
 
     // LOCAL question state for instant reordering (same pattern as QuizEditor)
     const [localQuestions, setLocalQuestions] = useState<QuizQuestion[]>(questions);
@@ -138,13 +144,80 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
 
             {!isPresentationMode && !isEditing && (
                 <header className="h-20 flex items-center justify-between px-8 bg-black/40 backdrop-blur-xl border-b border-white/5 relative z-50">
-                    <div className="flex items-center gap-6">
-                        {onBack && <button onClick={onBack} className="p-3 bg-white/5 hover:bg-white/10 text-gray-300 rounded-2xl transition-all border border-white/5"><ArrowLeft size={20} /></button>}
-                        <div>
-                            <div className="flex items-center gap-3 mb-0.5"><h1 className="font-black text-2xl tracking-tight">{board.title}</h1><span className={`${getStateColor(boardState)} px-2.5 py-1 rounded-lg text-[9px] uppercase font-black border animate-pulse`}>{stateLabels[boardState] || boardState}</span></div>
-                            <div className="flex items-center gap-3 text-gray-500 text-xs font-bold"><span className="flex items-center gap-1"><Layout size={12} /> {localQuestions.length} Slides</span><span className="flex items-center gap-1 text-green-500/80"><CheckCircle2 size={12} /> Ready</span></div>
+                        <div className="flex items-center gap-6">
+                            {onBack && <button onClick={onBack} className="p-3 bg-white/5 hover:bg-white/10 text-gray-300 rounded-2xl transition-all border border-white/5"><ArrowLeft size={20} /></button>}
+                            <div>
+                                <div className="flex items-center gap-3 mb-0.5" onDoubleClick={() => setIsEditingTitle(true)}>
+                                    {isEditingTitle ? (
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                autoFocus
+                                                type="text"
+                                                value={newTitle}
+                                                onChange={(e) => setNewTitle(e.target.value)}
+                                                onBlur={() => {
+                                                    if (newTitle.trim() && newTitle !== board.title) onUpdateBoard({ title: newTitle });
+                                                    setIsEditingTitle(false);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        if (newTitle.trim() && newTitle !== board.title) onUpdateBoard({ title: newTitle });
+                                                        setIsEditingTitle(false);
+                                                    }
+                                                    if (e.key === 'Escape') {
+                                                        setNewTitle(board.title);
+                                                        setIsEditingTitle(false);
+                                                    }
+                                                }}
+                                                className="bg-white/10 border border-purple-500/50 rounded-lg px-2 py-1 font-black text-2xl tracking-tight text-white outline-none focus:ring-2 focus:ring-purple-500/30"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <h1 className="font-black text-2xl tracking-tight cursor-text hover:text-purple-400 transition-colors" title="Double click to rename">{board.title}</h1>
+                                    )}
+                                    <span className={`${getStateColor(boardState)} px-2.5 py-1 rounded-lg text-[9px] uppercase font-black border animate-pulse`}>{stateLabels[boardState] || boardState}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-gray-500 text-xs font-bold">
+                                    <span className="flex items-center gap-1"><Layout size={12} /> {localQuestions.length} Slides</span>
+                                    
+                                    {/* Class Selector */}
+                                    <div className="relative">
+                                        <button 
+                                            onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                                            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                                        >
+                                            <Users size={12} /> {board.targetGrade || 'General'} <ChevronDown size={10} className={`transition-transform ${isClassDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        
+                                        {isClassDropdownOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-[100]" onClick={() => setIsClassDropdownOpen(false)}></div>
+                                                <div className="absolute top-full left-0 mt-2 w-48 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl z-[110] py-1 animate-in fade-in slide-in-from-top-1">
+                                                    {classList && classList.length > 0 ? (
+                                                        classList.map(cls => (
+                                                            <button
+                                                                key={cls.id}
+                                                                onClick={() => {
+                                                                    onUpdateBoard({ targetGrade: cls.name });
+                                                                    setIsClassDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-white/10 transition-colors truncate ${board.targetGrade === cls.name ? 'text-blue-400 font-bold bg-blue-500/10' : 'text-gray-300'}`}
+                                                            >
+                                                                {cls.name}
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="px-3 py-2 text-xs text-gray-500 italic text-center">No classes found</div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    <span className="flex items-center gap-1 text-green-500/80"><CheckCircle2 size={12} /> Ready</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                     <div className="flex items-center gap-4">
                         <button onClick={() => setShowHistory(true)} className="h-12 px-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-gray-400 hover:text-yellow-400 transition-all font-bold text-xs"><Trophy size={18} /> History</button>
                         <button onClick={onOpenSettings} className="h-12 w-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-gray-400 hover:text-white transition-all"><Settings size={20} /></button>
@@ -264,12 +337,36 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                                 </div>
                                 <h2 className="text-xl font-bold text-white">Session History</h2>
                             </div>
-                            <button 
-                                onClick={() => setShowHistory(false)}
-                                className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors"
-                            >
-                                <XCircle size={24} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {notes.some(n => n.type === 'quiz_answer') && (
+                                    <button 
+                                        onClick={async () => {
+                                            if (window.confirm("Are you sure you want to clear ALL quiz history for this board? This cannot be undone.")) {
+                                                setIsDeletingHistory(true);
+                                                try {
+                                                    const historyNoteIds = notes.filter(n => n.type === 'quiz_answer').map(n => n.id);
+                                                    await noteService.deleteNotes(historyNoteIds);
+                                                    // Note: We'd normally trigger a refresh here, but realtime should pick it up
+                                                } catch (e) {
+                                                    console.error("Failed to delete history", e);
+                                                } finally {
+                                                    setIsDeletingHistory(false);
+                                                }
+                                            }
+                                        }}
+                                        disabled={isDeletingHistory}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors border border-red-500/20 disabled:opacity-50"
+                                    >
+                                        <Trash size={12} /> {isDeletingHistory ? 'Clearing...' : 'Clear All'}
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => setShowHistory(false)}
+                                    className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <XCircle size={24} />
+                                </button>
+                            </div>
                         </div>
                         
                         <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
