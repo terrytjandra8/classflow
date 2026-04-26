@@ -20,13 +20,6 @@ interface StudentGameProps {
 }
 
 const SHAPES = ['▲', '◆', '●', '■'];
-// Kahoot-style bold colors
-const BTN_COLORS = [
-    'bg-[#e21b3c] active:bg-[#c61734] shadow-[0_8px_0_#9a1229]', // Red
-    'bg-[#1368ce] active:bg-[#0f54a8] shadow-[0_8px_0_#0a4182]', // Blue
-    'bg-[#d89e00] active:bg-[#b88600] shadow-[0_8px_0_#8c6a00]', // Yellow
-    'bg-[#26890c] active:bg-[#1d6b09] shadow-[0_8px_0_#144a06]'  // Green
-];
 
 export const StudentGame: React.FC<StudentGameProps> = ({
     state, board, currentQ, timeLeft, hasAnswered, myStreak, myAnswerNote, scores, userId, submitAnswer, SoundControl, backgroundStyle, isSubmitting
@@ -34,17 +27,39 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     
     // Local state for immediate feedback
     const [localSelectedIdx, setLocalSelectedIdx] = React.useState<number | null>(null);
+    const [revealMessage, setRevealMessage] = React.useState('');
 
     // Reset local selection when question changes
     React.useEffect(() => {
         setLocalSelectedIdx(null);
     }, [currentQ?.id]);
 
+    React.useEffect(() => {
+        if (state === 'reveal') {
+            const correctMsgs = [
+                "Genius move!", "On fire! 🔥", "Unstoppable!", 
+                "Pure brilliance!", "Perfectly executed!", "Absolute legend!"
+            ];
+            const incorrectMsgs = [
+                "Almost had it!", "Stay focused, you got this!", 
+                "Shake it off, next one's yours!", "Nice try! Keep pushing!", 
+                "Mistakes are lessons! Go again!", "So close! Don't give up!"
+            ];
+            
+            const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
+            const isCorrect = submittedIndex !== null && currentQ && Number(submittedIndex) === Number(currentQ.correctIndex);
+            
+            const list = isCorrect ? correctMsgs : incorrectMsgs;
+            setRevealMessage(list[Math.floor(Math.random() * list.length)]);
+        }
+    }, [state]);
+
     const handleAnswer = (idx: number) => {
         if (isSubmitting || hasAnswered) return;
         setLocalSelectedIdx(idx);
         submitAnswer(idx);
     };
+
     // --- SETUP SCREEN ---
     if (state === 'setup') {
         return (
@@ -216,29 +231,6 @@ export const StudentGame: React.FC<StudentGameProps> = ({
             </div>
         );
     }
-
-    // --- REVEAL SCREEN ---
-    const [revealMessage, setRevealMessage] = React.useState('');
-    
-    React.useEffect(() => {
-        if (state === 'reveal') {
-            const correctMsgs = [
-                "Genius move!", "On fire! 🔥", "Unstoppable!", 
-                "Pure brilliance!", "Perfectly executed!", "Absolute legend!"
-            ];
-            const incorrectMsgs = [
-                "Almost had it!", "Stay focused, you got this!", 
-                "Shake it off, next one's yours!", "Nice try! Keep pushing!", 
-                "Mistakes are lessons! Go again!", "So close! Don't give up!"
-            ];
-            
-            const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
-            const isCorrect = submittedIndex !== null && currentQ && Number(submittedIndex) === Number(currentQ.correctIndex);
-            
-            const list = isCorrect ? correctMsgs : incorrectMsgs;
-            setRevealMessage(list[Math.floor(Math.random() * list.length)]);
-        }
-    }, [state]);
 
     if (state === 'reveal') {
         const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
