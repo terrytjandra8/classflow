@@ -131,6 +131,10 @@ export const BoardView: React.FC<BoardViewProps> = ({
     // --- Board-level copy / paste / cut blocking ---
     // Applies to all formats when the board has these settings enabled for students.
     const lastViolationTime = useRef<number>(0);
+    // Keep a ref to the latest notes to avoid stale closures in event listeners
+    const notesRef = useRef(notes);
+    useEffect(() => { notesRef.current = notes; }, [notes]);
+
     const handleViolation = useCallback(async (type: 'security' | 'focus') => {
         if (!isStudent && !isSimulatingStudent) {
             console.log("[FocusGuard] Not a student, ignoring violation.");
@@ -141,28 +145,28 @@ export const BoardView: React.FC<BoardViewProps> = ({
         if (now - lastViolationTime.current < 2000) return;
         lastViolationTime.current = now;
 
-        console.log(`[FocusGuard] ${type.toUpperCase()} violation detected!`);
+        const currentNotes = notesRef.current;
+        console.log(`[FocusGuard] ${type.toUpperCase()} violation detected! Checking ${currentNotes.length} notes.`);
         console.log(`[FocusGuard] Current User System ID: ${userId}`);
         
         // --- SECURE ID AUDIT ---
-        // Let's see exactly what IDs are in the current notes list
-        if (notes.length > 0) {
+        if (currentNotes.length > 0) {
             console.log("[FocusGuard] Note ID Audit (First 5 notes):", 
-                notes.slice(0, 5).map(n => ({ author: n.author, id: n.author_id }))
+                currentNotes.slice(0, 5).map(n => ({ author: n.author, id: n.author_id }))
             );
         }
 
         // Primary Match by System ID
-        const studentNotes = notes.filter(n => n.author_id === userId);
+        const studentNotes = currentNotes.filter(n => n.author_id === userId);
         
         // Secondary Fallback for debugging (Name match)
-        const nameMatches = notes.filter(n => n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.author_id !== userId);
+        const nameMatches = currentNotes.filter(n => n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.author_id !== userId);
         
         if (studentNotes.length === 0) {
             if (nameMatches.length > 0) {
                 console.warn(`[FocusGuard] CRITICAL ID MISMATCH! Found ${nameMatches.length} notes with your name "${username}", but they have a different ID: "${nameMatches[0].author_id}". Your ID is "${userId}".`);
             } else {
-                console.log(`[FocusGuard] No notes found for user ID ${userId}.`);
+                console.log(`[FocusGuard] No notes found for user ID ${userId} among ${currentNotes.length} notes.`);
             }
             return;
         }
