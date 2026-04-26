@@ -94,9 +94,6 @@ export const boardService = {
     },
 
     async updateBoard(id: string, updates: Partial<Board>) {
-        const { data: current } = await supabase.from('boards').select('settings').eq('id', id).single();
-        const currentSettings = (current?.settings as any) || {};
-
         // Keys that map directly to DB columns
         const dbColumns = [
             'title', 'description', 'topic', 'format', 'class_code', 'wallpaper', 
@@ -105,7 +102,13 @@ export const boardService = {
         ];
 
         const dbUpdates: any = {};
-        const settingsUpdates: any = { ...currentSettings };
+        let settingsUpdates: any = null;
+
+        // If 'settings' is explicitly provided in updates, use it.
+        // Otherwise, we might need to fetch current settings if we are updating individual settings keys.
+        if (updates.settings) {
+            settingsUpdates = { ...updates.settings };
+        }
 
         Object.entries(updates).forEach(([key, value]) => {
             if (key === 'classCode') dbUpdates.class_code = value;
@@ -116,20 +119,32 @@ export const boardService = {
             else if (key === 'gradingType') dbUpdates.grading_type = value;
             else if (key === 'currentStepIndex') dbUpdates.current_step_index = value;
             else if (key === 'settings') {
-                // CRITICAL FIX: Merge nested settings properly instead of nesting them under 'settings' key
-                Object.assign(settingsUpdates, value);
+                // Handled above
             }
             else if (dbColumns.includes(key)) {
                 dbUpdates[key] = value;
             } else {
-                // Everything else goes to settings
+                // If we are updating a key that belongs in settings but 'settings' wasn't provided,
+                // we'll need to merge. To keep it simple and avoid race conditions, 
+                // we should encourage passing the whole settings object, but for legacy support:
+                if (!settingsUpdates) settingsUpdates = {};
                 settingsUpdates[key] = value;
             }
         });
 
-        // Always update updated_at
+        // Optimization: If we have settingsUpdates but they are partial, 
+        // we ideally should do an atomic merge, but for now we'll fetch only if necessary.
+        if (settingsUpdates && Object.keys(updates).some(k => !dbColumns.includes(k) && k !== 'settings')) {
+            const { data: current } = await supabase.from('boards').select('settings').eq('id', id).single();
+            const currentSettings = (current?.settings as any) || {};
+            settingsUpdates = { ...currentSettings, ...settingsUpdates };
+        }
+
+        if (settingsUpdates) {
+            dbUpdates.settings = settingsUpdates;
+        }
+
         dbUpdates.updated_at = new Date().toISOString();
-        dbUpdates.settings = settingsUpdates;
 
         const { data, error } = await supabase
             .from('boards')
@@ -139,7 +154,6 @@ export const boardService = {
             .single();
 
         if (error) throw error;
-
         return mapBoard(data as BoardRow);
     },
 

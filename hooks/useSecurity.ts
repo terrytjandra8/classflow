@@ -96,3 +96,77 @@ export const useCopyProtection = (disabled: boolean) => {
         onCut: prevent
     };
 };
+
+// --- Screenshot & Snipping Protection Hook ---
+export const useScreenshotProtection = (enabled: boolean) => {
+    useEffect(() => {
+        if (!enabled) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // 1. Block PrintScreen key (Standard & some Chromebooks)
+            if (e.key === 'PrintScreen' || e.keyCode === 44) {
+                e.preventDefault();
+                // We don't alert here as it might interfere with the blur logic
+            }
+
+            // 2. Block common screenshot shortcuts
+            const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+            
+            // Mac: Cmd+Shift+3/4/5
+            if (isMac && e.shiftKey && e.metaKey && ['3', '4', '5'].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            // Windows: Win+Shift+S
+            if (e.shiftKey && e.metaKey && (e.key === 'S' || e.key === 's')) {
+                e.preventDefault();
+            }
+
+            // Chromebook: Ctrl + Window Switcher (F5) or Ctrl + Shift + Window Switcher
+            // The Switcher key often maps to F5 or a specific code.
+            if (e.ctrlKey && (e.key === 'F5' || e.keyCode === 121)) {
+                e.preventDefault();
+            }
+        };
+
+        // 3. Blur/Blackout logic when focus is lost (Prevents Snipping Tools)
+        const handleBlur = () => {
+            // We use a high-performance CSS filter on the root
+            document.documentElement.style.filter = 'blur(40px) grayscale(100%)';
+            document.documentElement.style.transition = 'filter 0.1s ease-out';
+            
+            // Optional: Overlay a message
+            const overlay = document.getElementById('security-overlay');
+            if (overlay) overlay.style.display = 'flex';
+        };
+
+        const handleFocus = () => {
+            document.documentElement.style.filter = '';
+            const overlay = document.getElementById('security-overlay');
+            if (overlay) overlay.style.display = 'none';
+        };
+
+        // 4. Clipboard Clearing (Deterrence)
+        const clearClipboard = async () => {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText('Security: Content Protected');
+                }
+            } catch (e) { /* Ignore */ }
+        };
+
+        window.addEventListener('keydown', handleKeyDown, true);
+        window.addEventListener('blur', handleBlur);
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'PrintScreen') clearClipboard();
+        });
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, true);
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
+            document.documentElement.style.filter = '';
+        };
+    }, [enabled]);
+};

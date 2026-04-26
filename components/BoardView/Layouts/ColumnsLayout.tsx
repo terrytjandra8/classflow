@@ -10,7 +10,7 @@ import {
     IconLock, IconUnlock, IconVisible, IconHidden, IconBlur, 
     IconAnonymous, IconComment, IconNoComment, IconReply, 
     IconMove, IconDrag, IconClose, IconPlus,
-    IconCopyOff
+    IconCopyOff, IconWatermark
 } from '../../Icons';
 import { GitMerge, Ungroup, CheckCircle, Circle, X, Palette } from 'lucide-react';
 
@@ -34,6 +34,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const { 
         board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, toggleSectionRearrange,
+        toggleSectionCopy, toggleSectionWatermark,
         deleteNote, likeNote, addComment, isPresentationMode
     } = useBoard();
 
@@ -145,10 +146,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
 
     const renameSection = (id: string, newTitle: string) => updateBoard({ sections: activeSections.map(s => s.id === id ? { ...s, title: newTitle } : s) });
     const deleteSection = (id: string) => updateBoard({ sections: activeSections.filter(s => s.id !== id) });
-    const toggleSectionCopy = (sectionId: string) => {
-        const newSections = activeSections.map(s => s.id === sectionId ? { ...s, disableCopy: !s.disableCopy } : s);
-        updateBoard({ sections: newSections });
-    };
 
     const insertSectionAt = (index: number) => {
         const currentSections = (board.sections && board.sections.length > 0) 
@@ -315,7 +312,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
         const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
         const canDragNotes = canManageBoard || (sectionCanDrag && !isLocked && !section.locked);
-        const showControls = !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
+        const showControls = canManageBoard || !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
 
         const isSelected = selectedForMerge.has(section.id);
 
@@ -349,7 +346,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                 ) : (
                     /* ── Full standalone column header ── */
                     <div
-                        className={`flex flex-col gap-3 p-3 rounded-xl border transition-all relative cursor-pointer ${
+                        className={`flex flex-col gap-3 p-3 rounded-xl border transition-all relative cursor-pointer group ${
                             isMergeMode && isSelected
                                 ? 'border-blue-400 bg-blue-500/20 ring-2 ring-blue-400/50'
                                 : isMergeMode
@@ -379,6 +376,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                                 {section.locked && <div className="bg-red-500 text-white p-1 rounded shadow-sm"><IconLock size={10} strokeWidth={3} /></div>}
                                 {section.isHidden && <div className="bg-orange-500 text-white p-1 rounded shadow-sm"><IconHidden size={10} strokeWidth={3} /></div>}
                                 {section.disableCopy && <div className="bg-slate-700 text-white p-1 rounded shadow-sm"><IconCopyOff size={10} strokeWidth={3} /></div>}
+                                {section.isWatermarked && <div className="bg-red-600 text-white p-1 rounded shadow-sm"><IconWatermark size={10} strokeWidth={3} /></div>}
                             </div>
 
                             <EditableInput
@@ -433,6 +431,11 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                                         <IconCopyOff size={14} />
                                     </button>
                                 </Tooltip>
+                                <Tooltip content={section.isWatermarked ? "Disable AI Protection" : "Enable AI Protection (Anti-OCR)"}>
+                                    <button onClick={() => toggleSectionWatermark(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isWatermarked ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
+                                        <IconWatermark size={14} />
+                                    </button>
+                                </Tooltip>
                                 <Tooltip content="Delete Column">
                                     <button onClick={() => deleteSection(section.id)} className="p-1.5 hover:text-red-500 text-slate-400 transition-colors hover:bg-red-500/10 rounded-lg flex justify-center">
                                         <IconClose size={14} />
@@ -461,13 +464,26 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                             className={`note-card-wrapper transition-transform duration-200 ease-out ${draggingId === note.id ? 'opacity-40' : ''}`}
                             draggable={canDragNotes} onDragStart={(e) => onDragStart(e, note.id, 'NOTE')}
                             onDragOver={(e) => onDragOverNote(e, note.id, section.id)} onDragEnd={onDragEnd}>
-                            <NoteCard note={note}
-                                onAddBefore={() => handleAddRelative(note.id, 'before')}
-                                onAddAfter={() => handleAddRelative(note.id, 'after')}
-                                onMoveNote={handleMoveNote} canDrag={canDragNotes} isStudent={isStudent}
-                                isSectionAnonymous={section.isAnonymous} isContentBlurred={isContentBlurred}
-                                commentsEnabled={commentsOn} reactionsEnabled={board.reactionsEnabled}
-                                onDelete={deleteNote} onLike={likeNote} onAddComment={addComment} onUpdate={updateNote} />
+                            <NoteCard 
+                                key={note.id} 
+                                note={note}
+                                userId={board.owner_id} // Pass teacher ID to allow editing
+                                onDelete={deleteNote}
+                                onLike={likeNote}
+                                onAddComment={addComment}
+                                onUpdate={updateNote}
+                                isStudent={isStudent}
+                                isLocked={section.locked || isLocked}
+                                commentsEnabled={commentsOn}
+                                reactionsEnabled={board.reactionsEnabled}
+                                contentTextColor={board.contentTextColor}
+                                isSectionAnonymous={section.isAnonymous}
+                                isContentBlurred={isContentBlurred}
+                                isWatermarked={section.isWatermarked}
+                                onAddBefore={() => openAddNote({ sectionId: section.id, relativeId: note.id, position: 'before' })}
+                                onAddAfter={() => openAddNote({ sectionId: section.id, relativeId: note.id, position: 'after' })}
+                                onMoveNote={(id, dir) => handleMoveNote(id, dir)}
+                            />
                         </div>
                     ))}
                     <div className={`h-24 w-full transition-colors rounded-lg flex items-center justify-center border-2 border-dashed border-transparent ${draggingId && draggingType === 'NOTE' ? 'hover:border-blue-500/50 hover:bg-blue-500/5' : ''}`}

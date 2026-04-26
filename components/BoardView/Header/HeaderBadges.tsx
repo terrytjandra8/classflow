@@ -29,9 +29,10 @@ export const HeaderBadges: React.FC = () => {
 
                 {isClassMenuOpen && (
                     <>
-                        <div className="fixed inset-0 z-40" onClick={() => setIsClassMenuOpen(false)}></div>
-                        <div className="absolute top-full right-0 mt-2 w-56 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 flex flex-col">
-                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                        <div className="fixed inset-0 z-[1000]" onClick={() => setIsClassMenuOpen(false)}></div>
+                        <div className="fixed mt-10 w-56 bg-[#1a1a1a] border border-white/20 rounded-xl shadow-2xl z-[1001] overflow-hidden py-1 animate-in fade-in zoom-in-95 slide-in-from-top-2 flex flex-col"
+                             style={{ top: 'auto', left: 'auto' }}>
+                             <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                 {classList && classList.length > 0 ? (
                                     classList.map(cls => (
                                         <button

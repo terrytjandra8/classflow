@@ -55,6 +55,8 @@ export interface BoardContextType {
     toggleSectionComments: (sectionId: string) => void;
     toggleSectionReplies: (sectionId: string) => void;
     toggleSectionRearrange: (sectionId: string) => void;
+    toggleSectionCopy: (sectionId: string) => void; // NEW
+    toggleSectionWatermark: (sectionId: string) => void; // NEW
 
     // Highlighting
     highlightedUserId: string | null;

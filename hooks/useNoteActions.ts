@@ -29,9 +29,6 @@ export const useNoteActions = ({
     const setNotesRef = useRef(setNotes);
     useEffect(() => { setNotesRef.current = setNotes; }, [setNotes]);
 
-    const updateBoardTimestamp = useCallback(async () => {
-        await supabase.from('boards').update({ updated_at: new Date().toISOString() }).eq('id', boardId);
-    }, [boardId]);
 
     const performUndo = useCallback(async () => {
         const lastAction = historyStack.current.pop();
@@ -136,13 +133,12 @@ export const useNoteActions = ({
             setNotes(prev => [newNote, ...prev]);
             historyStack.current.push({ type: 'CREATE_NOTE', noteId: newNote.id });
             onTouchBoard();
-            updateBoardTimestamp();
             return newNote;
         } else {
             console.error("Failed to create note:", error);
             return null;
         }
-    }, [boardId, username, userAvatar, userRole, setNotes, onTouchBoard, userId, updateBoardTimestamp]);
+    }, [boardId, username, userAvatar, userRole, setNotes, onTouchBoard, userId]);
 
     const updateNote = useCallback(async (id: string, updates: Partial<Note>) => {
         setNotes(currentNotes => {
@@ -189,8 +185,8 @@ export const useNoteActions = ({
         }
         
         onTouchBoard();
-        updateBoardTimestamp();
-    }, [setNotes, onTouchBoard, updateBoardTimestamp]);
+        // Removed: updateBoardTimestamp() - causing race conditions on busy boards
+    }, [setNotes, onTouchBoard]);
 
     const deleteNote = useCallback(async (id: string) => {
         setNotes(currentNotes => {
@@ -205,8 +201,7 @@ export const useNoteActions = ({
         if (error) console.error("Error deleting note:", error);
         
         onTouchBoard();
-        updateBoardTimestamp();
-    }, [setNotes, onTouchBoard, updateBoardTimestamp]);
+    }, [setNotes, onTouchBoard]);
 
     const likeNote = useCallback(async (id: string) => {
         if (!userId) return;
@@ -262,13 +257,12 @@ export const useNoteActions = ({
             supabase.from('notes').update({ comments: updatedComments }).eq('id', noteId).then(({ error }) => {
                 if(error) console.error("Error adding comment", error);
                 onTouchBoard();
-                updateBoardTimestamp();
             });
 
             return prev.map(n => n.id === noteId ? { ...n, comments: updatedComments } : n);
         });
 
-    }, [userId, username, userRole, userAvatar, setNotes, onTouchBoard, updateBoardTimestamp]);
+    }, [userId, username, userRole, userAvatar, setNotes, onTouchBoard]);
 
     const duplicateNote = useCallback(async (note: Note) => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -300,9 +294,8 @@ export const useNoteActions = ({
             setNotes(prev => [newNote, ...prev]);
             historyStack.current.push({ type: 'CREATE_NOTE', noteId: newNote.id });
             onTouchBoard();
-            updateBoardTimestamp();
         }
-    }, [boardId, username, userRole, userAvatar, setNotes, onTouchBoard, userId, updateBoardTimestamp]);
+    }, [boardId, username, userRole, userAvatar, setNotes, onTouchBoard, userId]);
 
     const isEditable = useCallback((note: Note): boolean => {
         if (userRole === 'teacher') return true;

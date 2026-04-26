@@ -4,7 +4,7 @@ import {
     Globe, RefreshCw, Clock, Sparkles, CheckCircle2, Brain, 
     Lock, Unlock, MessageSquare, MessageSquareOff, Reply, 
     GripVertical, VenetianMask, Move, Eye, EyeOff, Ghost, 
-    Plus, Loader2, Search, Filter, Download, CopyX
+    Plus, Loader2, Search, Filter, Download, CopyX, ShieldAlert
 } from 'lucide-react';
 
 // Analysis & AI Icons
@@ -35,6 +35,7 @@ export const IconHidden = EyeOff;
 export const IconBlur = VenetianMask;
 export const IconAnonymous = Ghost;
 export const IconCopyOff = CopyX;
+export const IconWatermark = ShieldAlert;
 
 // Interaction Icons
 export const IconComment = MessageSquare;

@@ -36,6 +36,7 @@ interface NoteCardProps {
   onAddAfter?: () => void;
   onMoveNote?: (id: string, direction: 'up' | 'down') => void;
   canDrag?: boolean;
+  isWatermarked?: boolean; // NEW: Waterfall from Section
 }
 
 const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
@@ -43,7 +44,7 @@ const isHexColor = (color: string): boolean => !!color && color.startsWith('#');
 // Main Component
 const NoteCardComponent: React.FC<NoteCardProps> = ({ 
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
-    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote
+    commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote, isWatermarked
 }) => {
   const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId, userRole } = useBoard();
   
@@ -234,7 +235,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
           </div>
       ) : (
           <div className="relative z-10">
-            <NoteContent note={note} contentTextColor={contentTextColor} isEditing={false} isStickyNote={isStickyNote} isCopyDisabled={!canCopy}/>
+            <NoteContent note={note} contentTextColor={contentTextColor} isEditing={false} isStickyNote={isStickyNote} isCopyDisabled={!canCopy} isWatermarked={isWatermarked}/>
           </div>
       )}
 

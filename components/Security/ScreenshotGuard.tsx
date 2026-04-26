@@ -1,208 +1,165 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { ShieldAlert, UserCheck, Lock, Activity } from 'lucide-react';
 
 interface ScreenshotGuardProps {
     isEnabled: boolean;
     children: React.ReactNode;
-    /** Grace period in ms before the focus-loss overlay triggers. Default: 1500ms */
-    blurGraceMs?: number;
+    studentName?: string;
+    onViolation?: (type: 'security' | 'focus') => void;
 }
 
-export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children, blurGraceMs = 1500 }) => {
-    const [lockType, setLockType] = useState<'integrity' | 'focus' | 'devtools' | null>(null);
-    const lockTypeRef = useRef<'integrity' | 'focus' | 'devtools' | null>(null);
+export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children, studentName = "Student", onViolation }) => {
+    const [lockType, setLockType] = useState<'security' | 'focus' | null>(null);
+    const lockTypeRef = useRef<'security' | 'focus' | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
 
-    const applyShieldStyles = (type: 'integrity' | 'focus' | 'devtools') => {
-        if (!overlayRef.current) return;
-        const overlay = overlayRef.current;
-        overlay.style.transition = 'opacity 0.1s ease-in';
-        overlay.style.opacity = '1';
-        overlay.style.pointerEvents = 'auto';
+    // Generate a fake but official-looking session ID
+    const sessionId = useMemo(() => {
+        const chars = 'ABCDEF0123456789';
+        let res = '';
+        for (let i = 0; i < 8; i++) res += chars[Math.floor(Math.random() * chars.length)];
+        return `CB-${res}-${new Date().getFullYear()}`;
+    }, []);
 
-        if (contentRef.current && document.body.style.display !== 'none') {
-            const content = contentRef.current;
-            content.style.transition = 'filter 0.1s ease-in';
-            if (type === 'integrity' || type === 'devtools') {
-                content.style.filter = 'blur(15px) grayscale(100%)';
-            } else { // focus
-                content.style.filter = 'blur(5px)';
-            }
-        }
-    };
-
-    const releaseShieldStyles = () => {
+    const applyShield = useCallback((type: 'security' | 'focus') => {
+        lockTypeRef.current = type;
+        setLockType(type);
+        if (onViolation) onViolation(type);
+        if (contentRef.current) contentRef.current.style.filter = 'blur(40px) brightness(0.2)';
         if (overlayRef.current) {
-            overlayRef.current.style.transition = 'opacity 0.2s ease-out';
+            overlayRef.current.style.opacity = '1';
+            overlayRef.current.style.pointerEvents = 'auto';
+        }
+    }, []);
+
+    const releaseShield = useCallback(() => {
+        lockTypeRef.current = null;
+        setLockType(null);
+        if (contentRef.current) contentRef.current.style.filter = '';
+        if (overlayRef.current) {
             overlayRef.current.style.opacity = '0';
             overlayRef.current.style.pointerEvents = 'none';
         }
-        if (contentRef.current) {
-            contentRef.current.style.display = ''; // ** CRUCIAL: Restore visibility **
-            contentRef.current.style.filter = 'none';
-            contentRef.current.style.transition = 'filter 0.2s ease-out';
-        }
-    };
+    }, []);
 
     useEffect(() => {
-        if (!isEnabled) {
-            releaseShieldStyles();
-            return;
+        if (!isEnabled) { 
+            releaseShield(); 
+            return; 
         }
 
-        const triggerShield = (type: 'integrity' | 'focus' | 'devtools') => {
-            const severity = { 'devtools': 3, 'integrity': 2, 'focus': 1 };
-            const currentType = lockTypeRef.current;
-            if (!currentType || severity[type] >= severity[currentType]) {
-                lockTypeRef.current = type;
-                setLockType(type);
-                applyShieldStyles(type);
-            }
-        };
-
-        const releaseShield = (force = false) => {
-            if (lockTypeRef.current === 'devtools' && !force) return;
-            lockTypeRef.current = null;
-            setLockType(null);
-            releaseShieldStyles();
-        };
-
         const handleKeyDown = (e: KeyboardEvent) => {
-            const key = e.key.toLowerCase();
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-
-            const isPrintScreen = key === 'printscreen';
-            const isMacScreenshot = isMac && e.metaKey && e.shiftKey && ['3', '4'].includes(key);
-            // Chromebook: Ctrl+Overview (mapped as F5 or F4 depending on model)
-            const isChromebookScreenshot = e.ctrlKey && (key === 'f5' || key === 'f4');
-
-            if (isPrintScreen || isMacScreenshot || isChromebookScreenshot) {
-                e.preventDefault();
-                if (contentRef.current) {
-                    contentRef.current.style.display = 'none';
-                }
-                triggerShield('integrity');
-                window.print();
-                return;
-            }
-            
-            const devToolsShortcuts = (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) || (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) || key === 'f12';
-            if (devToolsShortcuts) {
-                e.preventDefault();
-                triggerShield('devtools');
-                return; 
-            }
-        };
-        
-        const handleAfterPrint = () => {
-            // This event fires after the print dialog is closed.
-            // It's our cue to restore the UI to its normal state.
-            releaseShield(true);
-        };
-
-        const handleBlur = () => {
-            if (!document.hasFocus()) {
-                triggerShield('focus');
+            const key = e.key?.toLowerCase() ?? '';
+            const kc = e.keyCode;
+            const isSS = key === 'printscreen' || kc === 44 || (e.ctrlKey && (key === 'f5' || kc === 116));
+            if (isSS) {
+                applyShield('security');
+                setTimeout(() => { if (lockTypeRef.current === 'security') releaseShield(); }, 4000);
             }
         };
 
-        const handleMouseLeave = (e: MouseEvent) => {
-            if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
-                triggerShield('focus');
-            }
-        };
-
-        const handleMouseEnter = () => {
-            if (lockTypeRef.current === 'focus' && document.hasFocus()) {
-                releaseShield();
-            }
-        };
-
-        const handleFocus = () => {
-            if (lockTypeRef.current === 'focus') {
-                releaseShield();
-            }
-        };
-        
         window.addEventListener('keydown', handleKeyDown, true);
-        window.addEventListener('afterprint', handleAfterPrint);
-        window.addEventListener('blur', handleBlur);
-        document.addEventListener('mouseleave', handleMouseLeave);
-        document.addEventListener('mouseenter', handleMouseEnter);
-        window.addEventListener('focus', handleFocus);
+        window.addEventListener('blur', () => applyShield('focus'));
+        window.addEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, true);
-            window.removeEventListener('afterprint', handleAfterPrint);
-            window.removeEventListener('blur', handleBlur);
-            document.removeEventListener('mouseleave', handleMouseLeave);
-            document.removeEventListener('mouseenter', handleMouseEnter);
-            window.removeEventListener('focus', handleFocus);
-            releaseShield(true); 
+            releaseShield();
         };
-    }, [isEnabled]);
+    }, [isEnabled, applyShield, releaseShield]);
 
     if (!isEnabled) return <>{children}</>;
-    
-    const getOverlayContent = () => {
-        switch(lockType) {
-            case 'integrity':
-                 return (
-                     <>
-                        <div className="text-6xl mb-6">🚫</div>
-                        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Action Blocked</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-lg font-medium max-w-lg leading-relaxed">
-                           For security reasons, this action has been blocked. Please cancel the print dialog to continue.
-                        </p>
-                    </>
-                );
-            case 'devtools':
-                 return (
-                     <>
-                        <div className="text-6xl mb-6">⚠️</div>
-                        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Developer Tools Detected</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-lg font-medium max-w-lg leading-relaxed">
-                            Please close the developer console to continue. This is not allowed.
-                        </p>
-                    </>
-                );
-            case 'focus':
-            default:
-                return (
-                    <>
-                        <div className="text-6xl mb-6 animate-pulse">🎯</div>
-                        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight uppercase">Stay Focused</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-lg font-medium max-w-lg leading-relaxed">
-                            This activity requires your full attention. Please return to this window to continue.
-                        </p>
-                    </>
-                );
-        }
-    }
+
+    const firstName = studentName.split(' ')[0].toUpperCase();
 
     return (
-        <div className="relative h-full w-full overflow-hidden select-none">
-             <style>{`
-                @media print {
-                    /* This is the key. It blanks the entire page during the print process. */
-                    body * {
-                        display: none !important;
-                    }
-                     body {
-                        background: none !important;
-                    }
+        <div className="relative h-screen w-full bg-slate-50 dark:bg-[#050505] overflow-hidden" onClick={() => { if (lockType === 'focus') releaseShield(); }}>
+            <style>{`
+                @media print { body * { display: none !important; } }
+                
+                .security-watermark {
+                    position: absolute;
+                    inset: 0;
+                    pointer-events: none;
+                    z-index: 50;
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    opacity: 0.04;
+                    user-select: none;
+                }
+                .watermark-text {
+                    transform: rotate(-25deg);
+                    font-size: 14px;
+                    font-weight: 900;
+                    padding: 60px;
+                    color: currentColor;
+                    white-space: nowrap;
                 }
             `}</style>
-            <div ref={contentRef} className="h-full w-full">
+
+            {/* Identity Watermark */}
+            <div className="security-watermark">
+                {Array.from({ length: 15 }).map((_, i) => (
+                    <div key={i} className="watermark-text">
+                        {studentName} • SECURE EXAM SESSION
+                    </div>
+                ))}
+            </div>
+
+            <div ref={contentRef} className="h-full w-full transition-all duration-300">
                 {children}
             </div>
-            <div 
-                ref={overlayRef}
-                className="absolute inset-0 z-[10000] bg-white/80 dark:bg-black/80 flex flex-col items-center justify-center text-center p-8"
-                style={{ opacity: 0, pointerEvents: 'none'}}
-            >
-                {getOverlayContent()}
+
+            {/* Academic Integrity Lock Overlay */}
+            <div ref={overlayRef}
+                className="absolute inset-0 z-[10000] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 transition-opacity duration-200"
+                style={{ opacity: 0, pointerEvents: 'none' }}>
+                <div className="max-w-md w-full bg-white dark:bg-[#111] p-10 rounded-[3rem] shadow-2xl text-center border border-white/10 relative overflow-hidden">
+                    {/* Top Status Bar */}
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-red-600"></div>
+                    
+                    <div className="bg-red-500/10 text-red-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <ShieldAlert size={32} />
+                    </div>
+
+                    <p className="text-red-600 dark:text-red-400 text-xs font-black uppercase tracking-[0.2em] mb-4">
+                        Academic Violation Prevention
+                    </p>
+
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 leading-tight">
+                        ATTENTION, {firstName}
+                    </h2>
+                    
+                    <div className="h-px w-16 bg-slate-200 dark:bg-white/10 mx-auto mb-6"></div>
+
+                    <p className="text-slate-500 dark:text-gray-400 font-medium mb-8 leading-relaxed">
+                        Security monitoring has detected focus loss. <br />
+                        Your screen is hidden to protect exam integrity.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3 mb-8">
+                        <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 text-left">
+                            <p className="text-[9px] uppercase font-bold text-gray-500 mb-1">Student</p>
+                            <p className="font-bold text-slate-800 dark:text-white truncate text-sm">{studentName}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5 text-left">
+                            <p className="text-[9px] uppercase font-bold text-gray-500 mb-1">Log ID</p>
+                            <p className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs">{sessionId}</p>
+                        </div>
+                    </div>
+
+                    <button onClick={() => releaseShield()} className="w-full bg-slate-900 text-white dark:bg-white dark:text-black font-black py-5 rounded-2xl text-lg transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-3">
+                        <Lock size={18} />
+                        RESUME SESSION
+                    </button>
+
+                    <div className="mt-8 flex items-center justify-center gap-2 text-green-500">
+                        <Activity size={14} className="animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Active Monitoring On</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

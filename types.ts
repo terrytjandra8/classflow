@@ -136,6 +136,7 @@ export interface Section {
   studentsCanDrag?: boolean; 
   isTitleBlurred?: boolean;
   disableCopy?: boolean;
+  isWatermarked?: boolean; // NEW: Watermark toggle per column
   colSpan?: number;
   groupId?: string;       // If set, this column belongs to a merge group
   groupTitle?: string;    // Shared group header label (same for all in group)

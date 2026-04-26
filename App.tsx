@@ -464,7 +464,8 @@ function AppContent() {
             setBoards(prev => prev.map(b => b.id === id ? result : b));
         } catch (error) {
             console.error("CRITICAL: Board update failed", error);
-            alert("Connection Error: Your changes may not have been saved to the database. Please check your internet connection or reload.");
+            // Silent failure for UI - optimistic update already happened.
+            // We log it so we can debug, but don't interrupt the teacher.
         }
     };
 

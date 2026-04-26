@@ -84,6 +84,14 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {shouldMask && <Ghost size={10} className="text-gray-400" />}
                         {isTeacher && <ShieldCheck size={12} className="text-pink-600 fill-pink-100" />}
                         {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
+                        
+                        {/* Focus Violation Flag (Only visible to teachers) */}
+                        {!isStudent && (note as any).violations > 0 && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-red-500 text-white rounded-full text-[9px] font-black animate-pulse shadow-sm ml-1" title={`${(note as any).violations} focus violations`}>
+                                <ShieldAlert size={10} />
+                                {(note as any).violations}
+                            </div>
+                        )}
                     </span>
                     <div className={`text-[10px] font-medium flex items-center gap-2 ${subTextColor}`}>
                         <Timestamp time={note.createdAt} />

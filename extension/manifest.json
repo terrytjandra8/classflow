@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Classboards Secure Browser",
+  "version": "1.0.0",
+  "description": "Required extension for secure exam mode on Classboards. Prevents screenshots and screen capture during assessments.",
+  "permissions": [
+    "activeTab",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://classboards.app/*",
+    "https://*.classboards.app/*",
+    "http://localhost:*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://classboards.app/*",
+        "https://*.classboards.app/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "externally_connectable": {
+    "matches": [
+      "https://classboards.app/*",
+      "https://*.classboards.app/*",
+      "http://localhost:*/*"
+    ]
+  }
+}

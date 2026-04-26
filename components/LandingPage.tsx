@@ -258,9 +258,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoogleLogin
         const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
 
-        // Robust Google One Tap Initialization
+        // Robust Google One Tap Initialization with Nonce
         let retryCount = 0;
-        const initOneTap = () => {
+        let rawNonce = ''; // Store raw nonce for Supabase
+
+        const generateNonce = async (): Promise<{ raw: string; hashed: string }> => {
+            const rawBytes = crypto.getRandomValues(new Uint8Array(16));
+            const raw = Array.from(rawBytes, b => b.toString(16).padStart(2, '0')).join('');
+            const encoder = new TextEncoder();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(raw));
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashed = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return { raw, hashed };
+        };
+
+        const initOneTap = async () => {
             const clientID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
             
             if (!clientID) {
@@ -279,30 +291,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoogleLogin
             }
 
             try {
+                const { raw, hashed } = await generateNonce();
+                rawNonce = raw;
+
                 (window as any).google.accounts.id.initialize({
                     client_id: clientID,
+                    nonce: hashed, // Google gets the SHA-256 hash
+                    use_fedcm_for_prompt: true,
                     callback: async (response: any) => {
+                        console.log("Google response received");
                         try {
                             const { error } = await supabase.auth.signInWithIdToken({
                                 provider: 'google',
                                 token: response.credential,
+                                nonce: rawNonce, // Supabase gets the raw nonce
                             });
                             if (error) throw error;
-                            onStart();
+                            console.log("Login successful, redirecting...");
                         } catch (err) {
-                            console.error("Google One Tap Auth Error:", err);
+                            console.error("Supabase Auth Error:", err);
                         }
                     },
-                    auto_select: true, // Optional: attempts to sign in automatically
+                    auto_select: true,
                 });
+
+                // Render the official Google button as a fallback for mobile
+                const buttonDiv = document.getElementById('google-signin-button');
+                if (buttonDiv) {
+                    (window as any).google.accounts.id.renderButton(buttonDiv, {
+                        theme: 'outline',
+                        size: 'large',
+                        width: buttonDiv.offsetWidth,
+                        shape: 'pill',
+                        text: 'continue_with',
+                        logo_alignment: 'left'
+                    });
+                }
                 
                 (window as any).google.accounts.id.prompt((notification: any) => {
-                    if (notification.isNotDisplayed()) {
-                        console.log("One Tap not displayed:", notification.getNotDisplayedReason());
-                    }
+                    console.log("One Tap Notification:", notification.getMomentType());
                 });
             } catch (err) {
-                console.error("Google One Tap Init Error:", err);
+                console.error("Google Init Error:", err);
             }
         };
 
@@ -349,12 +379,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoogleLogin
                             Get Started Free <ArrowRight size={20} />
                         </button>
 
-                        <button
-                            onClick={onGoogleLogin}
-                            className="w-full sm:w-auto px-10 py-5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 group"
-                        >
-                            Sign in with Google
-                        </button>
+                        <div id="google-signin-button" className="w-full sm:w-auto min-h-[50px] min-w-[200px] flex items-center justify-center"></div>
                     </div>
                 </div>
 

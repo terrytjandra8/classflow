@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Board, Note, LockMode, ClassGroup } from '../../types';
 import { useBoardData } from './logic/useBoardData';
 import { useNoteActions } from '../../hooks/useNoteActions';
@@ -357,6 +357,18 @@ export const BoardView: React.FC<BoardViewProps> = ({
         onUpdateBoard({ sections: updatedSections });
     }, [getEffectiveSections, board.studentsCanDrag, onUpdateBoard]);
 
+    const toggleSectionWatermark = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, isWatermarked: !s.isWatermarked } : s);
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
+    const toggleSectionCopy = useCallback((sectionId: string) => {
+        const sections = getEffectiveSections();
+        const updatedSections = sections.map(s => s.id === sectionId ? { ...s, disableCopy: !s.disableCopy } : s);
+        onUpdateBoard({ sections: updatedSections });
+    }, [getEffectiveSections, onUpdateBoard]);
+
     const contextValue: BoardContextType = useMemo(() => ({
         board,
         notes: sortedNotes,
@@ -401,6 +413,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         toggleSectionComments,
         toggleSectionReplies,
         toggleSectionRearrange,
+        toggleSectionCopy,
+        toggleSectionWatermark,
         highlightedUserId,
         setHighlightedUserId
     }), [
@@ -409,15 +423,36 @@ export const BoardView: React.FC<BoardViewProps> = ({
         openAddNoteModal, openEditNoteModal, onBack, isSimulating,
         backgroundStyle, fontClass, userAvatar, onlineUsers, isPresentationMode, classList,
         launchProjectorMode, toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous,
-        toggleSectionComments, toggleSectionReplies, toggleSectionRearrange, typingUsers, setTypingStatus,
+        toggleSectionComments, toggleSectionReplies, toggleSectionRearrange, toggleSectionCopy, toggleSectionWatermark, typingUsers, setTypingStatus,
         highlightedUserId
     ]);
 
+    const lastViolationTime = useRef<number>(0);
+    const handleViolation = useCallback(async (type: 'security' | 'focus') => {
+        if (!isStudent && !isSimulatingStudent) return;
+        
+        // Throttle violations to prevent DB spam (once every 2 seconds)
+        const now = Date.now();
+        if (now - lastViolationTime.current < 2000) return;
+        lastViolationTime.current = now;
+
+        // Find the student's primary note on this board
+        const studentNote = notes.find(n => n.author_id === userId);
+        if (studentNote) {
+            const currentViolations = (studentNote as any).violations || 0;
+            await updateNote(studentNote.id, { violations: currentViolations + 1 } as any);
+        }
+    }, [isStudent, isSimulatingStudent, notes, userId, updateNote]);
+
     const renderProtectedContent = (content: React.ReactNode) => {
-        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent) && board.format !== 'quiz';
+        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
         
         return (
-            <ScreenshotGuard isEnabled={protectionEnabled}>
+            <ScreenshotGuard 
+                isEnabled={protectionEnabled} 
+                studentName={username}
+                onViolation={handleViolation}
+            >
                 {content}
             </ScreenshotGuard>
         );
