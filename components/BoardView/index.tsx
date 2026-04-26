@@ -161,19 +161,28 @@ export const BoardView: React.FC<BoardViewProps> = ({
         
         // Secondary Fallback for debugging (Name match)
         const nameMatches = currentNotes.filter(n => n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.author_id !== userId);
-        
-        if (studentNotes.length === 0) {
-            if (nameMatches.length > 0) {
-                console.warn(`[FocusGuard] CRITICAL ID MISMATCH! Found ${nameMatches.length} notes with your name "${username}", but they have a different ID: "${nameMatches[0].author_id}". Your ID is "${userId}".`);
-            } else {
-                console.log(`[FocusGuard] No notes found for user ID ${userId} among ${currentNotes.length} notes.`);
+
+        // Combine ID matches and Name matches (Amnesty for ID mismatches)
+        const allMyNotes = [...studentNotes];
+        if (studentNotes.length === 0 && nameMatches.length > 0) {
+            console.warn(`[FocusGuard] ID mismatch detected! Healing notes for "${username}"...`);
+            
+            // AUTO-REPAIR IDs: Update the author_id to match current session
+            for (const n of nameMatches) {
+                updateNote(n.id, { author_id: userId } as any);
             }
+            
+            allMyNotes.push(...nameMatches);
+        }
+        
+        if (allMyNotes.length === 0) {
+            console.log(`[FocusGuard] No notes found for user ${username} (ID: ${userId}) among ${currentNotes.length} notes.`);
             return;
         }
 
-        console.log(`[FocusGuard] SUCCESS: Found ${studentNotes.length} matching notes for ID ${userId}.`);
+        console.log(`[FocusGuard] SUCCESS: Found ${allMyNotes.length} notes to flag/heal for ${username}.`);
 
-        for (const note of studentNotes) {
+        for (const note of allMyNotes) {
             // Check if the section this note belongs to has focus guard enabled
             const section = board.sections?.find(s => s.id === note.sectionId);
             
