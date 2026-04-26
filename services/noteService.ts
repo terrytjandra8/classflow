@@ -66,6 +66,7 @@ export const noteService = {
         if (updates.comments !== undefined) dbUpdates.comments = updates.comments as any;
         if (updates.connections !== undefined) dbUpdates.connections = updates.connections as any;
         if (updates.sectionId !== undefined) dbUpdates.section_id = updates.sectionId;
+        if (updates.violation_count !== undefined) dbUpdates.violation_count = updates.violation_count;
 
         const { data, error } = await supabase
             .from('notes')
