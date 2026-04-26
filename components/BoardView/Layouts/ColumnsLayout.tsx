@@ -349,7 +349,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                 ) : (
                     /* ── Full standalone column header ── */
                     <div
-                        className={`flex items-center justify-between group p-1.5 rounded-xl border transition-colors relative cursor-pointer ${
+                        className={`flex flex-col gap-3 p-3 rounded-xl border transition-all relative cursor-pointer ${
                             isMergeMode && isSelected
                                 ? 'border-blue-400 bg-blue-500/20 ring-2 ring-blue-400/50'
                                 : isMergeMode
@@ -360,6 +360,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                         }`}
                         onClick={isMergeMode ? () => toggleSelectForMerge(section.id) : undefined}
                     >
+                        {/* Row 1: Handle + Title + Status Badges */}
                         <div className="flex items-center gap-2 w-full min-w-0">
                             {isMergeMode && canManageBoard ? (
                                 <div className={`shrink-0 transition-colors ${isSelected ? 'text-blue-400' : 'text-white/30'}`}>
@@ -367,26 +368,31 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                                 </div>
                             ) : (
                                 canDragColumns && (
-                                    <div className="text-gray-400 p-1 cursor-grab active:cursor-grabbing hover:text-white transition-colors"
+                                    <div className="text-gray-400 p-1 cursor-grab active:cursor-grabbing hover:text-white transition-colors shrink-0"
                                         draggable={true} onDragStart={(e) => onDragStart(e, section.id, 'COLUMN')} title="Drag to reorder">
                                         <IconDrag size={16} />
                                     </div>
                                 )
                             )}
-                            {section.locked && <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-1.5 rounded-lg shadow-sm shrink-0"><IconLock size={12} strokeWidth={2.5} /></div>}
-                            {section.isHidden && <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-1.5 rounded-lg shadow-sm shrink-0"><IconHidden size={12} strokeWidth={2.5} /></div>}
-                            {section.disableCopy && <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 p-1.5 rounded-lg shadow-sm shrink-0"><IconCopyOff size={12} strokeWidth={2.5} /></div>}
+                            
+                            <div className="flex items-center gap-1 shrink-0">
+                                {section.locked && <div className="bg-red-500 text-white p-1 rounded shadow-sm"><IconLock size={10} strokeWidth={3} /></div>}
+                                {section.isHidden && <div className="bg-orange-500 text-white p-1 rounded shadow-sm"><IconHidden size={10} strokeWidth={3} /></div>}
+                                {section.disableCopy && <div className="bg-slate-700 text-white p-1 rounded shadow-sm"><IconCopyOff size={10} strokeWidth={3} /></div>}
+                            </div>
+
                             <EditableInput
                                 disabled={!canManageBoard || isMergeMode}
-                                className={`font-bold text-lg bg-transparent border border-transparent hover:border-white/20 rounded px-2 py-1 w-full focus:bg-white/10 outline-none transition-all ${isMergeMode ? 'pointer-events-none' : ''} ${section.isHidden ? 'opacity-70' : 'opacity-100'} text-slate-800 dark:text-white`}
+                                className={`font-bold text-base bg-transparent border border-transparent hover:border-white/20 rounded px-1.5 py-1 w-full focus:bg-white/10 outline-none transition-all ${isMergeMode ? 'pointer-events-none' : ''} ${section.isHidden ? 'opacity-70' : 'opacity-100'} text-slate-800 dark:text-white`}
                                 value={section.title}
                                 onSave={(val) => renameSection(section.id, val)}
                                 style={{ color: board.groupTextColor }}
                             />
                         </div>
+
+                        {/* Row 2: Teacher Controls (only when manage and not merge) */}
                         {canManageBoard && !isMergeMode && (
-                            <div className={`grid gap-1 shrink-0 ml-2 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                                style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
+                            <div className={`grid grid-cols-5 sm:flex sm:flex-wrap items-center gap-1 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                                 <Tooltip content={section.locked ? "Unlock" : "Lock"}>
                                     <button onClick={() => toggleSectionLock(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.locked ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
                                         {section.locked ? <IconLock size={14} /> : <IconUnlock size={14} />}

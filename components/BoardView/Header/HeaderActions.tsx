@@ -76,7 +76,7 @@ export const HeaderActions: React.FC = () => {
     );
 
     return (
-        <div className="flex items-center gap-4 pointer-events-auto ml-auto md:self-center self-end mt-4 md:mt-0 shrink-0">
+        <div className="flex items-center gap-3 pointer-events-auto shrink-0">
             {typingUsers && typingUsers.length > 0 && (
                 <div className="flex items-center gap-2 bg-pink-500 text-white px-4 py-1.5 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-lg shadow-pink-500/30 border border-pink-400">
                     <div className="flex gap-1 items-center">

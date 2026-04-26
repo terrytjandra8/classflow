@@ -31,8 +31,8 @@ export const EditableInput = ({
         if (textarea) {
             // Reset height to auto to correctly calculate scrollHeight if text shrank
             textarea.style.height = 'auto'; 
-            // Add slight buffer (+4px) to accommodate descenders and borders
-            textarea.style.height = `${textarea.scrollHeight + 4}px`;
+            // Add generous buffer (+8px) to accommodate descenders, bold weights, and custom line heights
+            textarea.style.height = `${textarea.scrollHeight + 8}px`;
         }
     };
 
@@ -88,7 +88,7 @@ export const EditableInput = ({
             className={`${className} resize-none overflow-hidden block break-words whitespace-pre-wrap`}
             placeholder={placeholder}
             rows={1}
-            style={{ minHeight: '40px', ...style }}
+            style={style}
         />
     );
 };

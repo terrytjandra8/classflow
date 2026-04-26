@@ -46,19 +46,24 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({ isPresenting }) => {
                     </button>
                 )}
                 
-                <div className="flex flex-col min-w-0 w-full gap-2 mt-1">
-                    <div className="flex items-center gap-3 w-full relative">
-                        <HeaderTitle />
+                <div className="flex flex-col min-w-0 w-full gap-3 mt-1">
+                    <HeaderTitle />
+                    
+                    <div className="flex flex-wrap items-center gap-3 pl-1">
                         <HeaderBadges />
-                    </div>
-                    <div className="pl-1">
+                        <div className="h-4 w-px bg-white/10 mx-1 hidden sm:block" />
                         <HeaderMeta />
+                    </div>
+
+                    {/* Mobile: Aligned under title */}
+                    <div className="flex md:hidden pt-1">
+                        <HeaderActions />
                     </div>
                 </div>
             </div>
 
-            {/* Right: Controls & Live Presence */}
-            <div className="w-full md:w-auto">
+            {/* Desktop: Actions on the right */}
+            <div className="hidden md:block shrink-0">
                  <HeaderActions />
             </div>
         </div>

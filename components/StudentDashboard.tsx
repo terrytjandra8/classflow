@@ -21,421 +21,420 @@ const getDateCategory = (timestamp: number) => {
 
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
-    
+
     const day = d.getDay();
     const diffToSunday = d.getDate() - day;
     const weekStart = new Date(d);
     weekStart.setDate(diffToSunday);
-    
+
     const currentDay = n.getDay();
     const currentDiffToSunday = n.getDate() - currentDay;
     const currentWeekStart = new Date(n);
     currentWeekStart.setDate(currentDiffToSunday);
-    
+
     if (weekStart.getTime() === currentWeekStart.getTime()) return "This Week";
-    
+
     const lastWeekStart = new Date(currentWeekStart);
     lastWeekStart.setDate(lastWeekStart.getDate() - 7);
     if (weekStart.getTime() === lastWeekStart.getTime()) return "Last Week";
-    
+
     if (date.getFullYear() === now.getFullYear()) return date.toLocaleDateString('en-US', { month: 'long' });
-    
+
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
 interface StudentDashboardProps {
-  boards: Board[];
-  onSelectBoard: (boardId: string) => void;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
-  username: string;
-  userAvatar: string | null;
-  userClasses: string[];
-  onJoinByCode: (code: string) => Promise<boolean>;
+    boards: Board[];
+    onSelectBoard: (boardId: string) => void;
+    theme: 'light' | 'dark';
+    onToggleTheme: () => void;
+    username: string;
+    userAvatar: string | null;
+    userClasses: string[];
+    onJoinByCode: (code: string) => Promise<boolean>;
 }
 
 // GLOBAL TRACKER: Persists across component unmounts during the session.
 // This is the "Blink Killer" - it ensures we remember seen boards even during aggressive polling.
 const sessionSeenBoardIds = new Set<string>();
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
-  boards: boardsProp, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode 
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({
+    boards: boardsProp, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode
 }) => {
-  // === STATE MANAGEMENT ===
-  // Local state for boards to handle exit animations
-  const [displayBoards, setDisplayBoards] = useState<Board[]>(boardsProp);
-  // Active tab for navigation (home, grades, etc.)
-  const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
-  // Currently selected class for filtering the board list
-  const [selectedClassFilter, setSelectedClassFilterState] = useState<string>(() => localStorage.getItem('cb_student_class_filter') || 'All Boards');
-  // Search input text
-  const [filter, setFilter] = useState('');
-  // State for the "Join a Class" modal
-  const [joinCode, setJoinCode] = useState('');
-  const [joinError, setJoinError] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  // Other UI states
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
-  
-  const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
+    // === STATE MANAGEMENT ===
+    // Local state for boards to handle exit animations
+    const [displayBoards, setDisplayBoards] = useState<Board[]>(boardsProp);
+    // Active tab for navigation (home, grades, etc.)
+    const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
+    // Currently selected class for filtering the board list
+    const [selectedClassFilter, setSelectedClassFilterState] = useState<string>(() => localStorage.getItem('cb_student_class_filter') || 'All Boards');
+    // Search input text
+    const [filter, setFilter] = useState('');
+    // State for the "Join a Class" modal
+    const [joinCode, setJoinCode] = useState('');
+    const [joinError, setJoinError] = useState('');
+    const [isJoining, setIsJoining] = useState(false);
+    // Other UI states
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string>('');
 
-  // Persist active tab and class filter to localStorage
-  const setActiveTab = (tab: 'home' | 'join' | 'documentation' | 'grades') => {
-      setActiveTabState(tab);
-      localStorage.setItem('cb_student_tab', tab);
-  };
-  const setSelectedClassFilter = (filter: string) => {
-      setSelectedClassFilterState(filter);
-      localStorage.setItem('cb_student_class_filter', filter);
-  };
+    const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
 
-  useEffect(() => {
-    // Get the current user's ID once
-    const fetchUserId = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) setCurrentUserId(user.id);
+    // Persist active tab and class filter to localStorage
+    const setActiveTab = (tab: 'home' | 'join' | 'documentation' | 'grades') => {
+        setActiveTabState(tab);
+        localStorage.setItem('cb_student_tab', tab);
     };
-    fetchUserId();
-  }, []);
+    const setSelectedClassFilter = (filter: string) => {
+        setSelectedClassFilterState(filter);
+        localStorage.setItem('cb_student_class_filter', filter);
+    };
 
-  // === FILTERING LOGIC (Using displayBoards for animations) ===
-  const filteredBoards = useMemo(() => {
-    let result = [...displayBoards];
+    useEffect(() => {
+        // Get the current user's ID once
+        const fetchUserId = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setCurrentUserId(user.id);
+        };
+        fetchUserId();
+    }, []);
 
-    // 1. Filter out any trashed boards and only include published boards.
-    // This is the core visibility rule for students.
-    result = result.filter(b => 
-        !b.isTrashed && 
-        (
-            b.isPublished || 
-            (b.format === 'quiz' && b.quizState && b.quizState !== 'setup') || 
-            (b.format === 'assessment' && (b.assessmentState === 'active' || b.assessmentState === 'reading'))
-        )
-    );
+    // === FILTERING LOGIC (Using displayBoards for animations) ===
+    const filteredBoards = useMemo(() => {
+        let result = [...displayBoards];
 
-    // 2. Filter by the selected class in the sidebar.
-    if (selectedClassFilter !== 'All Boards') {
-        result = result.filter(b => b.targetGrade === selectedClassFilter);
-    }
-    
-    // 3. Filter by the search input text.
-    if (filter.trim()) {
-        result = result.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
-    }
+        // 1. Filter out any trashed boards and only include published boards.
+        // This is the core visibility rule for students.
+        result = result.filter(b =>
+            !b.isTrashed &&
+            (
+                b.isPublished ||
+                (b.format === 'quiz' && b.quizState && b.quizState !== 'setup') ||
+                (b.format === 'assessment' && (b.assessmentState === 'active' || b.assessmentState === 'reading'))
+            )
+        );
 
-    // 4. Sort the results by creation date (newest first).
-    return result.sort((a, b) => b.createdAt - a.createdAt);
-  }, [displayBoards, selectedClassFilter, filter]);
+        // 2. Filter by the selected class in the sidebar.
+        if (selectedClassFilter !== 'All Boards') {
+            result = result.filter(b => b.targetGrade === selectedClassFilter);
+        }
 
-  // Sync boardsProp with displayBoards to handle entrance/exit animations
-  useEffect(() => {
-    // 1. Identify boards that are still there (including newly added ones)
-    const currentIds = new Set(boardsProp.map(b => b.id));
-    
-    // 2. Identify boards that were there but are now missing
-    const exitingBoards = displayBoards.filter(b => !currentIds.has(b.id) && !b.isExiting);
-    
-    if (exitingBoards.length > 0) {
-        // Mark disappearing boards as exiting
-        setDisplayBoards(prev => prev.map(b => 
-            !currentIds.has(b.id) ? { ...b, isExiting: true } : b
-        ));
-        
-        // Remove them after animation finishes (300ms)
-        const timer = setTimeout(() => {
+        // 3. Filter by the search input text.
+        if (filter.trim()) {
+            result = result.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
+        }
+
+        // 4. Sort the results by creation date (newest first).
+        return result.sort((a, b) => b.createdAt - a.createdAt);
+    }, [displayBoards, selectedClassFilter, filter]);
+
+    // Sync boardsProp with displayBoards to handle entrance/exit animations
+    useEffect(() => {
+        // 1. Identify boards that are still there (including newly added ones)
+        const currentIds = new Set(boardsProp.map(b => b.id));
+
+        // 2. Identify boards that were there but are now missing
+        const exitingBoards = displayBoards.filter(b => !currentIds.has(b.id) && !b.isExiting);
+
+        if (exitingBoards.length > 0) {
+            // Mark disappearing boards as exiting
+            setDisplayBoards(prev => prev.map(b =>
+                !currentIds.has(b.id) ? { ...b, isExiting: true } : b
+            ));
+
+            // Remove them after animation finishes (300ms)
+            const timer = setTimeout(() => {
+                setDisplayBoards(boardsProp);
+            }, 350);
+            return () => clearTimeout(timer);
+        } else {
+            // No one is exiting, just update with new list (handles additions and property updates)
             setDisplayBoards(boardsProp);
-        }, 350);
-        return () => clearTimeout(timer);
-    } else {
-        // No one is exiting, just update with new list (handles additions and property updates)
-        setDisplayBoards(boardsProp);
-    }
+        }
 
-    // Mark boards as seen only AFTER they have had time to animate in
-    const seenTimer = setTimeout(() => {
-        boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
-    }, 2000); // 2s is safely longer than the entrance animation
-    
-    return () => clearTimeout(seenTimer);
-  }, [boardsProp]);
+        // Mark boards as seen only AFTER they have had time to animate in
+        const seenTimer = setTimeout(() => {
+            boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
+        }, 2000); // 2s is safely longer than the entrance animation
 
-  const groupedBoards = useMemo(() => {
-      // Only group if there's no active search or class filter
-      if (filter.trim() || selectedClassFilter !== 'All Boards') return null; 
-      
-      const getTimestamp = (b: Board) => b.createdAt;
-      const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
-      
-      return categories.map(category => ({
-          title: category,
-          items: filteredBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
-      }));
-  }, [filteredBoards, filter, selectedClassFilter]);
+        return () => clearTimeout(seenTimer);
+    }, [boardsProp]);
 
-  // === EVENT HANDLERS ===
-  const handleJoinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setJoinError('');
-    setIsJoining(true);
-    const success = await onJoinByCode(joinCode.trim());
-    if (success) {
-      setJoinCode('');
-      setActiveTab('home'); // Switch back to home view on success
-    } else {
-      setJoinError('Invalid code or you already joined this class.');
-    }
-    setIsJoining(false);
-  };
+    const groupedBoards = useMemo(() => {
+        // Only group if there's no active search or class filter
+        if (filter.trim() || selectedClassFilter !== 'All Boards') return null;
 
-  const handleLogout = async () => {
-      localStorage.removeItem('cb_student_tab');
-      localStorage.removeItem('cb_student_class_filter');
-      await supabase.auth.signOut();
-  };
+        const getTimestamp = (b: Board) => b.createdAt;
+        const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
 
-  // === RENDER COMPONENTS ===
-const renderBoardGrid = (items: Board[]) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {items.map((board, idx) => {
-            const isNew = !sessionSeenBoardIds.has(board.id);
-            
-            return (
-                <div 
-                    key={board.id} 
-                    style={{ animationDelay: isNew ? `${idx * 75}ms` : '0ms' }}
-                    className={isNew ? '' : '[&_.animate-enter-card]:animate-none'}
-                >
-                    <BoardCard 
-                        board={board}
-                        viewMode="recents"
-                        onSelect={onSelectBoard}
-                        onDelete={() => {}}
-                        onRestore={() => {}}
-                        onToggleFavorite={() => {}}
-                        onMenuOpen={() => {}}
-                        wallpapersMap={WALLPAPERS_MAP}
-                        theme={theme}
-                        disableAnimation={!isNew}
-                        isExiting={board.isExiting}
-                    />
-                </div>
-            );
-        })}
-    </div>
-);
+        return categories.map(category => ({
+            title: category,
+            items: filteredBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
+        }));
+    }, [filteredBoards, filter, selectedClassFilter]);
 
-const SidebarNav = ({ 
-    isMobile, 
-    activeTab, 
-    selectedClassFilter, 
-    userClasses, 
-    onTabChange, 
-    onFilterChange, 
-    onCloseMobileMenu 
-}: { 
-    isMobile: boolean, 
-    activeTab: string, 
-    selectedClassFilter: string, 
-    userClasses: string[],
-    onTabChange: (tab: any) => void,
-    onFilterChange: (filter: string) => void,
-    onCloseMobileMenu: () => void
-}) => {
-    const buttonClass = (tab: string, filter?: string) => `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
-        activeTab === tab && (filter === undefined || selectedClassFilter === filter)
-        ? 'bg-slate-100 dark:bg-[#222] text-slate-900 dark:text-white'
-        : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-[#1a1a1a]'
-    }`;
+    // === EVENT HANDLERS ===
+    const handleJoinSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setJoinError('');
+        setIsJoining(true);
+        const success = await onJoinByCode(joinCode.trim());
+        if (success) {
+            setJoinCode('');
+            setActiveTab('home'); // Switch back to home view on success
+        } else {
+            setJoinError('Invalid code or you already joined this class.');
+        }
+        setIsJoining(false);
+    };
 
-    const handleFilterClick = (filterName: string) => {
-        onTabChange('home');
-        onFilterChange(filterName);
-        if(isMobile) onCloseMobileMenu();
-    }
+    const handleLogout = async () => {
+        localStorage.removeItem('cb_student_tab');
+        localStorage.removeItem('cb_student_class_filter');
+        await supabase.auth.signOut();
+    };
 
-    return (
-        <nav className={`space-y-1 flex-1 overflow-y-auto custom-scrollbar ${isMobile ? 'px-4' : 'pr-2'}`}>
-            <button onClick={() => handleFilterClick('All Boards')} className={buttonClass('home', 'All Boards')}><Home size={16} /> All Boards</button>
-            <button onClick={() => { onTabChange('grades'); if(isMobile) onCloseMobileMenu(); }} className={buttonClass('grades')}><GraduationCap size={16} /> Grades</button>
-            <button onClick={() => { onTabChange('documentation'); if(isMobile) onCloseMobileMenu(); }} className={buttonClass('documentation')}><BookOpen size={16} /> Guide</button>
-            
-            <div className="h-px my-4 bg-slate-200 dark:bg-white/10"></div>
-            <p className="px-3 mb-2 text-[10px] uppercase font-bold text-gray-500">My Classes</p>
+    // === RENDER COMPONENTS ===
+    const renderBoardGrid = (items: Board[]) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {items.map((board, idx) => {
+                const isNew = !sessionSeenBoardIds.has(board.id);
 
-            {userClasses.length > 0 ? (
-                <div className="space-y-1">
-                    {userClasses.map((className) => (
-                        <button key={className} onClick={() => handleFilterClick(className)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-left overflow-hidden transition-colors ${selectedClassFilter === className ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-[#1a1a1a]'}`}>
-                            <Folder size={16} className="shrink-0" /> <span className="truncate">{className}</span>
-                        </button>
-                    ))}
-                </div>
-            ) : <div className="px-3 py-4 text-center border-2 border-dashed border-gray-500/10 rounded-lg"><p className="text-xs text-gray-500">No classes yet</p></div>}
-        </nav>
+                return (
+                    <div
+                        key={board.id}
+                        style={{ animationDelay: isNew ? `${idx * 75}ms` : '0ms' }}
+                        className={isNew ? '' : '[&_.animate-enter-card]:animate-none'}
+                    >
+                        <BoardCard
+                            board={board}
+                            viewMode="recents"
+                            onSelect={onSelectBoard}
+                            onDelete={() => { }}
+                            onRestore={() => { }}
+                            onToggleFavorite={() => { }}
+                            onMenuOpen={() => { }}
+                            wallpapersMap={WALLPAPERS_MAP}
+                            theme={theme}
+                            disableAnimation={!isNew}
+                            isExiting={board.isExiting}
+                        />
+                    </div>
+                );
+            })}
+        </div>
     );
-};
 
-const Sidebar = ({ 
-    isMobile = false, 
-    userAvatar, 
-    username, 
-    activeTab, 
-    selectedClassFilter, 
-    userClasses, 
-    theme, 
-    onTabChange, 
-    onFilterChange, 
-    onCloseMobileMenu, 
-    onToggleTheme, 
-    onLogout 
-}: {
-    isMobile?: boolean,
-    userAvatar: string | null,
-    username: string,
-    activeTab: string,
-    selectedClassFilter: string,
-    userClasses: string[],
-    theme: 'light' | 'dark',
-    onTabChange: (tab: any) => void,
-    onFilterChange: (filter: string) => void,
-    onCloseMobileMenu: () => void,
-    onToggleTheme: () => void,
-    onLogout: () => void
-}) => (
-    <div className={`flex flex-col h-full ${isMobile ? 'flex w-full' : 'hidden md:flex w-64 shrink-0'} bg-white dark:bg-[#111] ${!isMobile ? 'py-6 pr-4 pl-6 border-r border-slate-200 dark:border-white/5' : ''}`}>
-        <div className={isMobile ? 'px-6 pt-6' : ''}>
-            <div className="flex mb-8 items-center gap-3">
-                <Avatar src={userAvatar} name={username} size="lg" className="shrink-0" />
-                <div>
-                    <h2 className="font-bold truncate max-w-[140px] text-slate-800 dark:text-white">{username}</h2>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
+    const SidebarNav = ({
+        isMobile,
+        activeTab,
+        selectedClassFilter,
+        userClasses,
+        onTabChange,
+        onFilterChange,
+        onCloseMobileMenu
+    }: {
+        isMobile: boolean,
+        activeTab: string,
+        selectedClassFilter: string,
+        userClasses: string[],
+        onTabChange: (tab: any) => void,
+        onFilterChange: (filter: string) => void,
+        onCloseMobileMenu: () => void
+    }) => {
+        const buttonClass = (tab: string, filter?: string) => `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === tab && (filter === undefined || selectedClassFilter === filter)
+                ? 'bg-slate-100 dark:bg-[#222] text-slate-900 dark:text-white'
+                : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-[#1a1a1a]'
+            }`;
+
+        const handleFilterClick = (filterName: string) => {
+            onTabChange('home');
+            onFilterChange(filterName);
+            if (isMobile) onCloseMobileMenu();
+        }
+
+        return (
+            <nav className={`space-y-1 flex-1 overflow-y-auto custom-scrollbar ${isMobile ? 'px-4' : 'pr-2'}`}>
+                <button onClick={() => handleFilterClick('All Boards')} className={buttonClass('home', 'All Boards')}><Home size={16} /> All Boards</button>
+                <button onClick={() => { onTabChange('grades'); if (isMobile) onCloseMobileMenu(); }} className={buttonClass('grades')}><GraduationCap size={16} /> Grades</button>
+                <button onClick={() => { onTabChange('documentation'); if (isMobile) onCloseMobileMenu(); }} className={buttonClass('documentation')}><BookOpen size={16} /> Guide</button>
+
+                <div className="h-px my-4 bg-slate-200 dark:bg-white/10"></div>
+                <p className="px-3 mb-2 text-[10px] uppercase font-bold text-gray-500">My Classes</p>
+
+                {userClasses.length > 0 ? (
+                    <div className="space-y-1">
+                        {userClasses.map((className) => (
+                            <button key={className} onClick={() => handleFilterClick(className)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-left overflow-hidden transition-colors ${selectedClassFilter === className ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-[#1a1a1a]'}`}>
+                                <Folder size={16} className="shrink-0" /> <span className="truncate">{className}</span>
+                            </button>
+                        ))}
+                    </div>
+                ) : <div className="px-3 py-4 text-center border-2 border-dashed border-gray-500/10 rounded-lg"><p className="text-xs text-gray-500">No classes yet</p></div>}
+            </nav>
+        );
+    };
+
+    const Sidebar = ({
+        isMobile = false,
+        userAvatar,
+        username,
+        activeTab,
+        selectedClassFilter,
+        userClasses,
+        theme,
+        onTabChange,
+        onFilterChange,
+        onCloseMobileMenu,
+        onToggleTheme,
+        onLogout
+    }: {
+        isMobile?: boolean,
+        userAvatar: string | null,
+        username: string,
+        activeTab: string,
+        selectedClassFilter: string,
+        userClasses: string[],
+        theme: 'light' | 'dark',
+        onTabChange: (tab: any) => void,
+        onFilterChange: (filter: string) => void,
+        onCloseMobileMenu: () => void,
+        onToggleTheme: () => void,
+        onLogout: () => void
+    }) => (
+        <div className={`flex flex-col h-full ${isMobile ? 'flex w-full' : 'hidden md:flex w-64 shrink-0'} bg-white dark:bg-[#111] ${!isMobile ? 'py-6 pr-4 pl-6 border-r border-slate-200 dark:border-white/5' : ''}`}>
+            <div className={isMobile ? 'px-6 pt-6' : ''}>
+                <div className="flex mb-8 items-center gap-3">
+                    <Avatar src={userAvatar} name={username} size="lg" className="shrink-0" />
+                    <div>
+                        <h2 className="font-bold truncate max-w-[140px] text-slate-800 dark:text-white">{username}</h2>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
+                    </div>
+                </div>
+                <button onClick={() => { onTabChange('join'); if (isMobile) onCloseMobileMenu(); }} className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+                    <Hash size={16} /> Join a Class
+                </button>
+            </div>
+            <SidebarNav
+                isMobile={isMobile}
+                activeTab={activeTab}
+                selectedClassFilter={selectedClassFilter}
+                userClasses={userClasses}
+                onTabChange={onTabChange}
+                onFilterChange={onFilterChange}
+                onCloseMobileMenu={onCloseMobileMenu}
+            />
+            <div className={`mt-auto pt-4 space-y-3 ${isMobile ? 'px-6 pb-6' : ''} border-t border-slate-200 dark:border-white/5`}>
+                <button onClick={onToggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-[#1a1a1a]"><Sun size={16} /><span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>
+                <button onClick={onLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"><LogOut size={16} /> Sign Out</button>
+            </div>
+        </div>
+    );
+
+    // === MAIN RENDER ===
+    return (
+        <div className="h-screen flex bg-slate-50 text-slate-900 dark:bg-[#050505] dark:text-white transition-colors duration-300 font-sans overflow-hidden">
+            {/* Mobile Sidebar */}
+            <div className={`md:hidden fixed inset-0 bg-black/50 z-30 transition-opacity ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}></div>
+            <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <Sidebar
+                    isMobile={true}
+                    userAvatar={userAvatar}
+                    username={username}
+                    activeTab={activeTab}
+                    selectedClassFilter={selectedClassFilter}
+                    userClasses={userClasses}
+                    theme={theme}
+                    onTabChange={setActiveTab}
+                    onFilterChange={setSelectedClassFilter}
+                    onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+                    onToggleTheme={onToggleTheme}
+                    onLogout={handleLogout}
+                />
+            </div>
+
+            {/* Desktop Sidebar */}
+            <Sidebar
+                userAvatar={userAvatar}
+                username={username}
+                activeTab={activeTab}
+                selectedClassFilter={selectedClassFilter}
+                userClasses={userClasses}
+                theme={theme}
+                onTabChange={setActiveTab}
+                onFilterChange={setSelectedClassFilter}
+                onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+                onToggleTheme={onToggleTheme}
+                onLogout={handleLogout}
+            />
+
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+                {/* Mobile Header */}
+                <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-10">
+                    <div className="flex items-center gap-2"><Layout size={24} className="text-pink-600" /><span className="font-bold text-lg">ClassBoard</span></div>
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5"><Menu size={20} /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8">
+                    {activeTab === 'documentation' ? <Documentation role="student" onBack={() => setActiveTab('home')} theme={theme} />
+                        : activeTab === 'grades' ? <StudentGrades userId={currentUserId} onSelectBoard={onSelectBoard} theme={theme} userClasses={userClasses} userName={username} />
+                            : activeTab === 'join' ? (
+                                <div className="flex flex-col items-center justify-center py-10 animate-in fade-in slide-in-from-bottom-2 relative min-h-[50vh]">
+                                    <div className="w-full max-w-md bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
+                                        <button onClick={() => setActiveTab('home')} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"><X size={20} /></button>
+                                        <div className="w-20 h-20 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3 border border-blue-500/20 shadow-lg"><Hash size={40} /></div>
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Join a Class</h2>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 px-4">Enter the 6-digit code provided by your teacher.</p>
+                                        <form onSubmit={handleJoinSubmit} className="space-y-6">
+                                            <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6} className="w-full bg-slate-100 dark:bg-black/30 border-2 border-slate-200 dark:border-white/10 rounded-2xl py-5 text-3xl font-mono tracking-[0.5em] text-center text-slate-900 dark:text-white focus:border-blue-500 outline-one uppercase transition-colors placeholder:text-slate-400 dark:placeholder-white/10" autoFocus />
+                                            {joinError && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{joinError}</p>}
+                                            <button type="submit" disabled={!joinCode || isJoining} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">{isJoining ? 'Joining...' : 'Join Class'}</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Header */}
+                                    <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-2xl animate-in fade-in slide-in-from-top-4 shrink-0">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600"></div>
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                                        <div className="relative z-10">
+                                            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-4 border border-white/10"><Sparkles size={12} className="text-yellow-300" /> Daily Inspiration</div>
+                                            <h2 className="text-2xl md:text-4xl font-extrabold mb-4 leading-tight">Ready to learn, {username.split(' ')[0]}?</h2>
+                                            <div className="flex gap-2 max-w-2xl items-start"><Quote size={20} className="text-white/50 shrink-0 mt-1" /><p className="text-lg font-medium text-white/90 italic leading-relaxed">"{randomQuote}"</p></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Search Bar */}
+                                    <div className="flex">
+                                        <div className="relative w-full md:max-w-md">
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <input type="text" placeholder="Search your boards..." value={filter} onChange={(e) => setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all bg-white border border-slate-200 dark:bg-[#1a1a1a] dark:border-white/10 dark:text-white" />
+                                        </div>
+                                    </div>
+
+                                    {/* Board Display */}
+                                    {filteredBoards.length === 0 ? (
+                                        <div className="text-center py-20 opacity-60 border-2 border-dashed border-gray-500/20 rounded-3xl bg-gray-50 dark:bg-white/5">
+                                            <Trophy size={48} className="mx-auto mb-4 text-gray-400" />
+                                            <p className="text-base font-bold text-gray-500">No boards found</p>
+                                            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or class filter.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-12 pb-20">
+                                            {groupedBoards ? groupedBoards.map((group) => (
+                                                <div key={group.title} className="animate-fade-in">
+                                                    <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
+                                                    {renderBoardGrid(group.items)}
+                                                </div>
+                                            )) : renderBoardGrid(filteredBoards)}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                 </div>
             </div>
-            <button onClick={() => { onTabChange('join'); if (isMobile) onCloseMobileMenu(); }} className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
-              <Hash size={16} /> Join a Class
-            </button>
         </div>
-        <SidebarNav 
-            isMobile={isMobile} 
-            activeTab={activeTab} 
-            selectedClassFilter={selectedClassFilter} 
-            userClasses={userClasses} 
-            onTabChange={onTabChange} 
-            onFilterChange={onFilterChange} 
-            onCloseMobileMenu={onCloseMobileMenu} 
-        />
-        <div className={`mt-auto pt-4 space-y-3 ${isMobile ? 'px-6 pb-6' : ''} border-t border-slate-200 dark:border-white/5`}>
-            <button onClick={onToggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-colors text-slate-500 hover:bg-slate-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-[#1a1a1a]"><Sun size={16} /><span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>
-            <button onClick={onLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"><LogOut size={16} /> Sign Out</button>
-        </div>
-    </div>
-);
-
-  // === MAIN RENDER ===
-  return (
-    <div className="h-screen flex bg-slate-50 text-slate-900 dark:bg-[#050505] dark:text-white transition-colors duration-300 font-sans overflow-hidden">
-      {/* Mobile Sidebar */}
-      <div className={`md:hidden fixed inset-0 bg-black/50 z-30 transition-opacity ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}></div>
-      <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <Sidebar 
-            isMobile={true} 
-            userAvatar={userAvatar} 
-            username={username} 
-            activeTab={activeTab} 
-            selectedClassFilter={selectedClassFilter} 
-            userClasses={userClasses} 
-            theme={theme} 
-            onTabChange={setActiveTab} 
-            onFilterChange={setSelectedClassFilter} 
-            onCloseMobileMenu={() => setIsMobileMenuOpen(false)} 
-            onToggleTheme={onToggleTheme} 
-            onLogout={handleLogout} 
-          />
-      </div>
-      
-      {/* Desktop Sidebar */}
-      <Sidebar 
-        userAvatar={userAvatar} 
-        username={username} 
-        activeTab={activeTab} 
-        selectedClassFilter={selectedClassFilter} 
-        userClasses={userClasses} 
-        theme={theme} 
-        onTabChange={setActiveTab} 
-        onFilterChange={setSelectedClassFilter} 
-        onCloseMobileMenu={() => setIsMobileMenuOpen(false)} 
-        onToggleTheme={onToggleTheme} 
-        onLogout={handleLogout} 
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-          {/* Mobile Header */}
-          <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-10">
-              <div className="flex items-center gap-2"><Layout size={24} className="text-pink-600" /><span className="font-bold text-lg">ClassBoard</span></div>
-              <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5"><Menu size={20} /></button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8">
-              {activeTab === 'documentation' ? <Documentation role="student" onBack={() => setActiveTab('home')} theme={theme} />
-              : activeTab === 'grades' ? <StudentGrades userId={currentUserId} onSelectBoard={onSelectBoard} theme={theme} userClasses={userClasses} userName={username} />
-              : activeTab === 'join' ? (
-                  <div className="flex flex-col items-center justify-center py-10 animate-in fade-in slide-in-from-bottom-2 relative min-h-[50vh]">
-                       <div className="w-full max-w-md bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
-                           <button onClick={() => setActiveTab('home')} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"><X size={20} /></button>
-                           <div className="w-20 h-20 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3 border border-blue-500/20 shadow-lg"><Hash size={40} /></div>
-                           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Join a Class</h2>
-                           <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 px-4">Enter the 6-digit code provided by your teacher.</p>
-                           <form onSubmit={handleJoinSubmit} className="space-y-6">
-                               <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6} className="w-full bg-slate-100 dark:bg-black/30 border-2 border-slate-200 dark:border-white/10 rounded-2xl py-5 text-3xl font-mono tracking-[0.5em] text-center text-slate-900 dark:text-white focus:border-blue-500 outline-one uppercase transition-colors placeholder:text-slate-400 dark:placeholder-white/10" autoFocus />
-                               {joinError && <p className="text-red-500 dark:text-red-400 text-xs font-bold">{joinError}</p>}
-                               <button type="submit" disabled={!joinCode || isJoining} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl disabled:opacity-50 transition-all shadow-lg">{isJoining ? 'Joining...' : 'Join Class'}</button>
-                           </form>
-                       </div>
-                  </div>
-              ) : (
-                  <>
-                      {/* Header */}
-                      <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white shadow-2xl animate-in fade-in slide-in-from-top-4 shrink-0">
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600"></div>
-                          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                          <div className="relative z-10">
-                              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-4 border border-white/10"><Sparkles size={12} className="text-yellow-300" /> Daily Inspiration</div>
-                              <h2 className="text-2xl md:text-4xl font-extrabold mb-4 leading-tight">Ready to learn, {username.split(' ')[0]}?</h2>
-                              <div className="flex gap-2 max-w-2xl items-start"><Quote size={20} className="text-white/50 shrink-0 mt-1" /><p className="text-lg font-medium text-white/90 italic leading-relaxed">"{randomQuote}"</p></div>
-                          </div>
-                      </div>
-
-                      {/* Search Bar */}
-                      <div className="flex">
-                          <div className="relative w-full md:max-w-md">
-                              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                              <input type="text" placeholder="Search your boards..." value={filter} onChange={(e) => setFilter(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all bg-white border border-slate-200 dark:bg-[#1a1a1a] dark:border-white/10 dark:text-white" />
-                          </div>
-                      </div>
-
-                      {/* Board Display */}
-                      {filteredBoards.length === 0 ? (
-                          <div className="text-center py-20 opacity-60 border-2 border-dashed border-gray-500/20 rounded-3xl bg-gray-50 dark:bg-white/5">
-                              <Trophy size={48} className="mx-auto mb-4 text-gray-400" />
-                              <p className="text-base font-bold text-gray-500">No boards found</p>
-                              <p className="text-sm text-gray-400 mt-1">Try adjusting your search or class filter.</p>
-                          </div>
-                      ) : (
-                          <div className="space-y-12 pb-20">
-                              {groupedBoards ? groupedBoards.map((group) => (
-                                  <div key={group.title} className="animate-fade-in">
-                                      <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
-                                      {renderBoardGrid(group.items)}
-                                  </div>
-                              )) : renderBoardGrid(filteredBoards)}
-                          </div>
-                      )}
-                  </>
-              )}
-          </div>
-      </div>
-    </div>
-  );
+    );
 };

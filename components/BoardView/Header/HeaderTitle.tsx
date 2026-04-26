@@ -26,7 +26,7 @@ export const HeaderTitle: React.FC = () => {
                         ? 'cursor-default' 
                         : 'hover:border-white/10 hover:bg-white/5 cursor-text'
                     }`}
-                    style={{ lineHeight: '1.3', padding: '4px 8px' }}
+                    style={{ lineHeight: '1.4', padding: '4px 12px 12px 12px' }}
                     placeholder="Untitled Board"
                 />
             </div>
