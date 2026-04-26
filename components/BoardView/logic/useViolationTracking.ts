@@ -54,25 +54,23 @@ export const useViolationTracking = ({
         // Primary Match by System ID
         const studentNotes = currentNotes.filter(n => n.author_id === userId);
         
-        // Secondary Fallback: Name match ONLY for students (Exclude Teachers)
-        const nameMatches = currentNotes.filter(n => 
-            n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && 
-            n.author_id !== userId &&
-            n.authorRole !== 'teacher' && // IMPORTANT: Never heal/flag a teacher's note
-            n.author !== 'Teacher'
-        );
+        // Secondary Fallback: Name match (Amnesty)
+        const nameMatches = currentNotes.filter(n => {
+            const isNameMatch = n.author?.trim().toLowerCase() === username?.trim().toLowerCase();
+            const isNotMe = n.author_id !== userId;
+            const isNotTeacher = n.authorRole !== 'teacher' && n.author !== 'Teacher';
+            
+            return isNameMatch && isNotMe && isNotTeacher;
+        });
 
-        // Combine ID matches and Name matches (Amnesty for ID mismatches)
-        const allMyNotes = [...studentNotes];
+        // Combine ID matches and Name matches
+        let allMyNotes = [...studentNotes];
         if (studentNotes.length === 0 && nameMatches.length > 0) {
             console.warn(`[FocusGuard] ID mismatch detected! Healing notes for "${username}"...`);
-            
-            // AUTO-REPAIR IDs: Update the author_id to match current session
             for (const n of nameMatches) {
                 updateNote(n.id, { author_id: userId } as any);
             }
-            
-            allMyNotes.push(...nameMatches);
+            allMyNotes = [...nameMatches];
         }
         
         if (allMyNotes.length === 0) {
@@ -80,34 +78,29 @@ export const useViolationTracking = ({
             return;
         }
 
-        console.log(`[FocusGuard] SUCCESS: Found ${allMyNotes.length} notes to flag/heal for ${username}.`);
+        // --- SPEED OPTIMIZATION: ONLY FLAG THE NEWEST NOTE ---
+        // Instead of hitting the DB for every note (slow), we pick the most recent one.
+        const newestNote = allMyNotes.sort((a, b) => b.createdAt - a.createdAt)[0];
 
-        for (const note of allMyNotes) {
-            // Check if the section this note belongs to has focus guard enabled
-            const section = board.sections?.find(s => s.id === note.sectionId);
+        console.log(`[FocusGuard] SUCCESS: Flagging newest note ${newestNote.id} for ${username}.`);
+
+        // Check if the section this note belongs to has focus guard enabled
+        const section = board.sections?.find(s => s.id === newestNote.sectionId);
+        
+        if (section?.isWatermarked || board.blockScreenshots) {
+            const currentViolations = newestNote.violation_count || 0;
             
-            // If the section is guarded (isWatermarked) or the global board security is on
-            if (section?.isWatermarked || board.blockScreenshots) {
-                const currentViolations = note.violation_count || 0;
-                
-                // --- SECURE LOCAL RECORDING ---
-                const localKey = getViolationKey(note.id);
-                const localCount = decryptViolationCount(localStorage.getItem(localKey));
-                
-                // Ensure we start from the highest known count (sync from DB if local is behind)
-                const baseCount = Math.max(currentViolations, localCount);
-                const newCount = baseCount + 1;
-                
-                console.log(`[FocusGuard] SECURE RECORD: Note ${note.id}. New total: ${newCount}`);
-                
-                // Save encrypted
-                localStorage.setItem(localKey, encryptViolationCount(newCount));
-                
-                // Trigger secure database sync via RPC
-                await incrementViolation(note.id, currentViolations);
-            } else {
-                console.log(`[FocusGuard] Skipping note ${note.id} - Section not guarded and global security is OFF.`);
-            }
+            // --- SECURE LOCAL RECORDING ---
+            const localKey = getViolationKey(newestNote.id);
+            const localCount = decryptViolationCount(localStorage.getItem(localKey));
+            
+            const baseCount = Math.max(currentViolations, localCount);
+            const newCount = baseCount + 1;
+            
+            localStorage.setItem(localKey, encryptViolationCount(newCount));
+            
+            // Trigger secure database sync via RPC
+            await incrementViolation(newestNote.id, currentViolations);
         }
     }, [isStudent, isSimulatingStudent, userId, username, board.sections, board.blockScreenshots, updateNote, incrementViolation]);
 

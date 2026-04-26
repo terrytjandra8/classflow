@@ -92,9 +92,12 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         
                         {/* Focus Violation Flag (Visible to teachers and the student themselves) */}
                         {((!isStudent) || (isStudent && isAuthor)) && (note.violation_count || 0) > 0 && (
-                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-red-500 text-white rounded-full text-[9px] font-black animate-pulse shadow-sm ml-1" title={`${note.violation_count} focus violations`}>
-                                <ShieldAlert size={10} />
-                                {note.violation_count}
+                            <div 
+                                className="flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-black shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-[pulse_1s_infinite] ml-1 border border-red-400/50" 
+                                title={`${note.violation_count} focus violations`}
+                            >
+                                <ShieldAlert size={11} className="animate-bounce" />
+                                <span className="tracking-tighter">{note.violation_count}</span>
                             </div>
                         )}
                     </span>
