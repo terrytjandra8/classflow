@@ -7,7 +7,7 @@ import { useBoard } from '../BoardContext';
 export const MapLayout: React.FC<any> = () => {
     const { 
         board, notes, openAddNote, canManageBoard,
-        deleteNote, likeNote, addComment, updateNote
+        deleteNote, likeNote, addComment, updateNote, userId
     } = useBoard();
 
     // Use a high-quality map background for this layout specifically
@@ -36,6 +36,7 @@ export const MapLayout: React.FC<any> = () => {
                         
                         <NoteCard 
                             note={note} 
+                            userId={userId}
                             commentsEnabled={board.commentsEnabled}
                             reactionsEnabled={board.reactionsEnabled}
                             onDelete={deleteNote}

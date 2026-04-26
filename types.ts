@@ -93,6 +93,7 @@ export interface Note {
   createdAt: number;
   updatedAt?: number;
   connections?: string[];
+  violation_count?: number; // NEW: Focus tracking (int4 in DB)
   // Assessment Specific
   submissionData?: {
       violations: number; // Number of tab switches

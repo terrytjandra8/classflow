@@ -35,7 +35,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, toggleSectionRearrange,
         toggleSectionCopy, toggleSectionWatermark,
-        deleteNote, likeNote, addComment, isPresentationMode
+        deleteNote, likeNote, addComment, isPresentationMode, userId
     } = useBoard();
 
     const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
@@ -467,7 +467,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                             <NoteCard 
                                 key={note.id} 
                                 note={note}
-                                userId={board.owner_id} // Pass teacher ID to allow editing
+                                userId={userId} 
                                 onDelete={deleteNote}
                                 onLike={likeNote}
                                 onAddComment={addComment}

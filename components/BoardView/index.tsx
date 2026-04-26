@@ -147,8 +147,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
             
             // If the section is guarded (isWatermarked) or the global board security is on
             if (section?.isWatermarked || board.blockScreenshots) {
-                const currentViolations = (note as any).violations || 0;
-                await updateNote(note.id, { violations: currentViolations + 1 } as any);
+                const currentViolations = note.violation_count || 0;
+                await updateNote(note.id, { violation_count: currentViolations + 1 });
             }
         }
     }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);

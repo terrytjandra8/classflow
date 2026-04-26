@@ -19,7 +19,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
         board, notes, updateBoard, openAddNote, canManageBoard,
         summarizeSection, sectionIdFilter, embeddedMode, updateNote, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionRearrange,
-        deleteNote, likeNote, addComment
+        deleteNote, likeNote, addComment, userId
     } = useBoard();
 
     // Prioritize prop if passed, else context
@@ -214,6 +214,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                 >
                                     <NoteCard 
                                         note={note} 
+                                        userId={userId}
                                         onAddBefore={() => handleAddRelative(note.id, 'before')}
                                         onAddAfter={() => handleAddRelative(note.id, 'after')}
                                         onMoveNote={handleMoveNote}

@@ -7,7 +7,7 @@ import { useBoard } from '../BoardContext';
 export const StreamLayout: React.FC<any> = () => {
     const { 
         board, notes, openAddNote, sectionIdFilter, canManageBoard,
-        deleteNote, likeNote, addComment, updateNote
+        deleteNote, likeNote, addComment, updateNote, userId
     } = useBoard();
 
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
@@ -37,6 +37,7 @@ export const StreamLayout: React.FC<any> = () => {
                     <div key={note.id} className="w-full">
                         <NoteCard 
                             note={note} 
+                            userId={userId}
                             canDrag={false} 
                             commentsEnabled={board.commentsEnabled}
                             reactionsEnabled={board.reactionsEnabled}
