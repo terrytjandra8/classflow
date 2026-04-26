@@ -11,9 +11,6 @@ type BoardUpdate = Database['public']['Tables']['boards']['Update'];
 
 export const boardService = {
     async getBoards() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
-
         // RLS policies handle visibility (Owner + Public + Published)
         const { data, error } = await supabase
             .from('boards')
