@@ -203,8 +203,8 @@ export const useNoteActions = ({
         // Removed: updateBoardTimestamp() - causing race conditions on busy boards
     }, [setNotes, onTouchBoard]);
     
-    const incrementViolation = useCallback(async (id: string) => {
-        console.log(`[FocusGuard] Calling secure RPC for note: ${id}`);
+    const incrementViolation = useCallback(async (id: string, currentCount: number = 0) => {
+        console.log(`[FocusGuard] Calling secure RPC for note: ${id}. Base count: ${currentCount}`);
         
         // Optimistic update for instant UI feedback
         setNotes(currentNotes => currentNotes.map(n => 
@@ -218,14 +218,14 @@ export const useNoteActions = ({
             console.error("[FocusGuard] RPC Error:", error.message);
             // Fallback: If RPC fails (e.g. not created yet), try a standard update as a last resort
             await supabase.from('notes').update({ 
-                violation_count: (notes.find(n => n.id === id)?.violation_count || 0) + 1 
+                violation_count: currentCount + 1 
             }).eq('id', id);
         } else {
             console.log(`[FocusGuard] Database successfully updated for note: ${id}`);
             // Clear local storage after successful DB sync
             localStorage.removeItem(getViolationKey(id));
         }
-    }, [setNotes, notes]);
+    }, [setNotes]);
 
     const deleteNote = useCallback(async (id: string) => {
         setNotes(currentNotes => {

@@ -169,7 +169,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 localStorage.setItem(localKey, encryptViolationCount(newCount));
                 
                 // Trigger secure database sync via RPC
-                await incrementViolation(note.id);
+                await incrementViolation(note.id, currentViolations);
             }
         }
     }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);
