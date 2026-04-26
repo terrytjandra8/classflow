@@ -138,7 +138,7 @@ export const mapNote = (row: NoteRow): Note => ({
     connections: safeParse(row.connections, []),
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
-    violation_count: row.violation_count || 0
+    violation_count: (row as any).violation_count || 0
 });
 
 // Helper for Math Parsing (Subscript/Superscript)
