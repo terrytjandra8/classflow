@@ -357,6 +357,7 @@ function AppContent() {
       const loadBoards = async () => {
           try {
               const data = await boardService.getBoards();
+              console.log('[AUTO-REFRESH] Polled', data.length, 'boards. Published:', data.filter(b => b.isPublished).map(b => b.title));
               if (isMounted) setBoards(data);
           } catch (e) {
               // Silent fail — guest users without auth will hit this
