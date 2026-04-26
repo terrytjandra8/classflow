@@ -17,7 +17,7 @@ export interface BoardContextType {
     addComment: (noteId: string, text: string, attachment?: any) => void;
     updateNote: (id: string, updates: Partial<Note>) => void;
     duplicateNote: (note: Note) => void;
-    openAddNote: (sectionId?: string | { x: number; y: number }) => void;
+    openAddNote: (config?: string | { x?: number; y?: number; sectionId?: string; relativeId?: string; position?: 'before' | 'after' }) => void;
     
     // NEW: Trigger edit mode in the centralized modal
     openEditNote: (note: Note) => void;

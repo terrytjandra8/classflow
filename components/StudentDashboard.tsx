@@ -370,7 +370,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             />
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+            <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative pb-16 md:pb-0">
                 {/* Mobile Header */}
                 <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-10">
                     <div className="flex items-center gap-2">
@@ -426,7 +426,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             <p className="text-sm text-gray-400 mt-1">Try adjusting your search or class filter.</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-12 pb-20">
+                                        <div className="space-y-12">
                                             {groupedBoards ? groupedBoards.map((group) => (
                                                 <div key={group.title} className="animate-fade-in">
                                                     <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
@@ -438,6 +438,33 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 </>
                             )}
                 </div>
+            </div>
+
+            {/* Mobile Bottom Navigation */}
+            <div className={`md:hidden fixed bottom-0 left-0 right-0 h-16 border-t z-50 flex items-center justify-around ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#0a0a0a] border-white/10'}`}>
+                <button 
+                    onClick={() => setActiveTab('home')} 
+                    className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'home' ? 'text-pink-500' : 'text-gray-500'}`}
+                >
+                    <Home size={20} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
+                    <span className="text-[10px] font-medium">Home</span>
+                </button>
+                
+                <button 
+                    onClick={() => setActiveTab('join')} 
+                    className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'join' ? 'text-pink-500' : 'text-gray-500'}`}
+                >
+                    <Hash size={20} strokeWidth={activeTab === 'join' ? 2.5 : 2} />
+                    <span className="text-[10px] font-medium">Join</span>
+                </button>
+
+                <button 
+                    onClick={() => setActiveTab('grades')} 
+                    className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'grades' ? 'text-pink-500' : 'text-gray-500'}`}
+                >
+                    <GraduationCap size={20} strokeWidth={activeTab === 'grades' ? 2.5 : 2} />
+                    <span className="text-[10px] font-medium">Grades</span>
+                </button>
             </div>
         </div>
     );

@@ -272,7 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
+      <div className="flex-1 overflow-hidden relative pb-16 md:pb-0">
           {activeTab === 'home' && (
              <Home 
                 boards={boards}

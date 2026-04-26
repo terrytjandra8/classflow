@@ -98,7 +98,7 @@ export const Home: React.FC<HomeProps> = ({
     );
 
     return (
-        <div className="flex h-full flex-col md:flex-row pb-16 md:pb-0 relative overflow-hidden">
+        <div className="flex h-full flex-col md:flex-row relative overflow-hidden">
             {/* Desktop Sidebar */}
             {!isStudent && (
                 <div className={`w-64 shrink-0 flex-col py-6 pr-4 pl-6 hidden md:flex border-r h-full ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[#111111] border-white/5'}`}>
@@ -234,7 +234,7 @@ export const Home: React.FC<HomeProps> = ({
                             </p>
                         </div>
                     ) : (
-                        <div className="pb-20">
+                        <div className="pb-4">
                             {groupedBoards ? (
                                 <div className="space-y-12">
                                     {groupedBoards.map((group) => (

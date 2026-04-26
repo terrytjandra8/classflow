@@ -222,7 +222,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const backgroundStyle = resolveBackgroundStyle(board.wallpaper, theme);
     const fontClass = board.font === 'serif' ? 'font-serif' : board.font === 'mono' ? 'font-mono' : board.font === 'hand' ? 'font-hand' : 'font-sans';
 
-    const openAddNoteModal = useCallback((location?: string | { x: number; y: number }) => {
+    const openAddNoteModal = useCallback((location?: any) => {
         if (isPresentationMode) return;
         setAddNoteLocation(location);
         setPendingPasteImage(null);

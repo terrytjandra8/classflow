@@ -141,14 +141,14 @@ export const BoardCard: React.FC<BoardCardProps> = ({
         <div 
             onClick={handleCardClick} 
             onContextMenu={(e) => onMenuOpen(e, board.id)}
-            className={`group relative rounded-2xl overflow-hidden h-96 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl border ${isExiting ? 'animate-exit-card' : (disableAnimation ? '' : 'animate-enter-card')} ${
+            className={`group relative rounded-2xl overflow-hidden h-72 sm:h-96 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl border ${isExiting ? 'animate-exit-card' : (disableAnimation ? '' : 'animate-enter-card')} ${
                 viewMode === 'trashed' 
                 ? 'opacity-70 bg-[#111] border-white/5' 
                 : (theme === 'light' ? 'bg-white border-slate-200 hover:border-blue-300 cursor-pointer' : 'bg-[#1a1a1a] hover:bg-[#202020] border-white/5 cursor-pointer')
             }`}
         >
-            <div className={`h-32 relative overflow-hidden shrink-0 transition-all duration-500`} style={bgStyle}>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] to-transparent opacity-80" />
+            <div className={`h-24 sm:h-32 relative overflow-hidden shrink-0 transition-all duration-500`} style={bgStyle}>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] to-transparent opacity-60" />
                 
                 {board.icon && (
                     <div className="absolute bottom-2 left-4 text-4xl shadow-xl filter drop-shadow-lg scale-100 group-hover:scale-110 transition-transform duration-300 font-emoji origin-bottom-left">

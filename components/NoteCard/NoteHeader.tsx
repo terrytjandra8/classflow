@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { ShieldCheck, MoreVertical, X, Pin, Ghost } from 'lucide-react';
+import { ShieldCheck, MoreVertical, X, Pin, Ghost, ShieldAlert } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
 import { NoteMenu } from './NoteMenu';
 import { Avatar } from '../ui/Avatar';
