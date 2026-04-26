@@ -503,9 +503,10 @@ export const BoardView: React.FC<BoardViewProps> = ({
         
         return (
             <ScreenshotGuard 
-                isEnabled={protectionEnabled} 
+                blockScreenshots={protectionEnabled} 
                 studentName={username}
                 onViolation={handleViolation}
+                boardId={board.id}
             >
                 {content}
             </ScreenshotGuard>

@@ -3,13 +3,14 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ShieldAlert, UserCheck, Lock, Activity } from 'lucide-react';
 
 interface ScreenshotGuardProps {
-    isEnabled: boolean;
+    blockScreenshots: boolean;
     children: React.ReactNode;
     studentName?: string;
     onViolation?: (type: 'security' | 'focus') => void;
+    boardId?: string;
 }
 
-export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, children, studentName = "Student", onViolation }) => {
+export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreenshots: isEnabled, children, studentName = "Student", onViolation, boardId }) => {
     const [lockType, setLockType] = useState<'security' | 'focus' | null>(null);
     const lockTypeRef = useRef<'security' | 'focus' | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -62,10 +63,14 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ isEnabled, chi
 
         window.addEventListener('keydown', handleKeyDown, true);
         window.addEventListener('blur', () => applyShield('focus'));
+        window.addEventListener('mouseleave', () => applyShield('focus'));
         window.addEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
+
+        console.log(`[FocusGuard] Security Guard ARMED for board: ${boardId || 'unknown'}`);
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, true);
+            window.removeEventListener('mouseleave', () => applyShield('focus'));
             releaseShield();
         };
     }, [isEnabled, applyShield, releaseShield]);
