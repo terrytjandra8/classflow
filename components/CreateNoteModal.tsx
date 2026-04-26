@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { X, Image, Link, Type, PenTool, UploadCloud, ShieldAlert, Palette, Edit3, Check } from 'lucide-react';
 import { NoteColor, NoteType, Note } from '../types';
 import { supabase } from '../services/supabaseClient';
-import { RichTextEditor } from './RichTextEditor';
+import { RichTextEditor, DebouncedRichTextEditor } from './RichTextEditor';
 import { DrawingCanvas } from './ui/DrawingCanvas';
 import { getColorName } from '../utils/theme';
 import { useBoard } from './BoardView/BoardContext';
@@ -79,39 +79,47 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const [drawingUrl, setDrawingUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  
+  // Drag & Resize State
   const [author, setAuthor] = useState(defaultAuthor || 'Student');
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [size, setSize] = useState({ width: 672, height: 'auto' as number | string }); 
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const [hasDraftRestored, setHasDraftRestored] = useState(false);
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null); // Ref for the content area to protect
+  const contentRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<any>(null);
   const dragStart = useRef({ x: 0, y: 0 });
-  // Incremented each time the modal opens so the RichTextEditor always remounts
-  // fresh and re-initialises its contentEditable DOM with the correct value.
+  const resizeStart = useRef({ w: 0, h: 0, x: 0, y: 0 });
   const openCountRef = useRef(0);
   const [editorKey, setEditorKey] = useState('initial');
 
   const isEditing = !!noteToEdit;
-  // Scope draft per board AND per section/column so different columns keep separate drafts
   const sectionSuffix = activeSectionId ? `_${activeSectionId}` : '';
   const draftKey = `note_draft_${board?.id || 'global'}${sectionSuffix}`;
   
-  // Apply the advanced paste protection
   const { pasteWarning, onPaste: honeypotPasteHandler } = usePasteProtection({
       isStudent,
       disablePaste,
       allowLinks,
-      targetRef: contentRef // The real listener watches this element
+      targetRef: contentRef
   });
 
   // --- Effects ---
 
   useEffect(() => {
-    const handleResize = () => setPosition({ x: 0, y: 0 });
+    const handleResize = () => {
+        setPosition({ x: 0, y: 0 });
+        if (window.innerWidth < 768) {
+            setSize({ width: '100%', height: '100%' });
+        } else {
+            setSize({ width: 672, height: 'auto' });
+        }
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -128,14 +136,18 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
       if (isOpen && isEditing && noteToEdit) setAuthor(noteToEdit.author);
   }, [isOpen, defaultAuthor, isEditing, noteToEdit]);
 
-  // State reset and pre-fill logic
   useEffect(() => {
     if (isOpen) {
-      // Bump the open counter so the RichTextEditor gets a new key and
-      // fully remounts with whatever content we're about to set below.
       openCountRef.current += 1;
       setEditorKey(`${noteToEdit?.id || 'new'}-${openCountRef.current}`);
       setPosition({ x: 0, y: 0 });
+      
+      if (window.innerWidth < 768) {
+          setSize({ width: '100%', height: '100%' });
+      } else {
+          setSize({ width: 672, height: 'auto' });
+      }
+
       if (noteToEdit) {
           setTitle(noteToEdit.title || '');
           setContent(noteToEdit.content || '');
@@ -145,7 +157,6 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           else if (noteToEdit.type === 'drawing') setDrawingUrl(noteToEdit.content);
           else if (noteToEdit.type === 'link') setAttachmentUrl(noteToEdit.attachmentUrl || '');
       } else {
-          // Try to restore a draft from localStorage
           const savedDraft = localStorage.getItem(draftKey);
           if (savedDraft) {
               try {
@@ -175,18 +186,32 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
       }
     } else {
         setTypingStatus(false);
+        // CRITICAL: Clear state when closing to prevent stale data from leaking 
+        // into the next column's draft via the auto-save race condition.
+        setTitle('');
+        setContent('');
+        setImageBase64(null);
+        setImageFile(null);
+        setDrawingBlob(null);
+        setDrawingUrl(null);
+        setAttachmentUrl('');
     }
-  }, [isOpen, initialImage, noteToEdit]);
+  }, [isOpen, initialImage, noteToEdit, draftKey, activeSectionId]);
 
-  // Auto-save draft to localStorage while typing (text mode only)
+  // Auto-save draft
   useEffect(() => {
       if (!isOpen || isEditing) return;
-      const draft = { title, content, attachmentUrl, activeMode };
-      // Only persist if there's something worth saving
-      if (title || content || attachmentUrl) {
-          localStorage.setItem(draftKey, JSON.stringify(draft));
+      
+      // Don't save if it's just the initial empty state or just being reset
+      if (!title && !content && !attachmentUrl) {
+          // If we intentionally cleared it, we might want to remove the draft, 
+          // but let's be careful. For now, just don't overwrite with empty.
+          return;
       }
-  }, [title, content, attachmentUrl, activeMode, isOpen, isEditing]);
+
+      const draft = { title, content, attachmentUrl, activeMode };
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [title, content, attachmentUrl, activeMode, isOpen, isEditing, draftKey]);
 
   // --- Handlers ---
 
@@ -222,26 +247,18 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
     setTypingStatus(false);
     try {
         let finalContent = content;
-        let finalType: NoteType = activeMode;
-
-        if (activeMode === 'image' && imageFile) {
-          finalContent = await handleUploadFile(imageFile) || ''
-        } else if (activeMode === 'image' && imageBase64) {
-          finalContent = imageBase64;
-        } else if (activeMode === 'drawing' && drawingBlob) {
-          finalContent = await handleUploadFile(drawingBlob) || ''
-        } else if (activeMode === 'drawing' && drawingUrl) {
-          finalContent = drawingUrl;
-        } 
+        if (activeMode === 'image' && imageFile) finalContent = await handleUploadFile(imageFile) || '';
+        else if (activeMode === 'image' && imageBase64) finalContent = imageBase64;
+        else if (activeMode === 'drawing' && drawingBlob) finalContent = await handleUploadFile(drawingBlob) || '';
+        else if (activeMode === 'drawing' && drawingUrl) finalContent = drawingUrl;
         
         if (!finalContent && !title && !isEditing && activeMode !== 'link') return;
         if (activeMode === 'link' && !attachmentUrl && !isEditing) return;
 
         await onSubmit({
-            title, content: finalContent, author, color: selectedColor, type: finalType,
+            title, content: finalContent, author, color: selectedColor, type: activeMode,
             attachmentUrl: activeMode === 'link' ? attachmentUrl : undefined
         });
-        // Clear draft on success
         localStorage.removeItem(draftKey);
         onClose();
     } catch (e) {
@@ -253,7 +270,6 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   };
   
   const onPaste = (e: React.ClipboardEvent, sourceInput?: 'link-url') => {
-      // 1. Handle image pasting first
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {
           if (items[i].type.indexOf('image') !== -1) {
@@ -262,18 +278,11 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                   e.preventDefault();
                   processImageFile(file);
                   setActiveMode('image');
-                  return; // Stop processing
+                  return;
               }
           }
       }
-
-      // 2. Allow pasting in the link URL field
-      if (activeMode === 'link' && sourceInput === 'link-url') {
-          return;
-      }
-
-      // 3. If no special case matched, call the decoy paste handler.
-      // The REAL protection is happening globally from the hook.
+      if (activeMode === 'link' && sourceInput === 'link-url') return;
       honeypotPasteHandler(e);
   };
 
@@ -283,14 +292,36 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
       dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
   };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-      if (isDragging) setPosition({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
-  }, [isDragging]);
+  const handleResizeStart = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+      const rect = modalRef.current?.getBoundingClientRect();
+      if (rect) {
+          resizeStart.current = { w: rect.width, h: rect.height, x: e.clientX, y: e.clientY };
+      }
+  };
 
-  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+      if (isDragging) {
+          setPosition({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
+      } else if (isResizing) {
+          const deltaX = e.clientX - resizeStart.current.x;
+          const deltaY = e.clientY - resizeStart.current.y;
+          setSize({ 
+              width: Math.max(450, resizeStart.current.w + deltaX), 
+              height: Math.max(400, resizeStart.current.h + deltaY) 
+          });
+      }
+  }, [isDragging, isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+      setIsDragging(false);
+      setIsResizing(false);
+  }, []);
 
   useEffect(() => {
-      if (isDragging) {
+      if (isDragging || isResizing) {
           window.addEventListener('mousemove', handleMouseMove);
           window.addEventListener('mouseup', handleMouseUp);
       } else {
@@ -301,7 +332,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
           window.removeEventListener('mousemove', handleMouseMove);
           window.removeEventListener('mouseup', handleMouseUp);
       };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   if (!isOpen) return null;
 
@@ -309,13 +340,23 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
       <div
         ref={modalRef}
         style={{ 
-            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`
+            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+            width: size.width,
+            height: size.height
         }}
-        className="fixed top-1/2 left-1/2 z-[1000] w-full h-full md:h-auto md:max-w-2xl bg-[#0a0a0a]/90 backdrop-blur-2xl border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow"
+        className="fixed top-1/2 left-1/2 z-[1000] bg-[#0a0a0a]/90 backdrop-blur-2xl border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow overflow-hidden group"
       >
             <div className="absolute inset-0 pointer-events-none z-0 md:rounded-3xl overflow-hidden">
                 <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] animate-blob"></div>
                 <div className="absolute bottom-[-50%] right-[-20%] w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
+            </div>
+
+            {/* Resize Handle */}
+            <div 
+                className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize z-[100] flex items-end justify-end p-1 hover:bg-white/5 transition-colors group/handle md:block hidden"
+                onMouseDown={handleResizeStart}
+            >
+                <div className="w-4 h-4 border-r-2 border-b-2 border-white/20 group-hover/handle:border-white/40 transition-colors rounded-br-sm" />
             </div>
 
             {pasteWarning && (
@@ -364,7 +405,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
             </div>
 
-            <div ref={contentRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[250px] bg-black/20 flex flex-col" onMouseDown={e => e.stopPropagation()}>
+            <div ref={contentRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[300px] bg-black/20 flex flex-col" onMouseDown={e => e.stopPropagation()}>
                 <input 
                     type="text" value={title} onChange={(e) => { setTitle(e.target.value); handleTyping(); }}
                     placeholder="Add a title..."
@@ -374,10 +415,8 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 />
 
                 {activeMode === 'text' && (
-                    <div className="h-full min-h-[200px]">
-                        {/* editorKey changes on every open so the editor always remounts
-                            with the correct initial value (draft or note content) */}
-                        <RichTextEditor key={editorKey} value={content} onChange={(val) => { setContent(val); handleTyping(); }} placeholder="Type something amazing..." className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed" onPaste={(e) => onPaste(e)} />
+                    <div className="flex-1 min-h-[250px] overflow-auto custom-scrollbar">
+                        <DebouncedRichTextEditor key={editorKey} value={content} onChange={(val: string) => { setContent(val); handleTyping(); }} placeholder="Type something amazing..." className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed" onPaste={(e: React.ClipboardEvent) => onPaste(e)} />
                     </div>
                 )}
 
@@ -404,20 +443,20 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                             <div className="p-2 sm:p-3 bg-indigo-500/20 rounded-xl text-indigo-400"><Link size={20} /></div>
                             <input type="url" value={attachmentUrl} onChange={(e) => setAttachmentUrl(e.target.value)} onPaste={(e) => onPaste(e, 'link-url')} placeholder="Paste a URL..." className="w-full bg-transparent text-white outline-none placeholder-white/30 text-base sm:text-lg" autoFocus={!isEditing} />
                         </div>
-                        <textarea value={content} onChange={(e) => { setContent(e.target.value); handleTyping(); }} onPaste={(e) => onPaste(e)} placeholder="Add a caption..." className="w-full bg-transparent text-white/70 outline-none resize-none p-2" rows={3} />
+                        <textarea value={content} onChange={(e) => { setContent(e.target.value); handleTyping(); }} onPaste={(e) => onPaste(e)} placeholder="Add a caption..." className="w-full bg-transparent text-white/70 outline-none resize-y p-2 border border-white/5 rounded-lg focus:border-indigo-500/50 transition-all" rows={3} />
                     </div>
                 )}
             </div>
 
-            <div className="relative z-10 bg-[#0a0a0a] border-t border-white/5 md:rounded-b-3xl" onMouseDown={e => e.stopPropagation()}>
-                <div className="px-4 md:px-6 pt-3 pb-1">
-                    <div className="flex items-center gap-1.5 mb-2"><Palette size={12} className="text-gray-500" /><span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Select Color</span></div>
-                    <div className="flex flex-wrap gap-2 justify-start py-3">
+            <div className="relative z-10 bg-[#0a0a0a] border-t border-white/5 md:rounded-b-3xl shrink-0 flex flex-col" onMouseDown={e => e.stopPropagation()}>
+                <div className="px-4 md:px-6 pt-3 pb-1 max-h-32 overflow-y-auto custom-scrollbar">
+                    <div className="flex items-center gap-1.5 mb-2 sticky top-0 bg-[#0a0a0a] z-10 py-1"><Palette size={12} className="text-gray-500" /><span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Select Color</span></div>
+                    <div className="flex flex-wrap gap-2 justify-start py-1">
                         {COLORS.map(color => <ColorOrb key={color} color={color} selected={selectedColor === color} onClick={() => setSelectedColor(color)} /> )}
                     </div>
                 </div>
 
-                <div className="px-4 md:px-6 pb-4 pt-2 border-t border-white/5 mt-[-1px]">
+                <div className="px-4 md:px-6 pb-4 pt-2 border-t border-white/5 mt-[-1px] bg-[#0a0a0a]">
                     <button onClick={handleSubmit} disabled={isUploading || (activeMode === 'text' && !content && !title && !isEditing) || (activeMode === 'image' && !imageBase64)} className="w-full sm:w-auto bg-white text-black hover:bg-indigo-50 px-8 py-3 rounded-full font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2">
                         {isUploading ? (isEditing ? 'Updating...' : 'Posting...') : (isEditing ? 'Update Note' : 'Post Note')}
                     </button>
