@@ -118,8 +118,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         );
 
         // 2. Filter by the selected class in the sidebar.
+        // SMART OVERRIDE: If a board is "New" (just went live), we show it even if it doesn't match the filter
+        // so the student doesn't miss the entrance animation.
         if (selectedClassFilter !== 'All Boards') {
-            result = result.filter(b => b.targetGrade === selectedClassFilter);
+            result = result.filter(b => {
+                const isNew = !sessionSeenBoardIds.has(b.id);
+                return isNew || b.targetGrade === selectedClassFilter;
+            });
         }
 
         // 3. Filter by the search input text.
@@ -135,13 +140,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     useEffect(() => {
         // Sync local displayBoards with incoming boardsProp from parent/DB
         // This is the core 'auto-refresh' mechanism
-        setDisplayBoards(boardsProp);
+        if (JSON.stringify(displayBoards.map(b => b.id + b.isPublished)) !== JSON.stringify(boardsProp.map(b => b.id + b.isPublished))) {
+             setDisplayBoards(boardsProp);
+        }
 
         // Mark boards as seen only AFTER they have had time to animate in
         // IMPORTANT: Only mark as seen if they are actually visible to the student!
         const seenTimer = setTimeout(() => {
-            filteredBoards.forEach(b => sessionSeenBoardIds.add(b.id));
-        }, 2000); // 2s is safely longer than the entrance animation
+            const currentlyVisible = filteredBoards.map(b => b.id);
+            currentlyVisible.forEach(id => sessionSeenBoardIds.add(id));
+        }, 3000); // 3s for extra safety
 
         return () => clearTimeout(seenTimer);
     }, [boardsProp]); // ONLY depend on the raw data stream
