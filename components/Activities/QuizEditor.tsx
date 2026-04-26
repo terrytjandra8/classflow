@@ -238,7 +238,6 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                             onTouchStart={onTouchStart}
                             onTouchMove={onTouchMove}
                             onTouchEnd={onTouchEnd}
-                            onDrop={() => {}} // Drop handled by onDragEnd logic
                         />
                     ))}
                     <button onClick={addQuestion} className="h-24 lg:h-auto min-w-[3.5rem] lg:w-full lg:py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-xl lg:rounded-2xl text-gray-500 hover:text-purple-400 flex items-center justify-center shrink-0 gap-2 font-black text-[10px] uppercase transition-all"><Plus size={16} /></button>
