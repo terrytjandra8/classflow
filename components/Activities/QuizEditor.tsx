@@ -127,18 +127,24 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
         }
     });
 
-    const updateCurrentQ = (updates: Partial<QuizQuestion>) => {
+    const updateCurrentQ = (updates: Partial<QuizQuestion & { text: string }>) => {
         const newQs = [...localQuestions];
         if (newQs[activeIndex]) {
-            newQs[activeIndex] = { ...newQs[activeIndex], ...updates };
+            // If updating question, sync to text and vice versa
+            const syncedUpdates = { ...updates };
+            if ('question' in updates) (syncedUpdates as any).text = updates.question;
+            if ('text' in updates) (syncedUpdates as any).question = (updates as any).text;
+            
+            newQs[activeIndex] = { ...newQs[activeIndex], ...syncedUpdates };
             setLocalQuestions(newQs);
         }
     };
 
     const addQuestion = () => {
-        const newQ: QuizQuestion = {
+        const newQ: QuizQuestion & { text: string } = {
             id: Math.random().toString(36).substr(2, 9),
             question: "",
+            text: "",
             options: ["", "", "", ""],
             correctIndex: 0,
             timeLimit: 20,
@@ -156,7 +162,13 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
     };
 
     const handleSaveAndClose = () => {
-        onUpdateBoard({ quizQuestions: localQuestions });
+        onUpdateBoard({ 
+            quizQuestions: localQuestions,
+            assessmentQuestions: localQuestions as any, // Sync both for compatibility
+            isPublished: true, // Ensure it appears on student dashboard
+            isPublic: true,
+            updatedAt: Date.now()
+        });
         if (onClose) onClose();
     };
 
@@ -200,7 +212,12 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                     <div className="flex items-center gap-2 lg:gap-3">
                         <div className="w-8 lg:w-10 h-8 lg:h-10 bg-purple-600 rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg"><Layout size={18} /></div>
                         <div>
-                            <h1 className="font-black text-xs lg:text-sm tracking-tight">Quiz Editor</h1>
+                            <div className="flex items-center gap-2">
+                                <h1 className="font-black text-xs lg:text-sm tracking-tight">Quiz Editor</h1>
+                                <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${showConfig ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'}`}>
+                                    {showConfig ? 'Live' : 'Draft'}
+                                </div>
+                            </div>
                             <p className="text-[8px] lg:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Slide {activeIndex + 1}</p>
                         </div>
                     </div>
@@ -365,6 +382,27 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                             </h3>
                             
                             <div className="space-y-6">
+                                {/* Visibility Toggle */}
+                                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center text-white shadow-lg">
+                                                <Eye size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-white">Publish Board</p>
+                                                <p className="text-[8px] font-bold text-purple-400/70">Visible to students</p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => onUpdateBoard({ isPublished: true, isPublic: true })}
+                                            className="w-10 h-5 bg-purple-600 rounded-full relative transition-all"
+                                        >
+                                            <div className="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 {/* Points Mode */}
                                 <div className="space-y-3">
                                     <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Points Mode</label>
