@@ -161,7 +161,7 @@ function AppContent() {
                         setView('dashboard');
                     }
                 } else {
-                    setView('landing');
+                    setView('dashboard');
                 }
             } else if (boardId) {
                 // Guest access logic stays standard...
@@ -365,11 +365,18 @@ function AppContent() {
     }, [session, isGuest]);
     // Initial fetch and auto-refresh for dashboard
     useEffect(() => {
+        console.log('[POLL-DEBUG] root App.tsx useEffect', { view, hasSession: !!session, isGuest });
         if (view === 'dashboard' && (session || isGuest)) {
-            fetchBoards();
+            const poll = async () => {
+                console.log('[POLL-ACTION] Fetching boards...');
+                const data = await fetchBoards();
+                console.log('[POLL-RESULT] Received', data.length, 'boards. Published:', data.filter(b => b.isPublished).map(b => b.title));
+            };
+            
+            poll();
 
             // Poll every 5 seconds as a fail-proof fallback
-            const interval = setInterval(fetchBoards, 5000);
+            const interval = setInterval(poll, 5000);
             return () => clearInterval(interval);
         }
     }, [view, session, isGuest]);

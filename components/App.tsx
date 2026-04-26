@@ -84,6 +84,7 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
+  console.log('[APP-MOUNT] AppContent is rendering');
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'auth' | 'dashboard' | 'board'>('auth');
