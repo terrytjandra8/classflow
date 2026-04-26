@@ -83,7 +83,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   // Drag & Resize State
   const [author, setAuthor] = useState(defaultAuthor || 'Student');
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ width: 672, height: 'auto' as number | string }); 
+  const [size, setSize] = useState({ width: 672 as number | string, height: 'auto' as number | string }); 
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [hasDraftRestored, setHasDraftRestored] = useState(false);
