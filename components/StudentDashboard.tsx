@@ -180,7 +180,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 return (
                     <div
                         key={board.id}
-                        style={{ animationDelay: isNew ? `${idx * 75}ms` : '0ms' }}
+                        style={{ animationDelay: isNew ? `${idx * 150}ms` : '0ms' }}
                         className={isNew ? '' : '[&_.animate-enter-card]:animate-none'}
                     >
                         <BoardCard

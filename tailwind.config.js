@@ -27,8 +27,8 @@ export default {
         'blob': 'blob 7s infinite',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'gradient-x': 'gradient-x 15s ease infinite',
-        'enter-card': 'enter-card 0.4s ease-out forwards',
-        'exit-card': 'exit-card 0.3s ease-in forwards',
+        'enter-card': 'enter-card 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'exit-card': 'exit-card 0.7s ease-in forwards',
       },
       keyframes: {
         blob: {
