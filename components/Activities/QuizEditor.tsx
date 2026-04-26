@@ -374,8 +374,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                         <Settings2 size={12} className="rotate-90" />
                     </button>
 
-                    <aside className={`hidden lg:relative z-[250] lg:z-[205] bg-[#161616] border-l border-white/10 transition-all duration-500 ease-in-out flex flex-col shrink-0 h-full overflow-y-auto custom-scrollbar lg:w-auto ${showConfig ? 'lg:w-80 opacity-100' : 'lg:w-0 lg:border-l-0 opacity-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto'}`}>
-                        <div className={`p-6 flex flex-col gap-6 w-full lg:w-80 transition-opacity duration-300 ${showConfig ? 'opacity-100' : 'opacity-0 lg:opacity-100'}`}>
+                  <aside className={`lg:relative z-[250] lg:z-[205] bg-[#161616] border-white/10 transition-all duration-500 ease-in-out flex flex-col shrink-0 h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${showConfig ? 'lg:w-80 lg:border-l opacity-100 pointer-events-auto' : 'lg:w-0 lg:border-l-0 opacity-0 pointer-events-none'}`}>
+                            <div className={`p-6 flex flex-col gap-6 w-80 transition-opacity duration-300 ${showConfig ? 'opacity-100' : 'opacity-0'}`}>
                             <div className="flex lg:hidden justify-center mb-2"><div className="w-12 h-1 bg-white/10 rounded-full" onClick={() => setShowConfig(false)}></div></div>
                             <h3 className="font-black text-[10px] lg:text-xs text-gray-500 uppercase tracking-[0.2em] flex items-center justify-between">
                                 <span className="flex items-center gap-2"><Settings2 size={14} className="text-purple-500" /> Slide Config</span>
