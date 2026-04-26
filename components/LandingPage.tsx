@@ -258,26 +258,61 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoogleLogin
         const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
 
-        // Initialize Google One Tap
-        const clientID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-        if (!clientID || typeof window === 'undefined' || !(window as any).google) return;
+        // Robust Google One Tap Initialization
+        let retryCount = 0;
+        const initOneTap = () => {
+            const clientID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+            
+            if (!clientID) {
+                console.warn("Google One Tap: VITE_GOOGLE_CLIENT_ID is missing.");
+                return;
+            }
 
-        try {
-            (window as any).google.accounts.id.initialize({
-                client_id: clientID,
-                callback: (response: any) => {
-                    supabase.auth.signInWithIdToken({
-                        provider: 'google',
-                        token: response.credential,
-                    }).then(() => onStart());
+            if (!(window as any).google?.accounts?.id) {
+                if (retryCount < 10) {
+                    retryCount++;
+                    setTimeout(initOneTap, 500);
+                } else {
+                    console.warn("Google One Tap: Google script not loaded after retries.");
                 }
-            });
-            (window as any).google.accounts.id.prompt();
-        } catch (err) {
-            console.error("Google One Tap Error:", err);
-        }
+                return;
+            }
 
-        return () => window.removeEventListener('scroll', handleScroll);
+            try {
+                (window as any).google.accounts.id.initialize({
+                    client_id: clientID,
+                    callback: async (response: any) => {
+                        try {
+                            const { error } = await supabase.auth.signInWithIdToken({
+                                provider: 'google',
+                                token: response.credential,
+                            });
+                            if (error) throw error;
+                            onStart();
+                        } catch (err) {
+                            console.error("Google One Tap Auth Error:", err);
+                        }
+                    },
+                    auto_select: true, // Optional: attempts to sign in automatically
+                });
+                
+                (window as any).google.accounts.id.prompt((notification: any) => {
+                    if (notification.isNotDisplayed()) {
+                        console.log("One Tap not displayed:", notification.getNotDisplayedReason());
+                    }
+                });
+            } catch (err) {
+                console.error("Google One Tap Init Error:", err);
+            }
+        };
+
+        // Delay slightly to ensure script has a chance to execute
+        const timer = setTimeout(initOneTap, 1000);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            clearTimeout(timer);
+        };
     }, [onStart]);
 
     return (
