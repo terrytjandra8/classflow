@@ -350,6 +350,7 @@ function AppContent() {
 
   // Fetch boards on dashboard load + auto-refresh every 10 seconds for live updates
   useEffect(() => {
+      console.log('[POLL-DEBUG] view=', view, 'session=', !!session, 'isGuest=', isGuest);
       if (view !== 'dashboard' || (!session && !isGuest)) return;
 
       let isMounted = true;
