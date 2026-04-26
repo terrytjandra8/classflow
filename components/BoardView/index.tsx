@@ -141,17 +141,33 @@ export const BoardView: React.FC<BoardViewProps> = ({
         if (now - lastViolationTime.current < 2000) return;
         lastViolationTime.current = now;
 
-        console.log(`[FocusGuard] ${type.toUpperCase()} violation detected! Checking notes for: ${username} (ID: ${userId})`);
+        console.log(`[FocusGuard] ${type.toUpperCase()} violation detected!`);
+        console.log(`[FocusGuard] Current User System ID: ${userId}`);
+        
+        // --- SECURE ID AUDIT ---
+        // Let's see exactly what IDs are in the current notes list
+        if (notes.length > 0) {
+            console.log("[FocusGuard] Note ID Audit (First 5 notes):", 
+                notes.slice(0, 5).map(n => ({ author: n.author, id: n.author_id }))
+            );
+        }
 
-        // Match by ID OR Name (to be safe during ID transitions)
-        const studentNotes = notes.filter(n => n.author_id === userId || (n.author === username && n.author !== 'Anonymous'));
+        // Primary Match by System ID
+        const studentNotes = notes.filter(n => n.author_id === userId);
+        
+        // Secondary Fallback for debugging (Name match)
+        const nameMatches = notes.filter(n => n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.author_id !== userId);
         
         if (studentNotes.length === 0) {
-            console.log(`[FocusGuard] No notes found matching user "${username}" or ID "${userId}".`);
+            if (nameMatches.length > 0) {
+                console.warn(`[FocusGuard] CRITICAL ID MISMATCH! Found ${nameMatches.length} notes with your name "${username}", but they have a different ID: "${nameMatches[0].author_id}". Your ID is "${userId}".`);
+            } else {
+                console.log(`[FocusGuard] No notes found for user ID ${userId}.`);
+            }
             return;
         }
 
-        console.log(`[FocusGuard] Found ${studentNotes.length} notes to evaluate for security rules.`);
+        console.log(`[FocusGuard] SUCCESS: Found ${studentNotes.length} matching notes for ID ${userId}.`);
 
         for (const note of studentNotes) {
             // Check if the section this note belongs to has focus guard enabled
