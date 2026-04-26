@@ -431,7 +431,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                                         <IconCopyOff size={14} />
                                     </button>
                                 </Tooltip>
-                                <Tooltip content={section.isWatermarked ? "Disable AI Protection" : "Enable AI Protection (Anti-OCR)"}>
+                                <Tooltip content={section.isWatermarked ? "Disable Focus Guard" : "Enable Stay Focused Guard (Tab-switch tracking)"}>
                                     <button onClick={() => toggleSectionWatermark(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isWatermarked ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
                                         <IconWatermark size={14} />
                                     </button>

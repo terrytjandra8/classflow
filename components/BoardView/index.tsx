@@ -129,6 +129,27 @@ export const BoardView: React.FC<BoardViewProps> = ({
     
     // --- Board-level copy / paste / cut blocking ---
     // Applies to all formats when the board has these settings enabled for students.
+    // --- Stay Focused Tracking (Focus Loss / Tab Switching) ---
+    useEffect(() => {
+        const isGuarded = (isStudent || isSimulatingStudent) && board.blockScreenshots; // Reusing screenshot guard setting for focus tracking
+        if (!isGuarded) return;
+
+        const onFocusLoss = () => {
+            // Check if the page is truly hidden or if the window lost focus
+            if (document.visibilityState === 'hidden' || !document.hasFocus()) {
+                handleViolation('focus');
+            }
+        };
+
+        window.addEventListener('visibilitychange', onFocusLoss);
+        window.addEventListener('blur', onFocusLoss);
+
+        return () => {
+            window.removeEventListener('visibilitychange', onFocusLoss);
+            window.removeEventListener('blur', onFocusLoss);
+        };
+    }, [board.blockScreenshots, isStudent, isSimulatingStudent, handleViolation]);
+
     useEffect(() => {
         const isGuarded = isStudent || isSimulatingStudent;
         if (!isGuarded) return;
@@ -436,13 +457,20 @@ export const BoardView: React.FC<BoardViewProps> = ({
         if (now - lastViolationTime.current < 2000) return;
         lastViolationTime.current = now;
 
-        // Find the student's primary note on this board
-        const studentNote = notes.find(n => n.author_id === userId);
-        if (studentNote) {
-            const currentViolations = (studentNote as any).violations || 0;
-            await updateNote(studentNote.id, { violations: currentViolations + 1 } as any);
+        // Find all student notes and check which columns they are in
+        const studentNotes = notes.filter(n => n.author_id === userId);
+        
+        for (const note of studentNotes) {
+            // Check if the section this note belongs to has focus guard enabled
+            const section = board.sections?.find(s => s.id === note.sectionId);
+            
+            // If the section is guarded (isWatermarked) or the global board security is on
+            if (section?.isWatermarked || board.blockScreenshots) {
+                const currentViolations = (note as any).violations || 0;
+                await updateNote(note.id, { violations: currentViolations + 1 } as any);
+            }
         }
-    }, [isStudent, isSimulatingStudent, notes, userId, updateNote]);
+    }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
         const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
