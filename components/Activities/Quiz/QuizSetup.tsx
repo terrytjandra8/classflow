@@ -334,7 +334,7 @@ export const QuizSetup: React.FC<QuizSetupProps> = ({
                         </div>
                     </div>
                 </div>
-                {isEditing && <QuizEditor questions={localQuestions} onUpdateBoard={onUpdateBoard} onClose={() => setIsEditing(false)} />}
+                {isEditing && <QuizEditor board={board} questions={localQuestions} onUpdateBoard={onUpdateBoard} onClose={() => setIsEditing(false)} />}
             </div>
             {/* History Modal */}
             {showHistory && (

@@ -156,12 +156,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }
 
         // Mark boards as seen only AFTER they have had time to animate in
+        // IMPORTANT: Only mark as seen if they are actually visible to the student!
         const seenTimer = setTimeout(() => {
-            boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
+            filteredBoards.forEach(b => sessionSeenBoardIds.add(b.id));
         }, 2000); // 2s is safely longer than the entrance animation
 
         return () => clearTimeout(seenTimer);
-    }, [boardsProp]);
+    }, [boardsProp, filteredBoards]);
 
     const groupedBoards = useMemo(() => {
         // Only group if there's no active search or class filter

@@ -10,6 +10,7 @@ import {
 import { useSortableList } from './logic/useSortableList';
 
 interface QuizEditorProps {
+    board: Board;
     questions: QuizQuestion[];
     onUpdateBoard: (updates: Partial<Board>) => void;
     onClose?: () => void;
@@ -85,7 +86,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
     );
 };
 
-export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard, onClose }) => {
+export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpdateBoard, onClose }) => {
     const [localQuestions, setLocalQuestions] = useState<QuizQuestion[]>([]);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -214,8 +215,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="font-black text-xs lg:text-sm tracking-tight">Quiz Editor</h1>
-                                <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${showConfig ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'}`}>
-                                    {showConfig ? 'Live' : 'Draft'}
+                                <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${board.isPublished ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'}`}>
+                                    {board.isPublished ? 'Live' : 'Draft'}
                                 </div>
                             </div>
                             <p className="text-[8px] lg:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Slide {activeIndex + 1}</p>
@@ -395,10 +396,10 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                             </div>
                                         </div>
                                         <button 
-                                            onClick={() => onUpdateBoard({ isPublished: true, isPublic: true })}
-                                            className="w-10 h-5 bg-purple-600 rounded-full relative transition-all"
+                                            onClick={() => onUpdateBoard({ isPublished: !board.isPublished, isPublic: !board.isPublished })}
+                                            className={`w-10 h-5 rounded-full relative transition-all ${board.isPublished ? 'bg-purple-600' : 'bg-white/10'}`}
                                         >
-                                            <div className="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${board.isPublished ? 'right-0.5' : 'left-0.5'}`}></div>
                                         </button>
                                     </div>
                                 </div>
