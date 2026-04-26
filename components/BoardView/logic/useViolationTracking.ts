@@ -54,8 +54,13 @@ export const useViolationTracking = ({
         // Primary Match by System ID
         const studentNotes = currentNotes.filter(n => n.author_id === userId);
         
-        // Secondary Fallback for debugging (Name match)
-        const nameMatches = currentNotes.filter(n => n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.author_id !== userId);
+        // Secondary Fallback: Name match ONLY for students (Exclude Teachers)
+        const nameMatches = currentNotes.filter(n => 
+            n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && 
+            n.author_id !== userId &&
+            n.authorRole !== 'teacher' && // IMPORTANT: Never heal/flag a teacher's note
+            n.author !== 'Teacher'
+        );
 
         // Combine ID matches and Name matches (Amnesty for ID mismatches)
         const allMyNotes = [...studentNotes];

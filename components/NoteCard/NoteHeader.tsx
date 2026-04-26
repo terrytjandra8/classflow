@@ -38,9 +38,11 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
 
     const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
     
-    // Robust Author Check: Match by ID OR Name (Identity Amnesty)
+    // Robust Author Check: Match by ID OR (Name + Role) fallback
     const isAuthor = userId === note.author_id || 
-                    (!!userId && !!username && note.author?.trim().toLowerCase() === username.trim().toLowerCase());
+                    (!!userId && !!username && 
+                     note.author?.trim().toLowerCase() === username.trim().toLowerCase() &&
+                     note.authorRole === (isStudent ? 'student' : 'teacher'));
     
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
     const anonymousIdentity = shouldMask && note.author_id ? getAnonymousIdentity(note.author_id) : null;
