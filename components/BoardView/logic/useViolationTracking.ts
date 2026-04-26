@@ -78,29 +78,44 @@ export const useViolationTracking = ({
             return;
         }
 
-        // --- SPEED OPTIMIZATION: ONLY FLAG THE NEWEST NOTE ---
-        // Instead of hitting the DB for every note (slow), we pick the most recent one.
-        const newestNote = allMyNotes.sort((a, b) => b.createdAt - a.createdAt)[0];
-
-        console.log(`[FocusGuard] SUCCESS: Flagging newest note ${newestNote.id} for ${username}.`);
-
-        // Check if the section this note belongs to has focus guard enabled
-        const section = board.sections?.find(s => s.id === newestNote.sectionId);
+        // --- GLOBAL SESSION SYNC ---
+        // Instead of tracking per note, we track per STUDENT.
+        // All of a student's notes will now show the same "Permanent Record" total.
         
-        if (section?.isWatermarked || board.blockScreenshots) {
-            const currentViolations = newestNote.violation_count || 0;
-            
-            // --- SECURE LOCAL RECORDING ---
-            const localKey = getViolationKey(newestNote.id);
+        // 1. Find the current highest count among all notes (DB or Local)
+        let maxViolations = 0;
+        for (const n of allMyNotes) {
+            const dbCount = n.violation_count || 0;
+            const localKey = getViolationKey(n.id);
             const localCount = decryptViolationCount(localStorage.getItem(localKey));
-            
-            const baseCount = Math.max(currentViolations, localCount);
-            const newCount = baseCount + 1;
-            
-            localStorage.setItem(localKey, encryptViolationCount(newCount));
-            
-            // Trigger secure database sync via RPC
-            await incrementViolation(newestNote.id, currentViolations);
+            maxViolations = Math.max(maxViolations, dbCount, localCount);
+        }
+
+        const newGlobalCount = maxViolations + 1;
+        console.log(`[FocusGuard] GLOBAL SYNC: Setting all ${allMyNotes.length} notes for ${username} to ${newGlobalCount}`);
+
+        // 2. Optimistic UI update for ALL notes instantly
+        setNotes(prev => prev.map(n => {
+            const isMe = n.author_id === userId || 
+                         (!!userId && !!username && n.author?.trim().toLowerCase() === username.trim().toLowerCase() && n.authorRole === 'student');
+            return isMe ? { ...n, violation_count: newGlobalCount } : n;
+        }));
+
+        // 3. Batch Update Database (Single Network Call)
+        // We update by author_id OR author name (for amnesty)
+        const { error } = await supabase
+            .from('notes')
+            .update({ violation_count: newGlobalCount })
+            .eq('board_id', board.id)
+            .or(`author_id.eq.${userId},author.eq.${username}`);
+
+        if (error) {
+            console.error("[FocusGuard] Global sync failed:", error.message);
+        } else {
+            // Update local storage for all notes to keep them in sync
+            for (const n of allMyNotes) {
+                localStorage.setItem(getViolationKey(n.id), encryptViolationCount(newGlobalCount));
+            }
         }
     }, [isStudent, isSimulatingStudent, userId, username, board.sections, board.blockScreenshots, updateNote, incrementViolation]);
 
