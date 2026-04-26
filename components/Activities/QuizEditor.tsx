@@ -90,14 +90,13 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
         setDraggedIndex(index);
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData('text/plain', index.toString());
-        const target = e.currentTarget as HTMLElement;
-        setTimeout(() => { target.style.opacity = '0.3'; }, 0);
     };
 
     const onDragOver = (e: React.DragEvent, index: number) => {
         e.preventDefault();
-        if (draggedIndex === index) return;
-        setDragOverIndex(index);
+        if (dragOverIndex !== index) {
+            setDragOverIndex(index);
+        }
     };
 
     const handleDrop = (index: number) => {
@@ -118,8 +117,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
         setDragOverIndex(null);
     };
 
-    const handleDragEnd = (e: React.DragEvent) => {
-        (e.currentTarget as HTMLElement).style.opacity = '1';
+    const handleDragEnd = () => {
         setDraggedIndex(null);
         setDragOverIndex(null);
     };
@@ -146,19 +144,6 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
     const currentQ = localQuestions[activeIndex];
     const SHAPES = ['▲', '◆', '●', '■'];
     const COLORS = ['bg-[#e21b3c]', 'bg-[#1368ce]', 'bg-[#d89e00]', 'bg-[#26890c]'];
-
-    const getSlideTransform = (idx: number) => {
-        if (draggedIndex === null || dragOverIndex === null) return 'translateY(0)';
-        if (idx === draggedIndex) return 'scale(0.9) opacity(0.2)';
-        
-        const SLIDE_HEIGHT = 104; 
-        if (draggedIndex < dragOverIndex) {
-            if (idx > draggedIndex && idx <= dragOverIndex) return `translateY(-${SLIDE_HEIGHT}px)`;
-        } else {
-            if (idx >= dragOverIndex && idx < draggedIndex) return `translateY(${SLIDE_HEIGHT}px)`;
-        }
-        return 'translateY(0)';
-    };
 
     const [showConfigMobile, setShowConfigMobile] = useState(false);
 
@@ -189,7 +174,11 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                 {/* Desktop Sidebar / Mobile Top Slide Nav */}
                 <aside className="h-28 lg:h-auto lg:w-72 bg-[#161616] border-b lg:border-b-0 lg:border-r border-white/5 flex lg:flex-col shrink-0 overflow-x-auto lg:overflow-y-auto custom-scrollbar p-3 lg:p-4 gap-3 relative no-scrollbar touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                     <div className="hidden lg:block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 px-2">Questions List</div>
-                    {localQuestions.map((q, idx) => (
+                    {localQuestions.map((q, idx) => {
+                        const isDragging = draggedIndex === idx;
+                        const isDragOver = dragOverIndex === idx && !isDragging;
+
+                        return (
                         <div 
                             key={q.id} 
                             className="relative shrink-0 lg:shrink"
@@ -201,9 +190,20 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                         >
                             <div 
                                 onClick={() => { setActiveIndex(idx); setIsPreviewMode(false); }} 
-                                className={`relative group cursor-grab active:cursor-grabbing p-0.5 rounded-xl lg:rounded-2xl transition-all duration-200 ${activeIndex === idx ? 'z-10' : 'opacity-60 hover:opacity-100'} ${dragOverIndex === idx ? 'ring-2 ring-purple-400 scale-[1.02]' : ''}`}
+                                className={`
+                                    relative group cursor-grab active:cursor-grabbing p-0.5 rounded-xl lg:rounded-2xl transition-all duration-300
+                                    ${activeIndex === idx ? 'z-10' : 'opacity-70 hover:opacity-100'} 
+                                    ${isDragging ? 'opacity-20 scale-95 grayscale' : 'opacity-100'}
+                                    ${isDragOver ? 'bg-purple-500/10 translate-y-1' : ''}
+                                    hover:shadow-2xl
+                                `}
                             >
-                                <div className={`bg-[#222] border-2 rounded-xl lg:rounded-2xl p-2 lg:p-3 h-20 lg:h-24 w-32 lg:w-full flex flex-col gap-1 lg:gap-1.5 overflow-hidden transition-all ${activeIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/20' : 'border-white/5'}`}>
+                                {/* Drop Indicator Line */}
+                                {isDragOver && (
+                                    <div className="absolute -top-1 left-0 right-0 h-0.5 bg-purple-500 rounded-full animate-pulse z-20"></div>
+                                )}
+
+                                <div className={`bg-[#222] border-2 rounded-xl lg:rounded-2xl p-2 lg:p-3 h-20 lg:h-24 w-32 lg:w-full flex flex-col gap-1 lg:gap-1.5 overflow-hidden transition-all duration-300 ${activeIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/20' : isDragOver ? 'border-purple-400/50 shadow-lg shadow-purple-500/10' : 'border-white/5'}`}>
                                     <div className="flex justify-between items-center">
                                         <span className="text-[8px] lg:text-[10px] font-black text-gray-600">{idx + 1}</span>
                                         <div className="flex items-center gap-1">
@@ -214,12 +214,12 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                     <div className="text-[9px] lg:text-[10px] font-bold text-gray-300 line-clamp-2 leading-tight">{q.question || "Untitled"}</div>
                                 </div>
                                 {localQuestions.length > 1 && (
-                                    <button onClick={(e) => { e.stopPropagation(); deleteQuestion(idx); }} className="absolute -right-1 -top-1 w-5 h-5 lg:w-6 lg:h-6 bg-red-600 border-2 border-[#161616] rounded-lg text-white shadow-xl flex items-center justify-center z-20"><X size={10} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteQuestion(idx); }} className="absolute -right-1 -top-1 w-5 h-5 lg:w-6 lg:h-6 bg-red-600 border-2 border-[#161616] rounded-lg text-white shadow-xl flex items-center justify-center z-20 hover:scale-110 active:scale-90 transition-transform"><X size={10} /></button>
                                 )}
                             </div>
                         </div>
-                    ))}
-                    <button onClick={addQuestion} className="h-20 lg:h-auto min-w-[3rem] lg:w-full lg:py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-xl lg:rounded-2xl text-gray-500 hover:text-purple-400 flex items-center justify-center shrink-0 gap-2 font-black text-[10px] uppercase transition-all"><Plus size={16} /></button>
+                    )})}
+                    <button onClick={addQuestion} className="h-20 lg:h-auto min-w-[3rem] lg:w-full lg:py-4 bg-white/5 border-2 border-dashed border-white/10 rounded-xl lg:rounded-2xl text-gray-500 hover:text-purple-400 flex items-center justify-center shrink-0 gap-2 font-black text-[10px] uppercase transition-all hover:bg-purple-500/5 hover:border-purple-500/20"><Plus size={16} /></button>
                 </aside>
 
                 <main className="flex-1 bg-[#0a0a0a] overflow-y-auto p-8 md:p-12 flex flex-col items-center custom-scrollbar relative">

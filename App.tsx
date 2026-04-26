@@ -12,6 +12,8 @@ import { noteService } from './services/noteService';
 import { mapBoard } from './utils/mappers';
 import './src/index.css';
 
+import { LandingPage } from './components/LandingPage';
+
 // Lazy load heavy views
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
 const StudentDashboard = React.lazy(() => import('./components/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
@@ -88,7 +90,7 @@ const APP_VERSION = '1.0.2'; // Force refresh for new security gates
 function AppContent() {
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState<'auth' | 'dashboard' | 'board'>('auth');
+    const [view, setView] = useState<'auth' | 'dashboard' | 'board' | 'landing'>('landing');
     const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
     const [boards, setBoards] = useState<Board[]>([]);
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -159,7 +161,7 @@ function AppContent() {
                         setView('dashboard');
                     }
                 } else {
-                    setView('dashboard');
+                    setView('landing');
                 }
             } else if (boardId) {
                 // Guest access logic stays standard...
@@ -209,7 +211,7 @@ function AppContent() {
                 const params = new URLSearchParams(window.location.search);
                 const boardId = params.get('board');
                 if (!boardId) {
-                    setView('auth');
+                    setView('landing');
                 }
             }
         });
@@ -614,6 +616,21 @@ function AppContent() {
     };
 
     if (loading) return <LoadingScreen />;
+
+    // 0. Landing Page View
+    if (!session && !isGuest && view === 'landing') {
+        return (
+            <LandingPage 
+                onStart={() => setView('auth')} 
+                onGoogleLogin={async () => {
+                    const { error } = await (supabase.auth as any).signInWithOAuth({
+                        provider: 'google',
+                        options: { redirectTo: window.location.origin }
+                    });
+                }}
+            />
+        );
+    }
 
     // 1. Auth / Guest Gate
     if (!session && !isGuest && view === 'auth') {

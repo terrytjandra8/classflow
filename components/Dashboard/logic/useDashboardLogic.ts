@@ -30,11 +30,46 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
 
+    // --- Hash-based Routing ---
+    const getTabFromHash = (hash: string): TabView | null => {
+        const h = hash.replace('#/', '').split('/')[0];
+        const validTabs: TabView[] = ['home', 'gallery', 'make', 'admin', 'system', 'documentation'];
+        return validTabs.includes(h as TabView) ? (h as TabView) : null;
+    };
+
     const setActiveTab = (tab: TabView) => {
         const key = isStudent ? 'cb_student_tab' : 'cb_teacher_tab';
         setActiveTabState(tab);
         localStorage.setItem(key, tab);
+        
+        // Update URL Hash without triggering re-sync if possible, but simplicity is better
+        if (window.location.hash !== `#/${tab}`) {
+            window.location.hash = `#/${tab}`;
+        }
     };
+
+    // Initial Sync & Hash Listener
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hashTab = getTabFromHash(window.location.hash);
+            if (hashTab && hashTab !== activeTab) {
+                setActiveTabState(hashTab);
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        
+        // Initial sync
+        const initialTab = getTabFromHash(window.location.hash);
+        if (initialTab) {
+            setActiveTabState(initialTab);
+        } else if (activeTab === 'home') {
+            // If no hash, set it to current active tab
+            window.location.hash = `#/${activeTab}`;
+        }
+
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [activeTab]);
 
     const setSelectedClass = (className: string) => {
         setSelectedClassState(className);

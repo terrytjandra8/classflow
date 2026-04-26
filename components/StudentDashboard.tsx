@@ -9,6 +9,7 @@ import { Avatar } from './ui/Avatar';
 import { Documentation } from './Documentation';
 import { StudentGrades } from './StudentGrades';
 import { BoardCard } from './Dashboard/BoardCard';
+import { Logo } from './Logo';
 
 // This utility function determines the time-based category for a board.
 const getDateCategory = (timestamp: number) => {
@@ -372,7 +373,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
                 {/* Mobile Header */}
                 <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-10">
-                    <div className="flex items-center gap-2"><Layout size={24} className="text-pink-600" /><span className="font-bold text-lg">ClassBoard</span></div>
+                    <div className="flex items-center gap-2">
+                        <Logo size="sm" />
+                        <span className="font-bold text-lg text-slate-800 dark:text-white">ClassBoards</span>
+                    </div>
                     <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5"><Menu size={20} /></button>
                 </div>
 

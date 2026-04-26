@@ -5,6 +5,7 @@ import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
 import { noteService } from '../../../services/noteService';
 import { calculatePoints } from '../../../utils/quizUtils';
+import { Logo } from '../../Logo';
 
 interface TeacherGameProps {
     state: QuizState | 'setup';
@@ -188,8 +189,9 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 <div className="flex-1 flex flex-col p-6 lg:p-10 relative z-10 overflow-y-auto no-scrollbar">
                     <div className="flex-1 flex flex-col items-center justify-center gap-10 lg:gap-12 max-w-7xl mx-auto w-full py-4 lg:py-8">
                         <div className="text-center space-y-4 lg:space-y-6 animate-in slide-in-from-top-10 duration-700">
-                            <h1 className="text-5xl sm:text-7xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-none py-2">
-                                JOIN THE GAME
+                            <Logo size="xl" className="mx-auto mb-8 drop-shadow-2xl" />
+                            <h1 className="text-5xl sm:text-7xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-none py-2 uppercase">
+                                join the game
                             </h1>
                             <div className="flex items-center justify-center gap-4 text-white/30 font-mono animate-in fade-in delay-300">
                                 <div className="flex gap-1.5">

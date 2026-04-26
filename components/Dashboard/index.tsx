@@ -14,6 +14,7 @@ import { useDashboardLogic, TabView } from './logic/useDashboardLogic';
 import { SuperAdminNotifications } from '../SuperAdminNotifications';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Avatar } from '../ui/Avatar';
+import { Logo } from '../Logo';
 
 interface DashboardProps {
   boards: Board[];
@@ -90,13 +91,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         
         <div className="flex items-center gap-3 md:gap-4">
             <div onClick={() => setActiveTab('home')} className="cursor-pointer flex items-center gap-3 group shrink-0">
-                <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <div className="absolute inset-0 bg-yellow-400 rounded-lg transform -rotate-12 translate-x-[-2px] border border-black/5 dark:border-white/5"></div>
-                    <div className="absolute inset-0 bg-blue-500 rounded-lg transform rotate-6 translate-x-[2px] border border-black/5 dark:border-white/5"></div>
-                    <div className="absolute inset-0 bg-pink-600 rounded-lg flex items-center justify-center shadow-lg border border-black/5 dark:border-white/5 z-10">
-                        <Layout size={16} className="text-white md:w-[18px] md:h-[18px]" strokeWidth={3} />
-                    </div>
-                </div>
+                <Logo size="sm" className="group-hover:scale-105 transition-transform" />
                 <h1 className={`font-bold text-lg md:text-xl tracking-tight hidden sm:block ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>ClassBoards</h1>
             </div>
 

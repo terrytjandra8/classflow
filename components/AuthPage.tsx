@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Heart, Sparkles, Layout, School, ShieldCheck, User, ArrowRight, X } from 'lucide-react';
+import { Loader2, Heart, Sparkles, School, ShieldCheck, User, ArrowRight, X } from 'lucide-react';
+import { Logo } from './Logo';
 
 interface AuthPageProps {
   onLoginSuccess: () => void;
@@ -178,14 +179,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
         {/* Logo Section */}
         <div className="text-center mb-10 transform hover:scale-105 transition-transform duration-500">
           <div className="relative inline-block mb-4">
-             <div className="w-20 h-20 relative mx-auto">
-                <div className="absolute top-0 left-0 w-16 h-16 bg-yellow-400 rounded-xl transform -rotate-12 shadow-lg border border-white/10"></div>
-                <div className="absolute top-2 left-4 w-16 h-16 bg-blue-500 rounded-xl transform rotate-6 shadow-lg border border-white/10"></div>
-                <div className="absolute top-4 left-2 w-16 h-16 bg-pink-600 rounded-xl transform -rotate-3 shadow-2xl flex items-center justify-center border border-white/10 z-10">
-                    <Layout className="text-white w-8 h-8" />
-                </div>
-                <Sparkles className="absolute -top-4 -right-4 text-yellow-300 w-6 h-6 animate-pulse" />
-             </div>
+             <Logo size="lg" className="mx-auto" />
           </div>
           
           <h1 className="text-5xl font-extrabold mb-3 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-gray-400 drop-shadow-sm">
