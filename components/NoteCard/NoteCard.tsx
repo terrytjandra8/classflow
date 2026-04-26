@@ -134,7 +134,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
   const isCustomColor = isHexColor(note.color);
 
-  const isBlurActive = BoardRules.shouldBlurContent(board, isContentBlurredBool, note, effectiveUserId, isStudentBool, isPresentationModeBool);
+  const isAuthor = note.author_id === effectiveUserId;
+  const isBlurActive = BoardRules.shouldBlurContent(board, isContentBlurredBool, note, effectiveUserId, isStudentBool, isPresentationModeBool) && !isAuthor;
   const isReadOnly = (board.lockMode === 'readonly' && !canManageBoard);
 
   // --- Highlighting Logic ---

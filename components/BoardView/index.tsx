@@ -129,6 +129,30 @@ export const BoardView: React.FC<BoardViewProps> = ({
     
     // --- Board-level copy / paste / cut blocking ---
     // Applies to all formats when the board has these settings enabled for students.
+    const lastViolationTime = useRef<number>(0);
+    const handleViolation = useCallback(async (type: 'security' | 'focus') => {
+        if (!isStudent && !isSimulatingStudent) return;
+        
+        // Throttle violations to prevent DB spam (once every 2 seconds)
+        const now = Date.now();
+        if (now - lastViolationTime.current < 2000) return;
+        lastViolationTime.current = now;
+
+        // Find all student notes and check which columns they are in
+        const studentNotes = notes.filter(n => n.author_id === userId);
+        
+        for (const note of studentNotes) {
+            // Check if the section this note belongs to has focus guard enabled
+            const section = board.sections?.find(s => s.id === note.sectionId);
+            
+            // If the section is guarded (isWatermarked) or the global board security is on
+            if (section?.isWatermarked || board.blockScreenshots) {
+                const currentViolations = (note as any).violations || 0;
+                await updateNote(note.id, { violations: currentViolations + 1 } as any);
+            }
+        }
+    }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);
+
     // --- Stay Focused Tracking (Focus Loss / Tab Switching) ---
     useEffect(() => {
         const isGuarded = (isStudent || isSimulatingStudent) && board.blockScreenshots; // Reusing screenshot guard setting for focus tracking
@@ -448,29 +472,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         highlightedUserId
     ]);
 
-    const lastViolationTime = useRef<number>(0);
-    const handleViolation = useCallback(async (type: 'security' | 'focus') => {
-        if (!isStudent && !isSimulatingStudent) return;
-        
-        // Throttle violations to prevent DB spam (once every 2 seconds)
-        const now = Date.now();
-        if (now - lastViolationTime.current < 2000) return;
-        lastViolationTime.current = now;
-
-        // Find all student notes and check which columns they are in
-        const studentNotes = notes.filter(n => n.author_id === userId);
-        
-        for (const note of studentNotes) {
-            // Check if the section this note belongs to has focus guard enabled
-            const section = board.sections?.find(s => s.id === note.sectionId);
-            
-            // If the section is guarded (isWatermarked) or the global board security is on
-            if (section?.isWatermarked || board.blockScreenshots) {
-                const currentViolations = (note as any).violations || 0;
-                await updateNote(note.id, { violations: currentViolations + 1 } as any);
-            }
-        }
-    }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
         const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
