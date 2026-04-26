@@ -133,27 +133,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     // Sync boardsProp with displayBoards to handle entrance/exit animations
     useEffect(() => {
-        // 1. Identify boards that are still there (including newly added ones)
-        const currentIds = new Set(boardsProp.map(b => b.id));
-
-        // 2. Identify boards that were there but are now missing
-        const exitingBoards = displayBoards.filter(b => !currentIds.has(b.id) && !b.isExiting);
-
-        if (exitingBoards.length > 0) {
-            // Mark disappearing boards as exiting
-            setDisplayBoards(prev => prev.map(b =>
-                !currentIds.has(b.id) ? { ...b, isExiting: true } : b
-            ));
-
-            // Remove them after animation finishes (300ms)
-            const timer = setTimeout(() => {
-                setDisplayBoards(boardsProp);
-            }, 350);
-            return () => clearTimeout(timer);
-        } else {
-            // No one is exiting, just update with new list (handles additions and property updates)
-            setDisplayBoards(boardsProp);
-        }
+        // Sync local displayBoards with incoming boardsProp from parent/DB
+        // This is the core 'auto-refresh' mechanism
+        setDisplayBoards(boardsProp);
 
         // Mark boards as seen only AFTER they have had time to animate in
         // IMPORTANT: Only mark as seen if they are actually visible to the student!
@@ -162,7 +144,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }, 2000); // 2s is safely longer than the entrance animation
 
         return () => clearTimeout(seenTimer);
-    }, [boardsProp, filteredBoards]);
+    }, [boardsProp]); // ONLY depend on the raw data stream
 
     const groupedBoards = useMemo(() => {
         // Only group if there's no active search or class filter
