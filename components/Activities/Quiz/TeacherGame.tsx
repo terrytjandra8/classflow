@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QuizState, QuizQuestion, Board, Note } from '../../../types';
-import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass, XCircle, ShieldAlert, Edit2 } from 'lucide-react';
+import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass, XCircle, ShieldAlert, Edit2, Flame } from 'lucide-react';
 import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
 import { noteService } from '../../../services/noteService';
