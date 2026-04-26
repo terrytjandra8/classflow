@@ -63,8 +63,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     boards: boardsProp, onSelectBoard, theme, onToggleTheme, username, userAvatar, userClasses, onJoinByCode
 }) => {
     // === STATE MANAGEMENT ===
-    // Local state for boards to handle exit animations
-    const [displayBoards, setDisplayBoards] = useState<Board[]>(boardsProp);
     // Active tab for navigation (home, grades, etc.)
     const [activeTab, setActiveTabState] = useState<'home' | 'join' | 'documentation' | 'grades'>(() => (localStorage.getItem('cb_student_tab') as any) || 'home');
     // Currently selected class for filtering the board list
@@ -102,9 +100,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         fetchUserId();
     }, []);
 
-    // === FILTERING LOGIC (Using displayBoards for animations) ===
+    // === FILTERING LOGIC (reads directly from boardsProp — no middleman state) ===
     const filteredBoards = useMemo(() => {
-        let result = [...displayBoards];
+        let result = [...boardsProp];
 
         // 1. Filter out any trashed boards and only include published boards.
         // This is the core visibility rule for students.
@@ -118,13 +116,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         );
 
         // 2. Filter by the selected class in the sidebar.
-        // SMART OVERRIDE: If a board is "New" (just went live), we show it even if it doesn't match the filter
-        // so the student doesn't miss the entrance animation.
         if (selectedClassFilter !== 'All Boards') {
-            result = result.filter(b => {
-                const isNew = !sessionSeenBoardIds.has(b.id);
-                return isNew || b.targetGrade === selectedClassFilter;
-            });
+            result = result.filter(b => b.targetGrade === selectedClassFilter);
         }
 
         // 3. Filter by the search input text.
@@ -134,23 +127,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         // 4. Sort the results by creation date (newest first).
         return result.sort((a, b) => b.createdAt - a.createdAt);
-    }, [displayBoards, selectedClassFilter, filter]);
+    }, [boardsProp, selectedClassFilter, filter]);
 
-    // Sync boardsProp with displayBoards to handle entrance/exit animations
+    // Track seen boards for entrance animations
     useEffect(() => {
-        // Sync local displayBoards with incoming boardsProp from parent/DB
-        // This is the core 'auto-refresh' mechanism — always update, no gating
-        setDisplayBoards(boardsProp);
-
-        // Mark boards as seen only AFTER they have had time to animate in
-        // IMPORTANT: Only mark as seen if they are actually visible to the student!
         const seenTimer = setTimeout(() => {
-            const currentlyVisible = filteredBoards.map(b => b.id);
-            currentlyVisible.forEach(id => sessionSeenBoardIds.add(id));
-        }, 3000); // 3s for extra safety
-
+            boardsProp.forEach(b => sessionSeenBoardIds.add(b.id));
+        }, 3000);
         return () => clearTimeout(seenTimer);
-    }, [boardsProp]); // ONLY depend on the raw data stream
+    }, [boardsProp]);
 
     const groupedBoards = useMemo(() => {
         // Only group if there's no active search or class filter
