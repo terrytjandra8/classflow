@@ -132,20 +132,26 @@ export const BoardView: React.FC<BoardViewProps> = ({
     // Applies to all formats when the board has these settings enabled for students.
     const lastViolationTime = useRef<number>(0);
     const handleViolation = useCallback(async (type: 'security' | 'focus') => {
-        if (!isStudent && !isSimulatingStudent) return;
+        if (!isStudent && !isSimulatingStudent) {
+            console.log("[FocusGuard] Not a student, ignoring violation.");
+            return;
+        }
         
         const now = Date.now();
         if (now - lastViolationTime.current < 2000) return;
         lastViolationTime.current = now;
 
-        console.log(`[FocusGuard] Violation detected: ${type}. Scanning student notes for guarded sections...`);
+        console.log(`[FocusGuard] ${type.toUpperCase()} violation detected! Checking notes for: ${username} (ID: ${userId})`);
 
-        const studentNotes = notes.filter(n => n.author_id === userId);
+        // Match by ID OR Name (to be safe during ID transitions)
+        const studentNotes = notes.filter(n => n.author_id === userId || (n.author === username && n.author !== 'Anonymous'));
         
         if (studentNotes.length === 0) {
-            console.log(`[FocusGuard] No notes found for user ${userId}. Nothing to flag.`);
+            console.log(`[FocusGuard] No notes found matching user "${username}" or ID "${userId}".`);
             return;
         }
+
+        console.log(`[FocusGuard] Found ${studentNotes.length} notes to evaluate for security rules.`);
 
         for (const note of studentNotes) {
             // Check if the section this note belongs to has focus guard enabled
@@ -163,13 +169,15 @@ export const BoardView: React.FC<BoardViewProps> = ({
                 const baseCount = Math.max(currentViolations, localCount);
                 const newCount = baseCount + 1;
                 
-                console.log(`[FocusGuard] Securely recording violation for note ${note.id}. New total: ${newCount}`);
+                console.log(`[FocusGuard] SECURE RECORD: Note ${note.id}. New total: ${newCount}`);
                 
                 // Save encrypted
                 localStorage.setItem(localKey, encryptViolationCount(newCount));
                 
                 // Trigger secure database sync via RPC
                 await incrementViolation(note.id, currentViolations);
+            } else {
+                console.log(`[FocusGuard] Skipping note ${note.id} - Section not guarded and global security is OFF.`);
             }
         }
     }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);
