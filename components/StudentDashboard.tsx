@@ -139,10 +139,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     // Sync boardsProp with displayBoards to handle entrance/exit animations
     useEffect(() => {
         // Sync local displayBoards with incoming boardsProp from parent/DB
-        // This is the core 'auto-refresh' mechanism
-        if (JSON.stringify(displayBoards.map(b => b.id + b.isPublished)) !== JSON.stringify(boardsProp.map(b => b.id + b.isPublished))) {
-             setDisplayBoards(boardsProp);
-        }
+        // This is the core 'auto-refresh' mechanism — always update, no gating
+        setDisplayBoards(boardsProp);
 
         // Mark boards as seen only AFTER they have had time to animate in
         // IMPORTANT: Only mark as seen if they are actually visible to the student!
