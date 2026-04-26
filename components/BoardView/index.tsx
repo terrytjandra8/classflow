@@ -133,14 +133,19 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const handleViolation = useCallback(async (type: 'security' | 'focus') => {
         if (!isStudent && !isSimulatingStudent) return;
         
-        // Throttle violations to prevent DB spam (once every 2 seconds)
         const now = Date.now();
         if (now - lastViolationTime.current < 2000) return;
         lastViolationTime.current = now;
 
-        // Find all student notes and check which columns they are in
+        console.log(`[FocusGuard] Violation detected: ${type}. Scanning student notes for guarded sections...`);
+
         const studentNotes = notes.filter(n => n.author_id === userId);
         
+        if (studentNotes.length === 0) {
+            console.log(`[FocusGuard] No notes found for user ${userId}. Nothing to flag.`);
+            return;
+        }
+
         for (const note of studentNotes) {
             // Check if the section this note belongs to has focus guard enabled
             const section = board.sections?.find(s => s.id === note.sectionId);
@@ -148,31 +153,11 @@ export const BoardView: React.FC<BoardViewProps> = ({
             // If the section is guarded (isWatermarked) or the global board security is on
             if (section?.isWatermarked || board.blockScreenshots) {
                 const currentViolations = note.violation_count || 0;
+                console.log(`[FocusGuard] Flagging note ${note.id} in section "${section?.title || 'Default'}". New count: ${currentViolations + 1}`);
                 await updateNote(note.id, { violation_count: currentViolations + 1 });
             }
         }
     }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);
-
-    // --- Stay Focused Tracking (Focus Loss / Tab Switching) ---
-    useEffect(() => {
-        const isGuarded = (isStudent || isSimulatingStudent) && board.blockScreenshots; // Reusing screenshot guard setting for focus tracking
-        if (!isGuarded) return;
-
-        const onFocusLoss = () => {
-            // Check if the page is truly hidden or if the window lost focus
-            if (document.visibilityState === 'hidden' || !document.hasFocus()) {
-                handleViolation('focus');
-            }
-        };
-
-        window.addEventListener('visibilitychange', onFocusLoss);
-        window.addEventListener('blur', onFocusLoss);
-
-        return () => {
-            window.removeEventListener('visibilitychange', onFocusLoss);
-            window.removeEventListener('blur', onFocusLoss);
-        };
-    }, [board.blockScreenshots, isStudent, isSimulatingStudent, handleViolation]);
 
     useEffect(() => {
         const isGuarded = isStudent || isSimulatingStudent;
@@ -474,7 +459,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
 
     const renderProtectedContent = (content: React.ReactNode) => {
-        const protectionEnabled = !!board.blockScreenshots && (isStudent || isSimulatingStudent);
+        const hasWatermarkedSection = board.sections?.some(s => s.isWatermarked);
+        const protectionEnabled = (!!board.blockScreenshots || !!hasWatermarkedSection) && (isStudent || isSimulatingStudent);
         
         return (
             <ScreenshotGuard 
