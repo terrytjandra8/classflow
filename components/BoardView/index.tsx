@@ -78,7 +78,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     });
 
     // --- REFACTORED LOGIC HOOKS ---
-    const { handleViolation } = useViolationTracking({ board, notes, userId, username, isStudent, isSimulatingStudent, updateNote, incrementViolation });
+    const { handleViolation } = useViolationTracking({ board, notes, setNotes, userId, username, isStudent: isStudent || isSimulatingStudent, isSimulatingStudent, updateNote, incrementViolation });
     useBoardSecurity({ board, isStudent, isSimulatingStudent });
     useBoardAutomations({ board, canManageBoard: !isStudent && !isSimulatingStudent && !isPresentationMode, onUpdateBoard });
     const sectionManagement = useSectionManagement({ board, onUpdateBoard });

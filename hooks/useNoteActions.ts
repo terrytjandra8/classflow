@@ -124,6 +124,7 @@ export const useNoteActions = ({
             likes: 0,
             comments: [],
             liked_by: [],
+            violation_count: decryptViolationCount(localStorage.getItem(`board_violations_${boardId}_${finalAuthorId}`)),
             created_at: noteData.createdAt ? new Date(noteData.createdAt).toISOString() : new Date().toISOString()
         };
 

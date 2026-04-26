@@ -2,10 +2,12 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { Board, Note } from '../../../types';
 import { getViolationKey, encryptViolationCount, decryptViolationCount } from '../../../utils/security';
+import { supabase } from '../../../services/supabaseClient';
 
 interface ViolationTrackingProps {
     board: Board;
     notes: Note[];
+    setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
     userId: string | undefined;
     username: string;
     isStudent: boolean;
@@ -112,7 +114,10 @@ export const useViolationTracking = ({
         if (error) {
             console.error("[FocusGuard] Global sync failed:", error.message);
         } else {
-            // Update local storage for all notes to keep them in sync
+            // Update local storage for all notes AND the master student key
+            const masterKey = `board_violations_${board.id}_${userId}`;
+            localStorage.setItem(masterKey, encryptViolationCount(newGlobalCount));
+            
             for (const n of allMyNotes) {
                 localStorage.setItem(getViolationKey(n.id), encryptViolationCount(newGlobalCount));
             }
