@@ -58,8 +58,6 @@ export const useViolationTracking = ({
 
         // Combine ID matches and Name matches
         let allMyNotes = [...studentNotes];
-        // Combine ID matches and Name matches
-        let allMyNotes = [...studentNotes];
         if (studentNotes.length === 0 && nameMatches.length > 0) {
             for (const n of nameMatches) {
                 updateNote(n.id, { author_id: userId } as any);
@@ -109,7 +107,7 @@ export const useViolationTracking = ({
                 localStorage.setItem(getViolationKey(n.id), encryptViolationCount(newGlobalCount));
             }
         }
-    }, [isStudent, isSimulatingStudent, userId, username, board.sections, board.blockScreenshots, updateNote, incrementViolation]);
+    }, [isStudent, isSimulatingStudent, userId, username, board.id, board.sections, board.blockScreenshots, updateNote, incrementViolation, setNotes]);
 
     return { handleViolation };
 };
