@@ -477,7 +477,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                     </div>
 
                                     {/* Board Display */}
-                                    {filteredBoards.length === 0 ? (
+                                    {displayBoards.length === 0 ? (
                                         <div className="text-center py-20 opacity-60 border-2 border-dashed border-gray-500/20 rounded-3xl bg-gray-50 dark:bg-white/5">
                                             <Trophy size={48} className="mx-auto mb-4 text-gray-400" />
                                             <p className="text-base font-bold text-gray-500">No boards found</p>
