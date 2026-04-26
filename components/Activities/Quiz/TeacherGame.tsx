@@ -212,7 +212,9 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                                 </div>
                                 <div className="flex flex-col items-center gap-2 pt-6 border-t border-white/5">
                                     <div className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em]">Step 1: Go to</div>
-                                    <div className="text-2xl lg:text-3xl text-white font-black tracking-tight bg-white/5 px-6 py-2 rounded-2xl border border-white/5">classboards.ai</div>
+                                    <div className="text-2xl lg:text-3xl text-white font-black tracking-tight bg-white/5 px-6 py-2 rounded-2xl border border-white/5 lowercase">
+                                        {typeof window !== 'undefined' ? window.location.host : 'classboards.ai'}
+                                    </div>
                                 </div>
                                 <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-purple-600/5 rounded-full blur-3xl"></div>
                             </div>
