@@ -214,7 +214,7 @@ export const UserDirectory: React.FC<UserDirectoryProps> = ({
                                     <td className="px-6 py-4">
                                         <div className="flex items-center -space-x-1 hover:space-x-1 transition-all duration-300 group/stack max-w-[200px] flex-wrap">
                                             {/* Currently Enrolled Classes (Compact Initials) */}
-                                            {userClasses.slice(0, 5).map(classIdOrName => {
+                                            {userClasses.slice(0, 5).map((classIdOrName: string) => {
                                                 const cls = classes.find(c => c.id === classIdOrName || c.name === classIdOrName);
                                                 if (!cls) return null;
                                                 const initials = cls.name.substring(0, 2).toUpperCase();
@@ -259,7 +259,7 @@ export const UserDirectory: React.FC<UserDirectoryProps> = ({
                                                     <div className={`absolute bottom-full left-0 mb-2 w-52 p-2 rounded-xl border shadow-2xl z-50 transition-all duration-200 transform origin-bottom-left ${expandedUserId === user.id ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'} ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1e1e1e] border-white/10'}`}>
                                                         <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto custom-scrollbar">
                                                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 px-1 mb-1">All Enrolled Classes</p>
-                                                            {userClasses.map(classIdOrName => {
+                                                            {userClasses.map((classIdOrName: string) => {
                                                                 const cls = classes.find(c => c.id === classIdOrName || c.name === classIdOrName);
                                                                 if (!cls) return null;
                                                                 return (
