@@ -19,6 +19,7 @@ interface ViolationTrackingProps {
 export const useViolationTracking = ({
     board,
     notes,
+    setNotes,
     userId,
     username,
     isStudent,
@@ -97,7 +98,7 @@ export const useViolationTracking = ({
         console.log(`[FocusGuard] GLOBAL SYNC: Setting all ${allMyNotes.length} notes for ${username} to ${newGlobalCount}`);
 
         // 2. Optimistic UI update for ALL notes instantly
-        setNotes(prev => prev.map(n => {
+        setNotes((prev: Note[]) => prev.map((n: Note) => {
             const isMe = n.author_id === userId || 
                          (!!userId && !!username && n.author?.trim().toLowerCase() === username.trim().toLowerCase() && n.authorRole === 'student');
             return isMe ? { ...n, violation_count: newGlobalCount } : n;
