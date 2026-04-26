@@ -9,7 +9,7 @@ export interface BoardProps {
     onUpdateBoard: (updates: Partial<Board>) => void;
     onOpenSettings: () => void;
     onOpenShare: () => void;
-    onOpenAddNote: (sectionId?: string | { x: number; y: number }) => void;
+    onOpenAddNote: (config?: string | { x?: number; y?: number; sectionId?: string; relativeId?: string; position?: 'before' | 'after' }) => void;
     onDeleteNote: (id: string) => void;
     onLikeNote: (id: string) => void;
     onAddComment: (noteId: string, text: string, attachment?: any) => void;

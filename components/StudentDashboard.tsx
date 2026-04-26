@@ -77,7 +77,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [isJoining, setIsJoining] = useState(false);
     // Other UI states
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string>('');
+    const profileMenuRef = useRef<HTMLDivElement>(null);
 
     const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
 
@@ -304,14 +306,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         onLogout: () => void
     }) => (
         <div className={`flex flex-col h-full ${isMobile ? 'flex w-full' : 'hidden md:flex w-64 shrink-0'} bg-white dark:bg-[#111] ${!isMobile ? 'py-6 pr-4 pl-6 border-r border-slate-200 dark:border-white/5' : ''}`}>
-            <div className={isMobile ? 'px-6 pt-6' : ''}>
-                <div className="flex mb-8 items-center gap-3">
-                    <Avatar src={userAvatar} name={username} size="lg" className="shrink-0" />
-                    <div>
-                        <h2 className="font-bold truncate max-w-[140px] text-slate-800 dark:text-white">{username}</h2>
-                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
+            <div className={isMobile ? 'px-6 pt-10' : ''}>
+                {!isMobile && (
+                    <div className="flex mb-8 items-center gap-3">
+                        <Avatar src={userAvatar} name={username} size="lg" className="shrink-0" />
+                        <div>
+                            <h2 className="font-bold truncate max-w-[140px] text-slate-800 dark:text-white">{username}</h2>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide">Student</p>
+                        </div>
                     </div>
-                </div>
+                )}
                 <button onClick={() => { onTabChange('join'); if (isMobile) onCloseMobileMenu(); }} className="w-full flex items-center justify-center gap-2 font-bold py-3 rounded-xl mb-6 transition-all shadow-lg hover:scale-[1.02] active:scale-95 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
                     <Hash size={16} /> Join a Class
                 </button>
@@ -336,8 +340,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return (
         <div className="h-screen flex bg-slate-50 text-slate-900 dark:bg-[#050505] dark:text-white transition-colors duration-300 font-sans overflow-hidden">
             {/* Mobile Sidebar */}
-            <div className={`md:hidden fixed inset-0 bg-black/50 z-30 transition-opacity ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}></div>
-            <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className={`md:hidden fixed inset-0 bg-black/50 z-[90] transition-opacity ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}></div>
+            <div className={`md:hidden fixed top-0 left-0 h-full w-4/5 max-w-[280px] z-[100] transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <Sidebar
                     isMobile={true}
                     userAvatar={userAvatar}
@@ -372,12 +376,60 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             {/* Main Content */}
             <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative pb-16 md:pb-0">
                 {/* Mobile Header */}
-                <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-10">
+                <div className="md:hidden h-16 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#111] z-50">
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5"><Menu size={20} /></button>
+                    
                     <div className="flex items-center gap-2">
                         <Logo size="sm" />
-                        <span className="font-bold text-lg text-slate-800 dark:text-white">ClassBoards</span>
+                        <span className="font-bold text-lg text-slate-800 dark:text-white tracking-tight">ClassBoards</span>
                     </div>
-                    <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5"><Menu size={20} /></button>
+
+                    <div className="relative" ref={profileMenuRef}>
+                        <div 
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                            className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs shadow-lg border-2 cursor-pointer shrink-0 hover:scale-105 transition-transform ${theme === 'light' ? 'border-slate-200' : 'border-[#111]'}`}
+                        >
+                            {userAvatar ? (
+                                <img src={userAvatar} alt={username} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center">
+                                    {username.substring(0, 2).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+
+                        {showProfileMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
+                                    <div className="p-3 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#111]">
+                                        <p className="font-bold text-sm truncate text-gray-800 dark:text-white">{username}</p>
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold mt-0.5 tracking-wider">Student</p>
+                                    </div>
+                                    <div className="p-1">
+                                        <button 
+                                            onClick={() => { onToggleTheme(); setShowProfileMenu(false); }}
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg flex items-center gap-2"
+                                        >
+                                            {theme === 'dark' ? <Sun size={14}/> : <Moon size={14}/>} {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                                        </button>
+                                        <button 
+                                            onClick={() => { setActiveTab('documentation'); setShowProfileMenu(false); }}
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg flex items-center gap-2"
+                                        >
+                                            <BookOpen size={14} /> Guide
+                                        </button>
+                                        <button 
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 font-bold transition-colors"
+                                        >
+                                            <LogOut size={14} /> Sign Out
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8">
