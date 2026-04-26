@@ -205,7 +205,7 @@ export const useNoteActions = ({
     }, [setNotes, onTouchBoard]);
     
     const incrementViolation = useCallback(async (id: string, currentCount: number = 0) => {
-        console.log(`[FocusGuard] Calling secure RPC for note: ${id}. Base count: ${currentCount}`);
+
         
         // Optimistic update for instant UI feedback
         setNotes(currentNotes => currentNotes.map(n => 
@@ -222,7 +222,7 @@ export const useNoteActions = ({
                 violation_count: currentCount + 1 
             }).eq('id', id);
         } else {
-            console.log(`[FocusGuard] Database successfully updated for note: ${id}`);
+
             // Clear local storage after successful DB sync
             localStorage.removeItem(getViolationKey(id));
         }

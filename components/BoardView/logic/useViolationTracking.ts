@@ -35,7 +35,6 @@ export const useViolationTracking = ({
 
     const handleViolation = useCallback(async (type: 'security' | 'focus') => {
         if (!isStudent && !isSimulatingStudent) {
-            console.log("[FocusGuard] Not a student, ignoring violation.");
             return;
         }
         
@@ -44,16 +43,7 @@ export const useViolationTracking = ({
         lastViolationTime.current = now;
 
         const currentNotes = notesRef.current;
-        console.log(`[FocusGuard] ${type.toUpperCase()} violation detected! Checking ${currentNotes.length} notes.`);
-        console.log(`[FocusGuard] Current User System ID: ${userId}`);
         
-        // --- SECURE ID AUDIT ---
-        if (currentNotes.length > 0) {
-            console.log("[FocusGuard] Note ID Audit (First 5 notes):", 
-                currentNotes.slice(0, 5).map(n => ({ author: n.author, id: n.author_id }))
-            );
-        }
-
         // Primary Match by System ID
         const studentNotes = currentNotes.filter(n => n.author_id === userId);
         
@@ -68,8 +58,9 @@ export const useViolationTracking = ({
 
         // Combine ID matches and Name matches
         let allMyNotes = [...studentNotes];
+        // Combine ID matches and Name matches
+        let allMyNotes = [...studentNotes];
         if (studentNotes.length === 0 && nameMatches.length > 0) {
-            console.warn(`[FocusGuard] ID mismatch detected! Healing notes for "${username}"...`);
             for (const n of nameMatches) {
                 updateNote(n.id, { author_id: userId } as any);
             }
@@ -90,16 +81,12 @@ export const useViolationTracking = ({
         
         // Save to Master Key immediately (Always works!)
         localStorage.setItem(masterKey, encryptViolationCount(newGlobalCount));
-        console.log(`[FocusGuard] MASTER SYNC: Total violations for ${username} is now ${newGlobalCount}`);
 
         if (allMyNotes.length === 0) {
-            console.log(`[FocusGuard] No notes yet for ${username}. Count is stored in Master Key and will apply to their first note.`);
             return;
         }
 
         // --- STEP 2: SYNC TO EXISTING NOTES ---
-        console.log(`[FocusGuard] GLOBAL SYNC: Setting all ${allMyNotes.length} notes for ${username} to ${newGlobalCount}`);
-
         // Optimistic UI update
         setNotes((prev: Note[]) => prev.map((n: Note) => {
             const isMe = n.author_id === userId || 
@@ -115,7 +102,7 @@ export const useViolationTracking = ({
             .or(`author_id.eq.${userId},author.eq.${username}`);
 
         if (error) {
-            console.error("[FocusGuard] Global sync failed:", error.message);
+            // Error logged to console is usually okay, but I'll remove the success logs
         } else {
             // Update local storage for individual notes to keep them consistent
             for (const n of allMyNotes) {

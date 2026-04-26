@@ -84,7 +84,7 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
-  console.log('[APP-MOUNT] AppContent is rendering');
+
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'auth' | 'dashboard' | 'board'>('auth');
@@ -351,7 +351,7 @@ function AppContent() {
 
   // Fetch boards on dashboard load + auto-refresh every 10 seconds for live updates
   useEffect(() => {
-      console.log('[POLL-DEBUG] view=', view, 'session=', !!session, 'isGuest=', isGuest);
+
       if (view !== 'dashboard' || (!session && !isGuest)) return;
 
       let isMounted = true;
@@ -359,7 +359,7 @@ function AppContent() {
       const loadBoards = async () => {
           try {
               const data = await boardService.getBoards();
-              console.log('[AUTO-REFRESH] Polled', data.length, 'boards. Published:', data.filter(b => b.isPublished).map(b => b.title));
+
               if (isMounted) setBoards(data);
           } catch (e) {
               // Silent fail — guest users without auth will hit this

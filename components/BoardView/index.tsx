@@ -183,7 +183,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         const hasWatermarkedSection = board.sections?.some(s => s.isWatermarked);
         const protectionEnabled = (!!board.blockScreenshots || !!hasWatermarkedSection) && (isStudent || isSimulatingStudent);
         return (
-            <ScreenshotGuard blockScreenshots={protectionEnabled} studentName={username} onViolation={handleViolation} boardId={board.id}>
+            <ScreenshotGuard blockScreenshots={protectionEnabled} studentName={username} onViolation={handleViolation} boardId={board.id} boardFormat={board.format}>
                 {content}
             </ScreenshotGuard>
         );

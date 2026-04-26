@@ -126,7 +126,7 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
 
                 // DEBUG LOG: The user can see this in their browser console
                 if (qIdx === currentQIndex) {
-                    console.log(`[QuizScore] Q:${qIdx} Player:${n.author} Answered:${answerIdx} Correct:${correctIdx} isCorrect:${isCorrect} Points:${pointsResult.total}`);
+                    // Logic here
                 }
 
                 playerMap[n.author_id].score += pointsResult.total;

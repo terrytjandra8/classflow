@@ -8,9 +8,10 @@ interface ScreenshotGuardProps {
     studentName?: string;
     onViolation?: (type: 'security' | 'focus') => void;
     boardId?: string;
+    boardFormat?: string;
 }
 
-export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreenshots: isEnabled, children, studentName = "Student", onViolation, boardId }) => {
+export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreenshots: isEnabled, children, studentName = "Student", onViolation, boardId, boardFormat }) => {
     const [lockType, setLockType] = useState<'security' | 'focus' | null>(null);
     const lockTypeRef = useRef<'security' | 'focus' | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -62,18 +63,22 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreensho
         };
 
         window.addEventListener('keydown', handleKeyDown, true);
-        window.addEventListener('blur', () => applyShield('focus'));
-        window.addEventListener('mouseleave', () => applyShield('focus'));
-        window.addEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
-
-        console.log(`[FocusGuard] Security Guard ARMED for board: ${boardId || 'unknown'}`);
+        
+        // Exclude focus tracking for Quizzes if requested
+        if (boardFormat !== 'quiz') {
+            window.addEventListener('blur', () => applyShield('focus'));
+            window.addEventListener('mouseleave', () => applyShield('focus'));
+            window.addEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
+        }
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, true);
-            window.removeEventListener('mouseleave', () => applyShield('focus'));
+            if (boardFormat !== 'quiz') {
+                window.removeEventListener('mouseleave', () => applyShield('focus'));
+            }
             releaseShield();
         };
-    }, [isEnabled, applyShield, releaseShield]);
+    }, [isEnabled, applyShield, releaseShield, boardFormat]);
 
     if (!isEnabled) return <>{children}</>;
 
