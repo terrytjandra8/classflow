@@ -33,11 +33,14 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     note, canDelete, canEdit, onDelete, onEdit, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, isStickyNote, isTransparent, isSectionAnonymous,
     showMenu, setShowMenu, showUpdatedAt
 }) => {
-    const { board, isStudent, userId, isPresentationMode } = useBoard();
+    const { board, isStudent, userId, isPresentationMode, username } = useBoard();
     const triggerRef = useRef<HTMLButtonElement>(null);
 
     const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
-    const isAuthor = userId === note.author_id;
+    
+    // Robust Author Check: Match by ID OR Name (Identity Amnesty)
+    const isAuthor = userId === note.author_id || 
+                    (!!userId && !!username && note.author?.trim().toLowerCase() === username.trim().toLowerCase());
     
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
     const anonymousIdentity = shouldMask && note.author_id ? getAnonymousIdentity(note.author_id) : null;
