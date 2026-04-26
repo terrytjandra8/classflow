@@ -76,36 +76,38 @@ export const useViolationTracking = ({
             allMyNotes = [...nameMatches];
         }
         
-        if (allMyNotes.length === 0) {
-            console.log(`[FocusGuard] No notes found for user ${username} (ID: ${userId}) among ${currentNotes.length} notes.`);
-            return;
-        }
-
-        // --- GLOBAL SESSION SYNC ---
-        // Instead of tracking per note, we track per STUDENT.
-        // All of a student's notes will now show the same "Permanent Record" total.
+        // --- STEP 1: ALWAYS UPDATE MASTER LOCAL STORAGE (Even if zero notes) ---
+        const masterKey = `board_violations_${board.id}_${userId}`;
+        const currentMasterCount = decryptViolationCount(localStorage.getItem(masterKey));
         
-        // 1. Find the current highest count among all notes (DB or Local)
-        let maxViolations = 0;
+        // Find the highest known count (Local Master vs any DB notes)
+        let maxViolations = currentMasterCount;
         for (const n of allMyNotes) {
-            const dbCount = n.violation_count || 0;
-            const localKey = getViolationKey(n.id);
-            const localCount = decryptViolationCount(localStorage.getItem(localKey));
-            maxViolations = Math.max(maxViolations, dbCount, localCount);
+            maxViolations = Math.max(maxViolations, n.violation_count || 0);
         }
 
         const newGlobalCount = maxViolations + 1;
+        
+        // Save to Master Key immediately (Always works!)
+        localStorage.setItem(masterKey, encryptViolationCount(newGlobalCount));
+        console.log(`[FocusGuard] MASTER SYNC: Total violations for ${username} is now ${newGlobalCount}`);
+
+        if (allMyNotes.length === 0) {
+            console.log(`[FocusGuard] No notes yet for ${username}. Count is stored in Master Key and will apply to their first note.`);
+            return;
+        }
+
+        // --- STEP 2: SYNC TO EXISTING NOTES ---
         console.log(`[FocusGuard] GLOBAL SYNC: Setting all ${allMyNotes.length} notes for ${username} to ${newGlobalCount}`);
 
-        // 2. Optimistic UI update for ALL notes instantly
+        // Optimistic UI update
         setNotes((prev: Note[]) => prev.map((n: Note) => {
             const isMe = n.author_id === userId || 
                          (!!userId && !!username && n.author?.trim().toLowerCase() === username.trim().toLowerCase() && n.authorRole === 'student');
             return isMe ? { ...n, violation_count: newGlobalCount } : n;
         }));
 
-        // 3. Batch Update Database (Single Network Call)
-        // We update by author_id OR author name (for amnesty)
+        // Batch Update Database
         const { error } = await supabase
             .from('notes')
             .update({ violation_count: newGlobalCount })
@@ -115,10 +117,7 @@ export const useViolationTracking = ({
         if (error) {
             console.error("[FocusGuard] Global sync failed:", error.message);
         } else {
-            // Update local storage for all notes AND the master student key
-            const masterKey = `board_violations_${board.id}_${userId}`;
-            localStorage.setItem(masterKey, encryptViolationCount(newGlobalCount));
-            
+            // Update local storage for individual notes to keep them consistent
             for (const n of allMyNotes) {
                 localStorage.setItem(getViolationKey(n.id), encryptViolationCount(newGlobalCount));
             }
