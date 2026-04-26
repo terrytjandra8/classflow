@@ -29,7 +29,7 @@ interface NoteHeaderProps {
     showUpdatedAt?: boolean;
 }
 
-export const NoteHeader: React.FC<NoteHeaderProps> = ({ 
+export const NoteHeader: React.FC<NoteHeaderProps> = ({
     note, canDelete, canEdit, onDelete, onEdit, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, isStickyNote, isTransparent, isSectionAnonymous,
     showMenu, setShowMenu, showUpdatedAt
 }) => {
@@ -37,16 +37,16 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     const triggerRef = useRef<HTMLButtonElement>(null);
 
     const isTeacher = note.authorRole === 'teacher' || note.author === 'Teacher';
-    
+
     // Robust Author Check: Match by ID OR (Name + Role) fallback
-    const isAuthor = userId === note.author_id || 
-                    (!!userId && !!username && 
-                     note.author?.trim().toLowerCase() === username.trim().toLowerCase() &&
-                     note.authorRole === (isStudent ? 'student' : 'teacher'));
-    
+    const isAuthor = userId === note.author_id ||
+        (!!userId && !!username &&
+            note.author?.trim().toLowerCase() === username.trim().toLowerCase() &&
+            note.authorRole === (isStudent ? 'student' : 'teacher'));
+
     const shouldMask = BoardRules.shouldAnonymizeNote(board, isSectionAnonymous, note, userId, !!isStudent, !!isPresentationMode);
     const anonymousIdentity = shouldMask && note.author_id ? getAnonymousIdentity(note.author_id) : null;
-    
+
     const rawName = note.author && note.author.trim() !== '' ? note.author : 'Anonymous';
     const displayName = shouldMask ? (anonymousIdentity?.name || 'Anonymous') : rawName;
     const displayAvatar = shouldMask ? (anonymousIdentity?.avatar || null) : note.authorAvatar;
@@ -60,7 +60,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
         if (canDelete) {
             return (
                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-1">
-                     <button 
+                    <button
                         onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}
                         className="p-1.5 hover:bg-black/10 rounded-full text-slate-500 hover:text-red-600 transition-colors"
                         title="Delete"
@@ -76,10 +76,10 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     return (
         <div className={`p-4 pb-2 flex items-start justify-between relative ${isTransparent ? 'pl-0' : ''}`}>
             <div className="flex items-center gap-3">
-                <Avatar 
-                    src={displayAvatar} 
-                    name={displayName} 
-                    size="md" 
+                <Avatar
+                    src={displayAvatar}
+                    name={displayName}
+                    size="md"
                     isTeacher={isTeacher}
                 />
                 <div className="flex flex-col">
@@ -89,11 +89,11 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {shouldMask && <Ghost size={10} className="text-gray-400" />}
                         {isTeacher && <ShieldCheck size={12} className="text-pink-600 fill-pink-100" />}
                         {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
-                        
+
                         {/* Focus Violation Flag (Visible to teachers and the student themselves) */}
                         {((!isStudent) || (isStudent && isAuthor)) && (note.violation_count || 0) > 0 && (
-                            <div 
-                                className="flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-black shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-[pulse_1s_infinite] ml-1 border border-red-400/50" 
+                            <div
+                                className="flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-black shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-[pulse_1s_infinite] ml-1 border border-red-400/50"
                                 title={`${note.violation_count} focus violations`}
                             >
                                 <ShieldAlert size={11} className="animate-bounce" />
@@ -104,23 +104,23 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                     <div className={`text-[10px] font-medium flex items-center gap-2 ${subTextColor}`}>
                         <Timestamp time={note.createdAt} />
                         {showUpdatedAt && note.updatedAt && (
-                           <Timestamp time={note.updatedAt} isEdited={true} />
+                            <Timestamp time={note.updatedAt} isEdited={true} />
                         )}
                     </div>
                 </div>
             </div>
-            
+
             {(canEdit || canDelete) && (
                 <div className="relative">
-                    <button 
+                    <button
                         ref={triggerRef}
                         onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                         className={`p-1 rounded-full transition-colors ${showMenu ? 'bg-black/10 text-slate-900' : `${menuIconColor} ${iconHoverBg}`}`}>
                         <MoreVertical size={16} />
                     </button>
-                    
+
                     {showMenu && (
-                        <NoteMenu 
+                        <NoteMenu
                             triggerRef={triggerRef}
                             note={note}
                             canEdit={canEdit}
