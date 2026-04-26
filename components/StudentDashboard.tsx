@@ -79,6 +79,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [currentUserId, setCurrentUserId] = useState<string>('');
     const profileMenuRef = useRef<HTMLDivElement>(null);
 
+    // --- EXIT ANIMATION BUFFER ---
+    // This state holds the boards that are currently being rendered, including those animating out.
+    const [renderedBoards, setRenderedBoards] = useState<Board[]>([]);
+    const boardsRef = useRef<Board[]>(boardsProp);
+    useEffect(() => { boardsRef.current = boardsProp; }, [boardsProp]);
+
     const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
 
     // Persist active tab and class filter to localStorage
@@ -100,13 +106,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         fetchUserId();
     }, []);
 
-    // === FILTERING LOGIC (reads directly from boardsProp — no middleman state) ===
-    const filteredBoards = useMemo(() => {
-        let result = [...boardsProp];
-
-        // 1. Filter out any trashed boards and only include published boards.
-        // This is the core visibility rule for students.
-        result = result.filter(b =>
+    // --- CORE LOGIC: Synchronize boardsProp with renderedBoards ---
+    useEffect(() => {
+        // 1. Calculate what SHOULD be visible based on filters
+        let nextVisible = boardsProp.filter(b =>
             !b.isTrashed &&
             (
                 b.isPublished ||
@@ -115,19 +118,48 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             )
         );
 
-        // 2. Filter by the selected class in the sidebar.
         if (selectedClassFilter !== 'All Boards') {
-            result = result.filter(b => b.targetGrade === selectedClassFilter);
+            nextVisible = nextVisible.filter(b => b.targetGrade === selectedClassFilter);
         }
 
-        // 3. Filter by the search input text.
         if (filter.trim()) {
-            result = result.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
+            nextVisible = nextVisible.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
         }
 
-        // 4. Sort the results by creation date (newest first).
-        return result.sort((a, b) => b.createdAt - a.createdAt);
+        setRenderedBoards(prev => {
+            // Find boards that are in prev but NOT in nextVisible
+            // We mark them as isExiting instead of removing them immediately
+            const currentlyExitingIds = new Set(prev.filter(b => b.isExiting).map(b => b.id));
+            
+            const stillVisible = nextVisible.map(b => ({ ...b, isExiting: false }));
+            
+            const boardsToAnimateOut = prev.filter(b => 
+                !nextVisible.some(nb => nb.id === b.id) && !currentlyExitingIds.has(b.id)
+            ).map(b => ({ ...b, isExiting: true }));
+
+            // For boards that were already exiting, keep them until the timeout hits
+            const persistentExiting = prev.filter(b => currentlyExitingIds.has(b.id));
+
+            const combined = [...stillVisible, ...boardsToAnimateOut, ...persistentExiting];
+            
+            // Sort to keep layout stable (newest first)
+            return combined.sort((a, b) => b.createdAt - a.createdAt);
+        });
+
+        // Set timeouts for boards marked as isExiting to eventually remove them
+        const boardsToKill = renderedBoards.filter(b => !nextVisible.some(nb => nb.id === b.id) && !b.isExiting);
+        if (boardsToKill.length > 0) {
+            // We just triggered isExiting: true for these. Now set a timer to remove them from state.
+            setTimeout(() => {
+                setRenderedBoards(current => current.filter(b => 
+                    nextVisible.some(nb => nb.id === b.id) || !boardsToKill.some(bk => bk.id === b.id)
+                ));
+            }, 1000); // Matches exit-card duration in tailwind.config.js
+        }
+
     }, [boardsProp, selectedClassFilter, filter]);
+
+    const displayBoards = renderedBoards;
 
     // Track seen boards for entrance animations
     useEffect(() => {
@@ -142,13 +174,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (filter.trim() || selectedClassFilter !== 'All Boards') return null;
 
         const getTimestamp = (b: Board) => b.createdAt;
-        const categories = [...new Set(filteredBoards.map(b => getDateCategory(getTimestamp(b))))];
+        const categories = [...new Set(displayBoards.map(b => getDateCategory(getTimestamp(b))))];
 
         return categories.map(category => ({
             title: category,
-            items: filteredBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
+            items: displayBoards.filter(b => getDateCategory(getTimestamp(b)) === category)
         }));
-    }, [filteredBoards, filter, selectedClassFilter]);
+    }, [displayBoards, filter, selectedClassFilter]);
 
     // === EVENT HANDLERS ===
     const handleJoinSubmit = async (e: React.FormEvent) => {
@@ -458,7 +490,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                     <div className="flex items-center gap-4 mb-4"><h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{group.title}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-white/5"></div></div>
                                                     {renderBoardGrid(group.items)}
                                                 </div>
-                                            )) : renderBoardGrid(filteredBoards)}
+                                            )) : renderBoardGrid(displayBoards)}
                                         </div>
                                     )}
                                 </>
