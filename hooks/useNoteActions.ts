@@ -177,6 +177,7 @@ export const useNoteActions = ({
         if (updates.attachmentUrl !== undefined) dbUpdates.attachment_url = updates.attachmentUrl;
         if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
         if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString();
+        if (updates.violation_count !== undefined) dbUpdates.violation_count = updates.violation_count;
 
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
 
