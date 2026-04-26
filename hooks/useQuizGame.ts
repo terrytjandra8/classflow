@@ -135,9 +135,19 @@ export const useQuizGame = (board: Board, notes: Note[], userId?: string, userna
         }
 
         return Object.entries(playerMap)
-            .map(([id, data]) => ({ id, name: data.name, score: data.score }))
+            .map(([id, data]) => {
+                // Get current streak for the latest question
+                let currentStreak = 0;
+                for (let i = currentQIndex; i >= 0; i--) {
+                    const q = questions[i];
+                    const ans = sessionAnswers.find(n => n.author_id === id && n.title === `S${currentSessionId}_Q${i}`);
+                    if (ans && Number(ans.content) === Number(q.correctIndex)) currentStreak++;
+                    else break;
+                }
+                return { id, name: data.name, score: data.score, streak: currentStreak };
+            })
             .sort((a, b) => b.score - a.score);
-    }, [notes, questions, currentSessionId, board.quizStartTime]);
+    }, [notes, questions, currentSessionId, board.quizStartTime, currentQIndex]);
 
     // ACTIONS
     const submitAnswer = async (index: number) => {

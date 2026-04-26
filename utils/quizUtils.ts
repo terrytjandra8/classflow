@@ -1,4 +1,10 @@
-// v1.0.1 - Final scoring logic with TS fix
+
+/**
+ * QUIZ SCORING SYSTEM v1.2.0 - "More Fun & Competitive"
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for scoring.
+ */
+
 export type PointSystemType = 'standard' | 'double' | 'none' | 'competitive' | 'streak_boost';
 
 export interface PointSystemConfig {
@@ -8,123 +14,116 @@ export interface PointSystemConfig {
     maxPoints: number;
     useTimer: boolean;
     hasStreak: boolean;
+    penalty: number; // New: Risk factor
 }
 
 export const POINT_SYSTEMS: PointSystemConfig[] = [
-    {
-        id: 'standard',
-        name: 'Standard',
-        description: 'Time-based points (1000 max) + Dynamic Streak Bonus.',
-        maxPoints: 1000,
-        useTimer: true,
-        hasStreak: true
+    { 
+        id: 'standard', 
+        name: 'Standard', 
+        description: 'Safe play. Earn up to 1000 points + streak bonus. No penalties for wrong answers.', 
+        maxPoints: 1000, 
+        useTimer: true, 
+        hasStreak: true,
+        penalty: 0
     },
-    {
-        id: 'double',
-        name: 'Double Points',
-        description: 'Double rewards (2000 max) + Dynamic Streak Bonus.',
-        maxPoints: 2000,
-        useTimer: true,
-        hasStreak: true
+    { 
+        id: 'double', 
+        name: 'Double Points', 
+        description: 'High stakes! 2000 points max, but a small -100 penalty if you miss.', 
+        maxPoints: 2000, 
+        useTimer: true, 
+        hasStreak: true,
+        penalty: 100
     },
-    {
-        id: 'streak_boost',
-        name: 'Streak Boost',
-        description: 'Massive rewards for long streaks. Perfect for consistent students.',
-        maxPoints: 1000,
-        useTimer: true,
-        hasStreak: true
+    { 
+        id: 'streak_boost', 
+        name: 'Streak Boost', 
+        description: 'Consistency is key. Massive streak multipliers, but streak resets to 0 on any miss.', 
+        maxPoints: 1000, 
+        useTimer: true, 
+        hasStreak: true,
+        penalty: 0
     },
-    {
-        id: 'competitive',
-        name: 'Competitive',
-        description: 'Fixed 1000 points if correct. No timer, no streak.',
-        maxPoints: 1000,
-        useTimer: false,
-        hasStreak: false
+    { 
+        id: 'competitive', 
+        name: 'Competitive', 
+        description: 'ULTRA RISK. Fixed 1000 points for correct answers, but a CRIPPLING -500 penalty for wrong ones!', 
+        maxPoints: 1000, 
+        useTimer: false, 
+        hasStreak: false,
+        penalty: 500
     },
-    {
-        id: 'none',
-        name: 'No Points',
-        description: 'No scores tracked. Use for surveys or icebreakers.',
-        maxPoints: 0,
-        useTimer: false,
-        hasStreak: false
+    { 
+        id: 'none', 
+        name: 'No Points', 
+        description: 'Casual mode. No scores, just for fun or surveys.', 
+        maxPoints: 0, 
+        useTimer: false, 
+        hasStreak: false,
+        penalty: 0
     }
 ];
 
-/**
- * Calculates the streak bonus based on consecutive correct answers
- */
-export const getStreakBonus = (streak: number, system: PointSystemType): number => {
-    if (streak <= 1) return 0;
-    
-    // Default streak bonus: 100 per streak level, capped at 500
-    let bonusPerLevel = 100;
-    let maxBonus = 500;
-
-    // Boosted streak system
-    if (system === 'streak_boost') {
-        bonusPerLevel = 250; // High reward for consistency
-        maxBonus = 1500; 
-    }
-
-    return Math.min((streak - 1) * bonusPerLevel, maxBonus);
-};
+export interface ScoreResult {
+    base: number;
+    speed: number;
+    rank: number;
+    streak: number;
+    total: number;
+}
 
 /**
- * Calculates total points for a given answer including time, rank, and streak factors.
- * This is the SINGLE SOURCE OF TRUTH for scoring in the application.
+ * Calculates total points for a given answer.
  */
 export const calculatePoints = (
-    system: PointSystemType,
+    systemId: PointSystemType,
     timeRemainingMs: number,
     timeLimitMs: number,
     isCorrect: boolean,
     currentStreak: number = 0,
-    correctRank: number = 0 // 0 = first person to answer correctly
-): { base: number; speed: number; rank: number; streak: number; total: number } => {
-    // 1. ABSOLUTE GUARD: If system is 'none', zero points.
-    if (system === 'none') return { base: 0, speed: 0, rank: 0, streak: 0, total: 0 };
-
-    const config = POINT_SYSTEMS.find(p => p.id === system) || POINT_SYSTEMS[0];
-    const multiplier = system === 'double' ? 2 : 1;
-
-    // 2. PENALTY LOGIC: If wrong, subtract points based on system
-    if (!isCorrect) {
-        // Penalty is -250 base, doubled if in Double mode
-        const penaltyValue = -250 * multiplier;
-        return { base: penaltyValue, speed: 0, rank: 0, streak: 0, total: penaltyValue };
-    }
+    correctRank: number = 0
+): ScoreResult => {
     
-    // 3. BASE POINTS (Standard is 1000)
-    const basePoints = config.maxPoints;
+    const config = POINT_SYSTEMS.find(p => p.id === systemId) || POINT_SYSTEMS[0];
+
+    // 1. INCORRECT ANSWER LOGIC (Risk/Penalty)
+    if (!isCorrect) {
+        const penalty = -config.penalty;
+        return { base: penalty, speed: 0, rank: 0, streak: 0, total: penalty };
+    }
+
+    // 2. FAIL-SAFE for "None" system
+    if (systemId === 'none') {
+        return { base: 0, speed: 0, rank: 0, streak: 0, total: 0 };
+    }
+
+    const multiplier = systemId === 'double' ? 2 : 1;
+
+    // 3. BASE POINTS
+    const base = config.maxPoints;
 
     // 4. SPEED BONUS (max 500)
-    let speedBonus = 0;
+    let speed = 0;
     if (config.useTimer && timeLimitMs > 0) {
-        // Linear decay from 500 to 0 based on time elapsed
         const timeFactor = Math.max(0, Math.min(1, timeRemainingMs / timeLimitMs));
-        speedBonus = Math.floor(500 * timeFactor * multiplier);
+        speed = Math.floor(500 * timeFactor * multiplier);
     }
 
-    // 5. RANK BONUS (Dynamic based on system)
-    const rankStep = system === 'competitive' ? 100 : 50;
-    const maxRankBonus = system === 'competitive' ? 1000 : 500;
-    const rankBonus = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
+    // 5. RANK BONUS (First responders get more)
+    const rankStep = systemId === 'competitive' ? 100 : 50;
+    const maxRankBonus = systemId === 'competitive' ? 1000 : 500;
+    const rank = Math.max(0, (maxRankBonus - (correctRank * rankStep)) * multiplier);
 
-    // 6. STREAK BONUS (Capped at level 5)
-    let streakBonus = 0;
-    if (config.hasStreak) {
-        const streakStep = system === 'streak_boost' ? 200 : 100;
-        streakBonus = Math.min(currentStreak, 5) * streakStep * multiplier;
+    // 6. STREAK BONUS (High scaling for Streak Boost)
+    let streak = 0;
+    if (config.hasStreak && currentStreak > 0) {
+        const streakStep = systemId === 'streak_boost' ? 300 : 100; // Boosted step
+        const effectiveStreak = Math.min(currentStreak, 5); // Cap at level 5
+        streak = effectiveStreak * streakStep * multiplier;
     }
 
-    return {
-        base: basePoints,
-        speed: speedBonus,
-        rank: rankBonus,
-        streak: streakBonus,
-        total: basePoints + speedBonus + rankBonus + streakBonus
-    };
+    const total = base + speed + rank + streak;
+
+    return { base, speed, rank, streak, total };
 };

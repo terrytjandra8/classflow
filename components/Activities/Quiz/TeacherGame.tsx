@@ -396,7 +396,7 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
 
                     <div className="w-full max-w-4xl space-y-3">
                         {!showHistory ? (
-                            scores.slice(0, 5).map(({ name, score }, idx) => (
+                            scores.slice(0, 5).map(({ name, score, streak }, idx) => (
                                 <div 
                                     key={idx} 
                                     className="flex items-center justify-between p-5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl transform transition-all hover:scale-105 hover:bg-white/10 animate-in slide-in-from-bottom-10 fade-in duration-500 group"
@@ -406,7 +406,16 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                                         <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black shadow-lg ${idx === 0 ? 'bg-yellow-400 text-black' : idx === 1 ? 'bg-gray-300 text-black' : idx === 2 ? 'bg-orange-400 text-black' : 'bg-white/10 text-white'}`}>
                                             {idx + 1}
                                         </div>
-                                        <span className="text-2xl font-bold text-white group-hover:text-pink-200 transition-colors">{name}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-2xl font-bold text-white group-hover:text-pink-200 transition-colors flex items-center gap-3">
+                                                {name}
+                                                {streak > 1 && (
+                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full text-[10px] font-black animate-pulse border border-orange-500/30">
+                                                        <Flame size={12} fill="currentColor" /> {streak} STREAK
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="text-3xl font-black text-white/50 group-hover:text-white transition-colors tabular-nums">{score}</div>
                                 </div>

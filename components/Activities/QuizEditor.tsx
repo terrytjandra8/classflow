@@ -21,6 +21,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
     const [isSearchingGiphy, setIsSearchingGiphy] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const [customTime, setCustomTime] = useState('');
+    const [showCustomTime, setShowCustomTime] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const questionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -83,11 +85,11 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
         }
     };
 
-    // --- DRAG AND DROP LOGIC (FIXED) ---
+    // --- DRAG AND DROP LOGIC (Deep-copy safe) ---
     const onDragStart = (e: React.DragEvent, index: number) => {
         setDraggedIndex(index);
         e.dataTransfer.effectAllowed = "move";
-        // Ghost effect
+        e.dataTransfer.setData('text/plain', index.toString());
         const target = e.currentTarget as HTMLElement;
         setTimeout(() => { target.style.opacity = '0.3'; }, 0);
     };
@@ -105,13 +107,13 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
             return;
         }
 
-        const newQs = [...localQuestions];
-        const itemToMove = newQs[draggedIndex];
-        newQs.splice(draggedIndex, 1);
-        newQs.splice(index, 0, itemToMove);
+        // Deep copy ALL questions so no data is shared or mutated
+        const deepCopy: QuizQuestion[] = JSON.parse(JSON.stringify(localQuestions));
+        const [moved] = deepCopy.splice(draggedIndex, 1);
+        deepCopy.splice(index, 0, moved);
         
-        setLocalQuestions(newQs);
-        setActiveIndex(index); // Focus the moved item
+        setLocalQuestions(deepCopy);
+        setActiveIndex(index);
         setDraggedIndex(null);
         setDragOverIndex(null);
     };
@@ -188,10 +190,18 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                 <aside className="h-28 lg:h-auto lg:w-72 bg-[#161616] border-b lg:border-b-0 lg:border-r border-white/5 flex lg:flex-col shrink-0 overflow-x-auto lg:overflow-y-auto custom-scrollbar p-3 lg:p-4 gap-3 relative no-scrollbar touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                     <div className="hidden lg:block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 px-2">Questions List</div>
                     {localQuestions.map((q, idx) => (
-                        <div key={q.id} className="relative shrink-0 lg:shrink">
+                        <div 
+                            key={q.id} 
+                            className="relative shrink-0 lg:shrink"
+                            draggable
+                            onDragStart={(e) => onDragStart(e, idx)}
+                            onDragOver={(e) => onDragOver(e, idx)}
+                            onDrop={() => handleDrop(idx)}
+                            onDragEnd={handleDragEnd}
+                        >
                             <div 
                                 onClick={() => { setActiveIndex(idx); setIsPreviewMode(false); }} 
-                                className={`relative group cursor-pointer p-0.5 rounded-xl lg:rounded-2xl ${activeIndex === idx ? 'z-10' : 'opacity-60 hover:opacity-100'}`}
+                                className={`relative group cursor-grab active:cursor-grabbing p-0.5 rounded-xl lg:rounded-2xl transition-all duration-200 ${activeIndex === idx ? 'z-10' : 'opacity-60 hover:opacity-100'} ${dragOverIndex === idx ? 'ring-2 ring-purple-400 scale-[1.02]' : ''}`}
                             >
                                 <div className={`bg-[#222] border-2 rounded-xl lg:rounded-2xl p-2 lg:p-3 h-20 lg:h-24 w-32 lg:w-full flex flex-col gap-1 lg:gap-1.5 overflow-hidden transition-all ${activeIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/20' : 'border-white/5'}`}>
                                     <div className="flex justify-between items-center">
@@ -228,7 +238,26 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                                 <div className="aspect-video max-w-md lg:max-w-lg mx-auto w-full bg-white/5 rounded-3xl lg:rounded-[2.5rem] shadow-2xl border border-white/5 flex flex-col items-center justify-center gap-4 group transition-all relative overflow-hidden shrink-0">
                                     {currentQ?.mediaUrl ? <div className="relative w-full h-full"><img src={currentQ.mediaUrl} className="w-full h-full object-contain" alt="Media" /><div className="absolute top-4 right-4 flex gap-2"><button onClick={() => fileInputRef.current?.click()} className="p-2 bg-blue-600 rounded-lg text-white"><Upload size={12}/></button><button onClick={() => updateCurrentQ({ mediaUrl: undefined })} className="p-2 bg-red-600 rounded-lg text-white"><Trash2 size={12}/></button></div></div> : <div className="flex flex-col items-center gap-4 lg:gap-6"><div className="flex gap-4"><button onClick={() => setShowGiphy(true)} className="w-16 h-16 lg:w-20 lg:h-20 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:text-purple-400 transition-all"><Film size={20} /><span className="text-[7px] font-black uppercase mt-1">Giphy</span></button><button onClick={() => fileInputRef.current?.click()} className="w-16 h-16 lg:w-20 lg:h-20 bg-white/5 border border-white/10 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center text-gray-500 hover:text-blue-400 transition-all"><Upload size={20} /><span className="text-[7px] font-black uppercase mt-1">Upload</span></button></div></div>}
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 pb-20">{currentQ?.options.map((opt, i) => { const isActive = currentQ.correctIndex === i; return (<div key={i} className={`group relative flex items-start p-1.5 lg:p-2 rounded-xl lg:rounded-2xl transition-all border-2 ${isActive ? 'border-green-500 bg-green-500/5' : 'border-white/5 bg-white/5'}`}><div className={`${COLORS[i]} w-10 lg:w-14 h-10 lg:h-14 rounded-lg lg:rounded-xl flex items-center justify-center text-base lg:text-xl text-white/90 font-black shrink-0 mt-0.5 lg:mt-1`}>{SHAPES[i]}</div><div className="flex-1 min-h-[40px] h-auto flex items-center px-3 lg:px-4"><textarea rows={1} value={opt} onChange={(e) => { const newOpts = [...currentQ.options]; newOpts[i] = e.target.value; updateCurrentQ({ options: newOpts }); adjustTextareaHeight(e.target as HTMLTextAreaElement); }} placeholder={`Answer ${i + 1}`} className="answer-textarea w-full bg-transparent text-sm lg:text-lg font-bold text-white placeholder-gray-800 outline-none resize-none overflow-hidden" /></div><button onClick={() => updateCurrentQ({ correctIndex: i })} className={`mr-1 lg:mr-2 p-2 lg:p-3 rounded-lg lg:rounded-xl border-2 transition-all mt-0.5 lg:mt-1 ${isActive ? 'bg-green-500 border-green-500 text-white' : 'bg-white/5 border-white/10 text-gray-700'}`}><CheckCircle2 size={16} /></button></div>); })}</div>
+                                <div className="grid grid-cols-2 gap-3 lg:gap-4 pb-20">
+                                    {currentQ?.options.map((opt, i) => {
+                                        const isActive = currentQ.correctIndex === i;
+                                        return (
+                                            <div key={i} className={`group relative flex items-center gap-3 p-3 lg:p-4 rounded-xl lg:rounded-2xl transition-all border-2 min-h-[64px] ${isActive ? 'border-green-500 bg-green-500/5' : 'border-white/5 bg-white/5'}`}>
+                                                <div className={`${COLORS[i]} w-10 lg:w-12 h-10 lg:h-12 rounded-lg lg:rounded-xl flex items-center justify-center text-base lg:text-lg text-white/90 font-black shrink-0`}>{SHAPES[i]}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <textarea
+                                                        rows={1}
+                                                        value={opt}
+                                                        onChange={(e) => { const newOpts = [...currentQ.options]; newOpts[i] = e.target.value; updateCurrentQ({ options: newOpts }); adjustTextareaHeight(e.target as HTMLTextAreaElement); }}
+                                                        placeholder={`Answer ${i + 1}`}
+                                                        className="answer-textarea w-full bg-transparent text-sm lg:text-base font-bold text-white placeholder-gray-800 outline-none resize-none overflow-hidden"
+                                                    />
+                                                </div>
+                                                <button onClick={() => updateCurrentQ({ correctIndex: i })} className={`p-2 lg:p-2.5 rounded-lg lg:rounded-xl border-2 transition-all shrink-0 ${isActive ? 'bg-green-500 border-green-500 text-white' : 'bg-white/5 border-white/10 text-gray-700'}`}><CheckCircle2 size={16} /></button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </>
                         )}
                     </div>
@@ -252,16 +281,33 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                             <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Points Mode</label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                                 {[
-                                    { id: 'standard', name: 'Standard', icon: Trophy, desc: 'Normal + Streak' },
-                                    { id: 'double', name: 'Double', icon: Zap, desc: '2x + Streak' },
-                                    { id: 'streak_boost', name: 'Streak Boost', icon: Flame, desc: 'Massive Streak', color: 'text-orange-400' },
-                                    { id: 'competitive', name: 'Competitive', icon: Target, desc: 'No streak' },
-                                    { id: 'none', name: 'No points', icon: MinusCircle, desc: 'Survey' }
+                                    { id: 'standard', name: 'Standard', icon: Trophy, desc: 'Normal + Streak', fullDesc: 'Earn up to 1000 base points. Speed & Streak bonuses included. No penalty for wrong answers.' },
+                                    { id: 'double', name: 'Double', icon: Zap, desc: '2x + Streak', fullDesc: 'Double everything (2000 max)! But watch out: a -100 penalty if you miss.' },
+                                    { id: 'streak_boost', name: 'Streak Boost', icon: Flame, desc: 'Massive Streak', fullDesc: 'Massive points for long streaks! Streak resets to zero on any miss.', color: 'text-orange-400' },
+                                    { id: 'competitive', name: 'Competitive', icon: Target, desc: 'High Risk', fullDesc: 'Fixed 1000 points if right. CRIPPLING -500 penalty if wrong! No timer, no streak.' },
+                                    { id: 'none', name: 'No points', icon: MinusCircle, desc: 'Survey', fullDesc: 'No scores tracked. Perfect for quick polls or icebreakers.' }
                                 ].map(p => (
-                                    <button key={p.id} onClick={() => updateCurrentQ({ pointsType: p.id as any })} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${currentQ?.pointsType === p.id ? 'border-purple-500 bg-purple-500/10' : 'border-white/5 bg-white/5'}`}>
-                                        <p.icon size={16} className={currentQ?.pointsType === p.id ? (p.color || 'text-purple-400') : 'text-gray-500'} />
-                                        <div className="flex-1 leading-tight"><p className="text-[10px] font-black uppercase">{p.name}</p><p className="text-[8px] font-bold text-gray-500">{p.desc}</p></div>
-                                    </button>
+                                    <div key={p.id} className="relative group/mode">
+                                        <button 
+                                            onClick={() => updateCurrentQ({ pointsType: p.id as any })} 
+                                            className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${currentQ?.pointsType === p.id ? 'border-purple-500 bg-purple-500/10' : 'border-white/5 bg-white/5'}`}
+                                        >
+                                            <p.icon size={16} className={currentQ?.pointsType === p.id ? (p.color || 'text-purple-400') : 'text-gray-500'} />
+                                            <div className="flex-1 leading-tight">
+                                                <p className="text-[10px] font-black uppercase">{p.name}</p>
+                                                <p className="text-[8px] font-bold text-gray-500">{p.desc}</p>
+                                            </div>
+                                        </button>
+                                        
+                                        {/* Hover Description Tooltip - positioned to the LEFT */}
+                                        <div className="absolute right-full mr-4 top-0 w-56 bg-[#1a1a1a] border border-white/10 rounded-2xl p-4 shadow-2xl opacity-0 group-hover/mode:opacity-100 pointer-events-none transition-all z-[300] -translate-x-2 group-hover/mode:translate-x-0 hidden lg:block">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <p.icon size={14} className={p.color || 'text-purple-400'} />
+                                                <span className="text-[10px] font-black uppercase text-white">{p.name} Rules</span>
+                                            </div>
+                                            <p className="text-[11px] leading-relaxed text-gray-400 font-medium">{p.fullDesc}</p>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -269,9 +315,51 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ questions, onUpdateBoard
                             <label className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Time limit</label>
                             <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
                                 {[5, 10, 20, 30, 60, 120].map(s => (
-                                    <button key={s} onClick={() => updateCurrentQ({ timeLimit: s })} className={`py-2 rounded-lg border-2 font-black text-[10px] transition-all ${currentQ?.timeLimit === s ? 'border-purple-500 bg-purple-500/10 text-white' : 'border-white/5 bg-white/5 text-gray-500'}`}>{s}s</button>
+                                    <button key={s} onClick={() => { updateCurrentQ({ timeLimit: s }); setShowCustomTime(false); }} className={`py-2 rounded-lg border-2 font-black text-[10px] transition-all ${currentQ?.timeLimit === s && !showCustomTime ? 'border-purple-500 bg-purple-500/10 text-white' : 'border-white/5 bg-white/5 text-gray-500'}`}>{s}s</button>
                                 ))}
+                                {/* Custom duration button */}
+                                <button 
+                                    onClick={() => { setShowCustomTime(true); setCustomTime(currentQ?.timeLimit?.toString() || ''); }}
+                                    className={`py-2 rounded-lg border-2 font-black text-[10px] transition-all ${showCustomTime || ![5, 10, 20, 30, 60, 120].includes(currentQ?.timeLimit || 0) ? 'border-purple-500 bg-purple-500/10 text-white' : 'border-white/5 bg-white/5 text-gray-500'}`}
+                                >
+                                    {![5, 10, 20, 30, 60, 120].includes(currentQ?.timeLimit || 0) ? `${currentQ?.timeLimit}s` : 'Custom'}
+                                </button>
                             </div>
+                            {/* Custom time input */}
+                            {showCustomTime && (
+                                <div className="flex items-center gap-2 animate-in slide-in-from-top-2 duration-200">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="300"
+                                        value={customTime}
+                                        onChange={(e) => setCustomTime(e.target.value)}
+                                        placeholder="Seconds"
+                                        className="flex-1 bg-white/5 border-2 border-white/10 rounded-lg px-3 py-2 text-white font-bold text-xs outline-none focus:border-purple-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                const val = parseInt(customTime);
+                                                if (val > 0 && val <= 300) {
+                                                    updateCurrentQ({ timeLimit: val });
+                                                    setShowCustomTime(false);
+                                                }
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const val = parseInt(customTime);
+                                            if (val > 0 && val <= 300) {
+                                                updateCurrentQ({ timeLimit: val });
+                                                setShowCustomTime(false);
+                                            }
+                                        }}
+                                        className="px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-black text-[10px] text-white transition-all"
+                                    >Set</button>
+                                    <span className="text-[9px] text-gray-500 font-bold">1–300s</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </aside>
