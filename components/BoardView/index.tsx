@@ -16,6 +16,7 @@ import { classService } from '../../services/classService';
 import { ScreenshotGuard } from '../Security/ScreenshotGuard';
 import { supabase } from '../../services/supabaseClient';
 import { mapBoard } from '../../utils/mappers';
+import { getViolationKey, encryptViolationCount, decryptViolationCount } from '../../utils/security';
 
 interface BoardViewProps {
     board: Board;
@@ -87,7 +88,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
     
     const { 
-        createNote, updateNote, deleteNote, likeNote, addComment, duplicateNote 
+        createNote, updateNote, deleteNote, likeNote, addComment, duplicateNote, incrementViolation
     } = useNoteActions({
         board: board,
         boardId: board.id,
@@ -153,8 +154,22 @@ export const BoardView: React.FC<BoardViewProps> = ({
             // If the section is guarded (isWatermarked) or the global board security is on
             if (section?.isWatermarked || board.blockScreenshots) {
                 const currentViolations = note.violation_count || 0;
-                console.log(`[FocusGuard] Flagging note ${note.id} in section "${section?.title || 'Default'}". New count: ${currentViolations + 1}`);
-                await updateNote(note.id, { violation_count: currentViolations + 1 });
+                
+                // --- SECURE LOCAL RECORDING ---
+                const localKey = getViolationKey(note.id);
+                const localCount = decryptViolationCount(localStorage.getItem(localKey));
+                
+                // Ensure we start from the highest known count (sync from DB if local is behind)
+                const baseCount = Math.max(currentViolations, localCount);
+                const newCount = baseCount + 1;
+                
+                console.log(`[FocusGuard] Securely recording violation for note ${note.id}. New total: ${newCount}`);
+                
+                // Save encrypted
+                localStorage.setItem(localKey, encryptViolationCount(newCount));
+                
+                // Trigger secure database sync via RPC
+                await incrementViolation(note.id);
             }
         }
     }, [isStudent, isSimulatingStudent, notes, userId, updateNote, board]);

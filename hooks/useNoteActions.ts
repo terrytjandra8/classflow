@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Note, Comment, Board } from '../types';
 import { mapNote } from '../utils/mappers';
+import { getViolationKey, decryptViolationCount, encryptViolationCount } from '../utils/security';
 
 interface UseNoteActionsProps {
     board: Board;
@@ -177,7 +178,20 @@ export const useNoteActions = ({
         if (updates.attachmentUrl !== undefined) dbUpdates.attachment_url = updates.attachmentUrl;
         if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
         if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString();
-        if (updates.violation_count !== undefined) dbUpdates.violation_count = updates.violation_count;
+        
+        // --- SECURE LOCAL SYNC ---
+        // If a local encrypted violation count exists, merge it into the update
+        const localKey = getViolationKey(id);
+        const localViolations = decryptViolationCount(localStorage.getItem(localKey));
+        
+        if (updates.violation_count !== undefined) {
+            dbUpdates.violation_count = updates.violation_count;
+            // Clear local storage after explicit update to prevent double-counting
+            localStorage.removeItem(localKey);
+        } else if (localViolations > 0) {
+            // Pick up pending local violations if not explicitly provided
+            dbUpdates.violation_count = localViolations;
+        }
 
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
 
@@ -188,6 +202,30 @@ export const useNoteActions = ({
         onTouchBoard();
         // Removed: updateBoardTimestamp() - causing race conditions on busy boards
     }, [setNotes, onTouchBoard]);
+    
+    const incrementViolation = useCallback(async (id: string) => {
+        console.log(`[FocusGuard] Calling secure RPC for note: ${id}`);
+        
+        // Optimistic update for instant UI feedback
+        setNotes(currentNotes => currentNotes.map(n => 
+            n.id === id ? { ...n, violation_count: (n.violation_count || 0) + 1 } : n
+        ));
+
+        // Call secure RPC - this bypasses RLS using SECURITY DEFINER
+        const { error } = await supabase.rpc('increment_violation_count', { target_note_id: id });
+        
+        if (error) {
+            console.error("[FocusGuard] RPC Error:", error.message);
+            // Fallback: If RPC fails (e.g. not created yet), try a standard update as a last resort
+            await supabase.from('notes').update({ 
+                violation_count: (notes.find(n => n.id === id)?.violation_count || 0) + 1 
+            }).eq('id', id);
+        } else {
+            console.log(`[FocusGuard] Database successfully updated for note: ${id}`);
+            // Clear local storage after successful DB sync
+            localStorage.removeItem(getViolationKey(id));
+        }
+    }, [setNotes, notes]);
 
     const deleteNote = useCallback(async (id: string) => {
         setNotes(currentNotes => {
@@ -327,5 +365,6 @@ export const useNoteActions = ({
         addComment,
         duplicateNote,
         isEditable,
+        incrementViolation
     };
 };
