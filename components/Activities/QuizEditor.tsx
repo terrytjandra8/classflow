@@ -166,7 +166,6 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
         onUpdateBoard({ 
             quizQuestions: localQuestions,
             assessmentQuestions: localQuestions as any, // Sync both for compatibility
-            isPublished: true, // Ensure it appears on student dashboard
             updatedAt: Date.now()
         });
         if (onClose) onClose();
