@@ -24,7 +24,7 @@ const SHAPES = ['▲', '◆', '●', '■'];
 export const StudentGame: React.FC<StudentGameProps> = ({
     state, board, currentQ, timeLeft, hasAnswered, myStreak, myAnswerNote, scores, userId, submitAnswer, SoundControl, backgroundStyle, isSubmitting
 }) => {
-    
+
     // Local state for immediate feedback
     const [localSelectedIdx, setLocalSelectedIdx] = React.useState<number | null>(null);
     const [revealMessage, setRevealMessage] = React.useState('');
@@ -37,18 +37,18 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     React.useEffect(() => {
         if (state === 'reveal') {
             const correctMsgs = [
-                "Genius move!", "On fire! 🔥", "Unstoppable!", 
+                "Genius move!", "On fire! 🔥", "Unstoppable!",
                 "Pure brilliance!", "Perfectly executed!", "Absolute legend!"
             ];
             const incorrectMsgs = [
-                "Almost had it!", "Stay focused, you got this!", 
-                "Shake it off, next one's yours!", "Nice try! Keep pushing!", 
+                "Almost had it!", "Stay focused, you got this!",
+                "Shake it off, next one's yours!", "Nice try! Keep pushing!",
                 "Mistakes are lessons! Go again!", "So close! Don't give up!"
             ];
-            
+
             const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
             const isCorrect = submittedIndex !== null && currentQ && Number(submittedIndex) === Number(currentQ.correctIndex);
-            
+
             const list = isCorrect ? correctMsgs : incorrectMsgs;
             setRevealMessage(list[Math.floor(Math.random() * list.length)]);
         }
@@ -65,7 +65,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         return (
             <div className="h-full flex flex-col items-center justify-center bg-[#46178f] text-white p-6 text-center relative overflow-hidden font-sans">
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
-                
+
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white/5 rounded-full blur-[100px] animate-pulse"></div>
                     <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-400/10 rounded-full blur-[100px] animate-pulse [animation-delay:2s]"></div>
@@ -89,7 +89,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         return (
             <div className="h-full flex flex-col items-center justify-center bg-[#46178f] text-white p-6 relative overflow-hidden">
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
-                
+
                 <div className="z-10 flex flex-col items-center text-center animate-in zoom-in duration-500">
                     <div className="w-40 h-40 bg-white rounded-[3rem] flex items-center justify-center mb-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-4 border-white/50 rotate-3 transition-transform hover:rotate-0">
                         <span className="text-8xl select-none">🎮</span>
@@ -113,14 +113,14 @@ export const StudentGame: React.FC<StudentGameProps> = ({
             return (
                 <div className="h-full flex flex-col items-center justify-center bg-[#1368ce] text-white p-8 relative overflow-hidden">
                     <div className="absolute top-6 right-6 z-50 scale-125 origin-top-right"><SoundControl /></div>
-                    
+
                     <div className="relative z-10 flex flex-col items-center text-center">
                         <div className="w-40 h-40 bg-white/10 backdrop-blur-3xl rounded-full flex items-center justify-center mb-12 border-4 border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.1)] animate-bounce">
                             <CheckCircle size={80} className="text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.2)]" />
                         </div>
                         <h3 className="text-6xl font-black mb-4 tracking-tighter drop-shadow-2xl">Answered!</h3>
                         <p className="text-white/60 text-xl font-bold uppercase tracking-widest bg-black/20 px-8 py-2 rounded-full border border-white/10">Waiting for others...</p>
-                        
+
                         {myStreak > 1 && (
                             <div className="mt-16 flex items-center gap-4 bg-gradient-to-r from-orange-500 to-red-600 px-10 py-5 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
                                 <Flame size={32} className="fill-white" />
@@ -150,7 +150,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                         )}
                         <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Question {(board.currentQuestionIndex ?? 0) + 1}</div>
                     </div>
-                    
+
                     <div className="flex gap-3 scale-110 origin-right">
                         <div className={`px-6 py-2.5 rounded-2xl font-black text-2xl shadow-2xl backdrop-blur-xl border-2 transition-all ${timeLeft <= 5 ? 'bg-red-600 border-red-400 text-white animate-pulse scale-110' : 'bg-black/40 border-white/10 text-white'}`}>
                             {timeLeft}s
@@ -167,19 +167,19 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                         </h2>
                     </div>
                 )}
-                
+
                 {/* Media Area (Prominent) */}
                 {board.showQuestionOnStudentDevice && currentQ?.mediaUrl && (
                     <div className="relative z-10 w-full flex-1 max-h-[35vh] min-h-[20vh] bg-white/5 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group">
                         {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
-                            <iframe 
-                                src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                            <iframe
+                                src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
                                 className="w-full h-full border-0"
                             />
                         ) : (
-                            <img 
-                                src={currentQ.mediaUrl} 
-                                alt="Media" 
+                            <img
+                                src={currentQ.mediaUrl}
+                                alt="Media"
                                 className="w-full h-full object-contain"
                                 onError={(e) => {
                                     (e.target as any).style.display = 'none';
@@ -192,7 +192,7 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                         </div>
                     </div>
                 )}
-                
+
                 {/* Large Answer Tiles - Modern Grid (Expanded Hit-Box) */}
                 <div className="relative z-10 grid grid-cols-2 gap-3 lg:gap-6 flex-1 min-h-0 pb-4">
                     {currentQ?.options.map((opt, idx) => {
@@ -200,16 +200,16 @@ export const StudentGame: React.FC<StudentGameProps> = ({
                         const isDisabled = isSubmitting || hasAnswered;
 
                         return (
-                            <button 
+                            <button
                                 key={idx}
                                 onClick={() => handleAnswer(idx)}
                                 disabled={isDisabled}
                                 className={`
                                     relative rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center p-4 lg:p-8 transition-all duration-75 active:scale-[0.98] border-t-2 border-x-2 border-b-8 group touch-manipulation select-none
-                                    ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/60 shadow-[0_4px_20px_rgba(226,27,60,0.4)]' : 'bg-[#e21b3c] border-[#9a1229] active:border-white/20') : 
-                                      idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/60 shadow-[0_4px_20px_rgba(19,104,206,0.4)]' : 'bg-[#1368ce] border-[#0a4182] active:border-white/20') : 
-                                      idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/60 shadow-[0_4px_20px_rgba(216,158,0,0.4)]' : 'bg-[#d89e00] border-[#8c6a00] active:border-white/20') : 
-                                      (isSelected ? 'bg-[#26890c] border-white/60 shadow-[0_4px_20px_rgba(38,137,12,0.4)]' : 'bg-[#26890c] border-[#144a06] active:border-white/20')}
+                                    ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/60 shadow-[0_4px_20px_rgba(226,27,60,0.4)]' : 'bg-[#e21b3c] border-[#9a1229] active:border-white/20') :
+                                        idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/60 shadow-[0_4px_20px_rgba(19,104,206,0.4)]' : 'bg-[#1368ce] border-[#0a4182] active:border-white/20') :
+                                            idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/60 shadow-[0_4px_20px_rgba(216,158,0,0.4)]' : 'bg-[#d89e00] border-[#8c6a00] active:border-white/20') :
+                                                (isSelected ? 'bg-[#26890c] border-white/60 shadow-[0_4px_20px_rgba(38,137,12,0.4)]' : 'bg-[#26890c] border-[#144a06] active:border-white/20')}
                                     ${isDisabled && !isSelected ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'}
                                     ${isSelected ? 'translate-y-1 border-b-2 brightness-110 ring-4 ring-white/30' : 'translate-y-0 active:translate-y-1 active:border-b-4'}
                                 `}
@@ -235,20 +235,20 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     if (state === 'reveal') {
         const submittedIndex = myAnswerNote ? Number(myAnswerNote.content) : localSelectedIdx;
         const isCorrect = submittedIndex !== null && currentQ && Number(submittedIndex) === Number(currentQ.correctIndex);
-        
+
         return (
             <div className={`h-full flex flex-col items-center justify-center ${isCorrect ? 'bg-[#26890c]' : 'bg-[#e21b3c]'} text-white transition-colors duration-300 relative overflow-hidden`}>
                 <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
-                
+
                 <div className="z-10 flex flex-col items-center text-center animate-in zoom-in duration-300">
                     <div className="mb-8 p-6 bg-white/20 rounded-full backdrop-blur-xl border-4 border-white/40 shadow-2xl">
                         {isCorrect ? <CheckCircle size={100} className="text-white" /> : <XCircle size={100} className="text-white" />}
                     </div>
-                    
+
                     <h3 className="text-6xl font-black mb-4 tracking-tighter drop-shadow-2xl uppercase">
                         {isCorrect ? 'Correct!' : 'Incorrect'}
                     </h3>
-                    
+
                     <div className="bg-black/20 px-10 py-4 rounded-3xl border-2 border-white/20 backdrop-blur-md shadow-2xl">
                         <div className="space-y-1">
                             <p className="text-xl font-black text-white/80">{revealMessage}</p>
@@ -264,32 +264,32 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     const rankIndex = scores.findIndex(s => s.id === userId);
     const myRank = rankIndex !== -1 ? rankIndex + 1 : '-';
     const myScore = scores.find(s => s.id === userId)?.score || 0;
-    
+
     return (
         <div className="h-full flex flex-col bg-[#46178f] text-white relative overflow-hidden font-sans">
             <div className="absolute top-4 right-4 z-50"><SoundControl /></div>
-            
+
             <div className="flex-1 flex flex-col items-center justify-center p-8 relative z-10 text-center">
                 <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mb-10 border-2 border-white/20">
                     <Trophy size={48} className="text-yellow-400" />
                 </div>
-                
+
                 <h2 className="text-2xl font-black text-white/50 uppercase tracking-[0.2em] mb-12">
                     {state === 'finished' ? 'Game Finished' : 'You are at'}
                 </h2>
-                
+
                 <div className="bg-white text-black p-10 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] w-full max-w-sm relative mb-12">
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#1368ce] text-white px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest shadow-xl">
                         Current Rank
                     </div>
-                    
+
                     <div className="text-8xl font-black tracking-tighter mb-4">#{myRank}</div>
                     <div className="h-1 w-20 bg-gray-100 mx-auto mb-6 rounded-full"></div>
                     <div className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Total Score</div>
                     <div className="text-4xl font-black text-purple-700 font-mono tracking-tight">{myScore.toLocaleString()}</div>
                 </div>
 
-                <button 
+                <button
                     onClick={() => window.location.href = '/'}
                     className="group bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white px-10 py-5 rounded-[2rem] font-black text-xl transition-all active:scale-95 shadow-2xl flex items-center gap-3"
                 >

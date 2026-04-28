@@ -372,7 +372,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
             width: size.width,
             height: size.height
         }}
-        className={`fixed top-1/2 left-1/2 z-[1000] bg-[#0a0a0a]/90 border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow overflow-hidden group ${!board.settings?.disableModalBlur ? 'backdrop-blur-2xl' : ''}`}
+        className={`fixed top-1/2 left-1/2 z-[1000] bg-[#121212] border border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow overflow-hidden group`}
       >
             <div className="absolute inset-0 pointer-events-none z-0 md:rounded-3xl overflow-hidden">
                 <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] animate-blob"></div>
@@ -433,7 +433,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 </div>
             </div>
 
-            <div ref={contentRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[300px] bg-black/20 flex flex-col" onMouseDown={e => e.stopPropagation()}>
+            <div ref={contentRef} className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 min-h-[300px] bg-[#0a0a0a] flex flex-col" onMouseDown={e => e.stopPropagation()}>
                 <input 
                     type="text" value={title} onChange={(e) => { setTitle(e.target.value); handleTyping(); }}
                     placeholder="Add a title..."

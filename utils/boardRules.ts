@@ -122,28 +122,19 @@ export const BoardRules = {
         const isAuthor = effectiveViewerId === note.author_id;
         if (isAuthor) return false;
 
-        // 3. Teacher Posts logic
-        // Fix: Check if note author is board owner OR explicitly marked as teacher
-        const isOwner = note.author_id === board.owner_id;
-        // Check collaborators too if available
-        const isCollaborator = board.collaborators?.includes(note.author_id || '');
-        
-        const isTeacherNote = note.authorRole === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
-        
-        if (isTeacherNote) {
-            // Only blur teacher posts if explicitly configured (default: visible)
-            return !!board.blurTeacherPosts;
-        }
-
-        // 4. Explicit Release Override
+        // 3. Master Release Override (Always reveal if feedback is explicitly public)
         if (note.isFeedbackPublic) return false;
 
-        // 5. Peer Posts logic
+        // 4. Teacher Posts logic
+        const isOwner = note.author_id === board.owner_id;
+        const isCollaborator = board.collaborators?.includes(note.author_id || '');
+        const isTeacherNote = note.authorRole === 'teacher' || note.author === 'Teacher' || isOwner || isCollaborator;
+        
+        // 5. Blur State calculations
         const isGlobalBlur = board.blurOtherPosts;
         const isColumnExplicitBlur = !!sectionBlurred;
         
-        // NEW: Specific Assignment Blur
-        // If a column is assigned and blurUnassigned is ON, we blur for everyone NOT assigned.
+        // Specific Assignment Blur logic
         let isAssignmentBlur = false;
         if (isEffectiveStudent && note.sectionId && board.sections) {
             const section = board.sections.find(s => s.id === note.sectionId);
@@ -153,6 +144,11 @@ export const BoardRules = {
             }
         }
         
+        if (isTeacherNote) {
+            // Teacher notes are only blurred if explicitly configured OR if the column is blurred/assigned
+            return !!board.blurTeacherPosts || isColumnExplicitBlur || isAssignmentBlur;
+        }
+
         return isGlobalBlur || isColumnExplicitBlur || isAssignmentBlur;
     },
 

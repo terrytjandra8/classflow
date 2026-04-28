@@ -56,12 +56,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
     }, []);
 
     useEffect(() => {
-        if (!isEnabled) { 
-            releaseShield(); 
-            return; 
-        }
-
-        const handleKeyDown = (e: KeyboardEvent) => {
+        const handleSecurityViolation = (e: KeyboardEvent) => {
             const key = e.key?.toLowerCase() ?? '';
             const kc = e.keyCode;
             const isSS = key === 'printscreen' || kc === 44 || (e.ctrlKey && (key === 'f5' || kc === 116));
@@ -71,27 +66,30 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown, true);
+        const handleFocusBlur = () => applyShield('focus');
+        const handleMouseLeave = () => applyShield('focus');
+        const handleFocusGain = () => { if (lockTypeRef.current === 'focus') releaseShield(); };
+
+        if (isEnabled) {
+            window.addEventListener('keydown', handleSecurityViolation, true);
+        }
         
-        // Exclude focus tracking if disabled or for specific formats
         if (enableFocusGuard && boardFormat !== 'quiz') {
-            window.addEventListener('blur', () => applyShield('focus'));
-            window.addEventListener('mouseleave', () => applyShield('focus'));
-            window.addEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
+            window.addEventListener('blur', handleFocusBlur);
+            window.addEventListener('mouseleave', handleMouseLeave);
+            window.addEventListener('focus', handleFocusGain);
         }
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown, true);
-            if (enableFocusGuard && boardFormat !== 'quiz') {
-                window.removeEventListener('blur', () => applyShield('focus'));
-                window.removeEventListener('mouseleave', () => applyShield('focus'));
-                window.removeEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
-            }
+            window.removeEventListener('keydown', handleSecurityViolation, true);
+            window.removeEventListener('blur', handleFocusBlur);
+            window.removeEventListener('mouseleave', handleMouseLeave);
+            window.removeEventListener('focus', handleFocusGain);
             releaseShield();
         };
     }, [isEnabled, enableFocusGuard, applyShield, releaseShield, boardFormat]);
 
-    if (!isEnabled) return <>{children}</>;
+    if (!isEnabled && !enableFocusGuard) return <>{children}</>;
 
     const firstName = studentName.split(' ')[0].toUpperCase();
 
