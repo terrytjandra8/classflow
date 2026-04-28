@@ -142,6 +142,8 @@ export interface Section {
   groupId?: string;       // If set, this column belongs to a merge group
   groupTitle?: string;    // Shared group header label (same for all in group)
   groupColor?: string;    // Accent color for the group (hex or tailwind token)
+  assignedStudentIds?: string[]; // NEW: List of student IDs assigned to this column
+  blurUnassigned?: boolean;      // NEW: Whether to blur content for unassigned students
   analytics?: ColumnAnalyticsData; 
 }
 
@@ -327,4 +329,13 @@ export interface ClassGroup {
     position?: number;
     owner_id?: string;
     autoEnroll?: boolean;
+}
+
+export interface Profile {
+    id: string;
+    email: string;
+    full_name: string;
+    grade_level?: string;
+    enrolled_classes?: string[];
+    role: string;
 }

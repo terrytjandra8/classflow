@@ -412,11 +412,30 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                     className="w-full bg-transparent text-xl sm:text-2xl font-bold text-white placeholder-white/20 outline-none mb-4 shrink-0"
                     autoFocus={activeMode === 'text' && !isEditing}
                     onPaste={(e) => onPaste(e)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSubmit();
+                        }
+                    }}
                 />
 
                 {activeMode === 'text' && (
                     <div className="flex-1 min-h-[250px] overflow-auto custom-scrollbar">
-                        <DebouncedRichTextEditor key={editorKey} value={content} onChange={(val: string) => { setContent(val); handleTyping(); }} placeholder="Type something amazing..." className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed" onPaste={(e: React.ClipboardEvent) => onPaste(e)} />
+                        <DebouncedRichTextEditor 
+                            key={editorKey} 
+                            value={content} 
+                            onChange={(val: string) => { setContent(val); handleTyping(); }} 
+                            placeholder="Type something amazing..." 
+                            className="w-full h-full bg-transparent text-lg text-white/80 placeholder-white/20 outline-none leading-relaxed" 
+                            onPaste={(e: React.ClipboardEvent) => onPaste(e)} 
+                            onKeyDown={(e: React.KeyboardEvent) => {
+                                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                    e.preventDefault();
+                                    handleSubmit();
+                                }
+                            }}
+                        />
                     </div>
                 )}
 

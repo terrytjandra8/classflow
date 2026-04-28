@@ -135,8 +135,44 @@ export const BoardRules = {
         }
 
         // 4. Peer Posts logic
-        // Blur if global board setting is ON OR specific column setting is ON
-        return (board.blurOtherPosts || !!sectionBlurred);
+        const isGlobalBlur = board.blurOtherPosts;
+        const isColumnExplicitBlur = !!sectionBlurred;
+        
+        // NEW: Specific Assignment Blur
+        // If a column is assigned and blurUnassigned is ON, we blur for everyone NOT assigned.
+        let isAssignmentBlur = false;
+        if (isStudent && note.sectionId && board.sections) {
+            const section = board.sections.find(s => s.id === note.sectionId);
+            if (section?.blurUnassigned && section.assignedStudentIds && section.assignedStudentIds.length > 0) {
+                const isAssigned = !!viewerId && section.assignedStudentIds.includes(viewerId);
+                if (!isAssigned) isAssignmentBlur = true;
+            }
+        }
+        
+        return isGlobalBlur || isColumnExplicitBlur || isAssignmentBlur;
+    },
+
+    /**
+     * Determines if a user can post a note in a specific column/section.
+     */
+    canPostInSection: (
+        board: Board,
+        sectionId: string | undefined,
+        userId: string | undefined,
+        isStudent: boolean
+    ): boolean => {
+        // Teachers can always post everywhere
+        if (!isStudent) return true;
+
+        if (!sectionId || !board.sections) return true;
+        const section = board.sections.find(s => s.id === sectionId);
+        
+        // If the column has assignments, only allow assigned students
+        if (section?.assignedStudentIds && section.assignedStudentIds.length > 0) {
+            return !!userId && section.assignedStudentIds.includes(userId);
+        }
+
+        return true;
     },
 
     /**

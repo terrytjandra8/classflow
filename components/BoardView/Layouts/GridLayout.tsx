@@ -1,11 +1,13 @@
 
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { Plus, FolderPlus, Lock, Unlock, Wand2, X, Eye, EyeOff, Ghost, VenetianMask, Move } from 'lucide-react';
+import { Plus, FolderPlus, Lock, Unlock, Wand2, X, Eye, EyeOff, Ghost, VenetianMask, Move, UserPlus, UserCheck } from 'lucide-react';
 import { NoteCard } from '../../NoteCard/index';
 import { EditableInput } from '../../ui/EditableInput';
 import { Tooltip } from '../../Tooltip';
 import { useBoard } from '../BoardContext';
 import { Note } from '../../../types';
+import { BoardRules } from '../../../utils/boardRules';
+import { AssignStudentsModal } from '../AssignStudentsModal';
 
 interface GridLayoutProps {
     gridClass: string;
@@ -19,8 +21,10 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
         board, notes, updateBoard, openAddNote, canManageBoard,
         summarizeSection, sectionIdFilter, embeddedMode, updateNote, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionRearrange,
-        deleteNote, likeNote, addComment, userId
+        deleteNote, likeNote, addComment, userId, students
     } = useBoard();
+
+    const [assigningSection, setAssigningSection] = useState<string | null>(null);
 
     // Prioritize prop if passed, else context
     const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
@@ -127,7 +131,10 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                     : localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && section.id === sections[0].id));
                 
                 const isSectionLocked = section.locked;
-                const canAddToSection = canManageBoard || (!isLocked && !isSectionLocked);
+                
+                // NEW: Check if student can post in this specific section
+                const canPostInSection = BoardRules.canPostInSection(board, section.id, userId, !!isStudent);
+                const canAddToSection = canManageBoard || (!isLocked && !isSectionLocked && canPostInSection);
                 
                 const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
                 const isHidden = section.isHidden;
@@ -192,8 +199,26 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                         <Tooltip content="Delete Group">
                                             <button onClick={() => deleteSection(section.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><X size={16} /></button>
                                         </Tooltip>
+                                        
+                                        {/* NEW: Assign Students Button */}
+                                        <Tooltip content="Assign Students">
+                                            <button 
+                                                onClick={() => setAssigningSection(section.id)} 
+                                                className={`p-2 rounded-lg transition-colors ${section.assignedStudentIds?.length ? 'text-blue-500 bg-blue-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                                            >
+                                                <UserPlus size={16} />
+                                            </button>
+                                        </Tooltip>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Assignment Status Badge */}
+                        {section.assignedStudentIds && section.assignedStudentIds.length > 0 && (
+                            <div className="bg-blue-500/10 border border-blue-500/20 p-2 mb-6 rounded-xl text-[10px] text-blue-400 font-bold uppercase tracking-wide flex items-center gap-2 justify-center max-w-fit mx-auto">
+                                <UserCheck size={12} /> {section.assignedStudentIds.length} Students Assigned
+                                {section.blurUnassigned && <span className="text-[8px] bg-orange-500/20 text-orange-400 px-1 rounded ml-1">Blur Active</span>}
                             </div>
                         )}
 
@@ -260,6 +285,25 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                         <FolderPlus size={14} /> {sections.length > 1 ? 'Add Another Group' : 'Add Group / Section'}
                     </button>
                 </div>
+            )}
+            {/* Assignment Modal */}
+            {assigningSection && (
+                <AssignStudentsModal
+                    isOpen={!!assigningSection}
+                    onClose={() => setAssigningSection(null)}
+                    sectionTitle={sections.find(s => s.id === assigningSection)?.title || ''}
+                    allStudents={students || []}
+                    assignedIds={sections.find(s => s.id === assigningSection)?.assignedStudentIds || []}
+                    blurUnassigned={sections.find(s => s.id === assigningSection)?.blurUnassigned || false}
+                    targetGrade={board.targetGrade}
+                    onSave={(assignedIds, blurUnassigned) => {
+                        updateBoard({
+                            sections: sections.map(s => 
+                                s.id === assigningSection ? { ...s, assignedStudentIds: assignedIds, blurUnassigned } : s
+                            )
+                        });
+                    }}
+                />
             )}
         </div>
     );

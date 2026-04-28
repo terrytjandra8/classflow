@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { QuizQuestion, Board } from '../../types';
-import { 
-    Plus, Trash2, Image as ImageIcon, Clock, Star, Type, CheckCircle2, 
-    ChevronRight, ChevronLeft, Layout, Trash, Save, X, Layers, Settings2, 
-    Trash2 as TrashIcon, ArrowLeft, Eye, EyeOff, Search, Film, Loader2, 
-    Upload, GripVertical, Zap, Trophy, MinusCircle, Flame, Target 
+import {
+    Plus, Trash2, Image as ImageIcon, Clock, Star, Type, CheckCircle2,
+    ChevronRight, ChevronLeft, Layout, Trash, Save, X, Layers, Settings2,
+    Trash2 as TrashIcon, ArrowLeft, Eye, EyeOff, Search, Film, Loader2,
+    Upload, GripVertical, Zap, Trophy, MinusCircle, Flame, Target
 } from 'lucide-react';
 import { useSortableList } from './logic/useSortableList';
 
@@ -39,15 +39,15 @@ interface QuestionCardProps {
     onTouchEnd: () => void;
 }
 
-const QuestionCard: React.FC<QuestionCardProps> = ({ 
-    q, idx, activeIndex, draggedIndex, dragOverIndex, offset, onSelect, onDelete, 
-    onDragStart, onDragOver, onDragEnter, onDragEnd, onTouchStart, onTouchMove, onTouchEnd 
+const QuestionCard: React.FC<QuestionCardProps> = ({
+    q, idx, activeIndex, draggedIndex, dragOverIndex, offset, onSelect, onDelete,
+    onDragStart, onDragOver, onDragEnter, onDragEnd, onTouchStart, onTouchMove, onTouchEnd
 }) => {
     const isActive = activeIndex === idx;
     const isDragging = draggedIndex === idx;
 
     return (
-        <div 
+        <div
             className={`relative shrink-0 lg:shrink transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)] ${isDragging ? 'opacity-60 z-30' : 'z-10'} touch-none`}
             style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
             draggable="true"
@@ -60,8 +60,8 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
         >
-            <div 
-                onClick={() => onSelect(idx)} 
+            <div
+                onClick={() => onSelect(idx)}
                 className={`
                     relative group cursor-pointer p-0.5 rounded-xl lg:rounded-2xl transition-all duration-300
                     ${isActive ? 'z-10' : 'opacity-70 hover:opacity-100'} 
@@ -109,17 +109,17 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
     }, []);
 
     // Reusable Sortable Logic Hook
-    const { 
-        draggedIndex, 
-        dragOverIndex, 
-        onDragStart, 
-        onDragOver, 
+    const {
+        draggedIndex,
+        dragOverIndex,
+        onDragStart,
+        onDragOver,
         onDragEnter,
-        handleDragEnd, 
+        handleDragEnd,
         onTouchStart,
         onTouchMove,
         onTouchEnd,
-        getOffset 
+        getOffset
     } = useSortableList({
         items: localQuestions,
         onReorder: (newItems, newIndex) => {
@@ -135,7 +135,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
             const syncedUpdates = { ...updates };
             if ('question' in updates) (syncedUpdates as any).text = updates.question;
             if ('text' in updates) (syncedUpdates as any).question = (updates as any).text;
-            
+
             newQs[activeIndex] = { ...newQs[activeIndex], ...syncedUpdates };
             setLocalQuestions(newQs);
         }
@@ -163,7 +163,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
     };
 
     const handleSaveAndClose = () => {
-        onUpdateBoard({ 
+        onUpdateBoard({
             quizQuestions: localQuestions,
             assessmentQuestions: localQuestions as any, // Sync both for compatibility
             updatedAt: Date.now()
@@ -202,7 +202,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                     reader.readAsDataURL(file);
                 }
             }} />
-            
+
             {/* Header */}
             <header className="h-16 bg-[#161616] border-b border-white/5 flex items-center justify-between px-4 lg:px-6 shrink-0 relative z-[210] shadow-2xl">
                 <div className="flex items-center gap-2 lg:gap-4">
@@ -231,13 +231,13 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
 
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-16 lg:pb-0 relative">
                 {/* Left Sidebar - Top on Mobile, Left on Desktop */}
-                <aside 
+                <aside
                     onDragOver={(e) => onDragOver(e)}
                     className="h-32 lg:h-auto lg:w-72 bg-[#161616] border-b lg:border-b-0 lg:border-r border-white/5 flex lg:flex-col shrink-0 overflow-x-auto lg:overflow-y-auto custom-scrollbar p-3 lg:p-4 gap-3 relative no-scrollbar"
                 >
                     <div className="hidden lg:block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 px-2">Questions List</div>
                     {localQuestions.map((q, idx) => (
-                        <QuestionCard 
+                        <QuestionCard
                             key={q.id}
                             q={q}
                             idx={idx}
@@ -274,7 +274,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                                     {currentQ?.options.map((opt, i) => (
                                         <div key={i} className={`min-h-[80px] h-auto py-5 ${COLORS[i]} rounded-2xl flex items-center gap-5 px-8 shadow-[0_6px_0_rgba(0,0,0,0.2)]`}>
                                             <span className="text-2xl text-white/50 font-black shrink-0">{SHAPES[i]}</span>
-                                            <span className="text-lg font-black text-white break-words" dangerouslySetInnerHTML={{ __html: opt || `Answer ${i+1}` }} />
+                                            <span className="text-lg font-black text-white break-words" dangerouslySetInnerHTML={{ __html: opt || `Answer ${i + 1}` }} />
                                         </div>
                                     ))}
                                 </div>
@@ -294,7 +294,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                                         ))}
                                     </div>
                                     <div className="bg-[#161616] rounded-xl lg:rounded-[3rem] shadow-2xl border border-white/5 p-4 lg:p-12 text-center transition-all">
-                                        <div 
+                                        <div
                                             contentEditable
                                             onBlur={(e) => updateCurrentQ({ question: e.currentTarget.innerHTML })}
                                             dangerouslySetInnerHTML={{ __html: currentQ?.question || "" }}
@@ -312,8 +312,8 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                                             <div className="relative w-full h-full p-2">
                                                 <img src={currentQ.mediaUrl} className="w-full h-full object-contain rounded-lg" alt="Media" />
                                                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                    <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-blue-600/90 hover:bg-blue-500 rounded-lg text-white shadow-lg backdrop-blur-sm"><Upload size={12}/></button>
-                                                    <button onClick={() => updateCurrentQ({ mediaUrl: undefined })} className="p-2 bg-red-600/90 hover:bg-red-500 rounded-lg text-white shadow-lg backdrop-blur-sm"><Trash2 size={12}/></button>
+                                                    <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-blue-600/90 hover:bg-blue-500 rounded-lg text-white shadow-lg backdrop-blur-sm"><Upload size={12} /></button>
+                                                    <button onClick={() => updateCurrentQ({ mediaUrl: undefined })} className="p-2 bg-red-600/90 hover:bg-red-500 rounded-lg text-white shadow-lg backdrop-blur-sm"><Trash2 size={12} /></button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -339,12 +339,12 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                                             <div key={i} className={`group relative flex items-center gap-2 lg:gap-3 p-2 lg:p-4 rounded-xl lg:rounded-2xl transition-all border min-h-[56px] ${isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-white/5 bg-[#161616]'}`}>
                                                 <div className={`${COLORS[i]} w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl flex items-center justify-center text-xs lg:text-lg text-white/90 font-black shrink-0 shadow-md`}>{SHAPES[i]}</div>
                                                 <div className="flex-1 min-w-0 relative">
-                                                    <div 
+                                                    <div
                                                         contentEditable
-                                                        onBlur={(e) => { 
-                                                            const newOpts = [...currentQ.options]; 
-                                                            newOpts[i] = e.currentTarget.innerHTML; 
-                                                            updateCurrentQ({ options: newOpts }); 
+                                                        onBlur={(e) => {
+                                                            const newOpts = [...currentQ.options];
+                                                            newOpts[i] = e.currentTarget.innerHTML;
+                                                            updateCurrentQ({ options: newOpts });
                                                         }}
                                                         dangerouslySetInnerHTML={{ __html: opt || "" }}
                                                         className="w-full bg-transparent text-[10px] lg:text-sm font-bold text-white outline-none leading-tight"
@@ -363,7 +363,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
 
                 {/* Right Toggle Config - Hidden on Mobile to prevent blocking */}
                 <div className="relative hidden lg:flex h-full">
-                    <button 
+                    <button
                         onClick={() => setShowConfig(!showConfig)}
                         className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-[215] w-6 h-24 bg-[#161616] border border-r-0 border-white/10 rounded-l-2xl flex-col items-center justify-center text-gray-500 hover:text-purple-400 transition-all shadow-[-10px_0_20px_rgba(0,0,0,0.5)]"
                     >
@@ -372,14 +372,14 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                         <Settings2 size={12} className="rotate-90" />
                     </button>
 
-                  <aside className={`lg:relative z-[250] lg:z-[205] bg-[#161616] border-white/10 transition-all duration-500 ease-in-out flex flex-col shrink-0 h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${showConfig ? 'lg:w-80 lg:border-l opacity-100 pointer-events-auto' : 'lg:w-0 lg:border-l-0 opacity-0 pointer-events-none'}`}>
-                            <div className={`p-6 flex flex-col gap-6 w-80 transition-opacity duration-300 ${showConfig ? 'opacity-100' : 'opacity-0'}`}>
+                    <aside className={`lg:relative z-[250] lg:z-[205] bg-[#161616] border-white/10 transition-all duration-500 ease-in-out flex flex-col shrink-0 h-full overflow-y-auto overflow-x-hidden custom-scrollbar ${showConfig ? 'lg:w-80 lg:border-l opacity-100 pointer-events-auto' : 'lg:w-0 lg:border-l-0 opacity-0 pointer-events-none'}`}>
+                        <div className={`p-6 flex flex-col gap-6 w-80 transition-opacity duration-300 ${showConfig ? 'opacity-100' : 'opacity-0'}`}>
                             <div className="flex lg:hidden justify-center mb-2"><div className="w-12 h-1 bg-white/10 rounded-full" onClick={() => setShowConfig(false)}></div></div>
                             <h3 className="font-black text-[10px] lg:text-xs text-gray-500 uppercase tracking-[0.2em] flex items-center justify-between">
                                 <span className="flex items-center gap-2"><Settings2 size={14} className="text-purple-500" /> Slide Config</span>
                                 <button onClick={() => setShowConfig(false)} className="lg:hidden text-gray-400 hover:text-white"><X size={16} /></button>
                             </h3>
-                            
+
                             <div className="space-y-6">
                                 {/* Visibility Toggle */}
                                 <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl space-y-3">
@@ -393,7 +393,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                                                 <p className="text-[8px] font-bold text-purple-400/70">Visible to students</p>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => onUpdateBoard({ isPublished: !board.isPublished, isPublic: !board.isPublished })}
                                             className={`w-10 h-5 rounded-full relative transition-all ${board.isPublished ? 'bg-purple-600' : 'bg-white/10'}`}
                                         >
@@ -462,7 +462,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ board, questions, onUpda
                                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                                 <input autoFocus placeholder="Search GIPHY..." className="w-full bg-[#111] border border-white/10 rounded-2xl pl-12 pr-4 py-4 font-bold outline-none focus:border-purple-500" value={giphySearch} onChange={e => setGiphySearch(e.target.value)} onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); searchGiphy(); } }} />
                             </div>
-                            <button onClick={() => setShowGiphy(false)} className="p-4 bg-white/5 rounded-2xl hover:bg-white/10"><X size={20}/></button>
+                            <button onClick={() => setShowGiphy(false)} className="p-4 bg-white/5 rounded-2xl hover:bg-white/10"><X size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                             {isSearchingGiphy ? <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-500"><Loader2 className="animate-spin" size={32} /><p className="font-black uppercase tracking-widest text-xs">Searching...</p></div> : giphyResults.length > 0 ? <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{giphyResults.map((gif, i) => <img key={i} src={gif.images.fixed_height.url} className="w-full h-32 object-cover rounded-2xl cursor-pointer hover:scale-105 transition-all shadow-lg" onClick={() => { updateCurrentQ({ mediaUrl: gif.images.original.url }); setShowGiphy(false); }} />)}</div> : <div className="h-64 flex flex-col items-center justify-center text-gray-600 gap-4"><Film size={48} className="opacity-20" /><p className="font-black uppercase tracking-widest text-xs">Search GIPHY</p></div>}

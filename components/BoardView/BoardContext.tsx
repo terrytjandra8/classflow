@@ -40,6 +40,7 @@ export interface BoardContextType {
     typingUsers: string[]; // List of names currently typing
     setTypingStatus: (isTyping: boolean) => void; // Function to broadcast typing state
     classList?: ClassGroup[];
+    students?: Profile[];
     
     // Filters for embedding
     sectionIdFilter?: string;

@@ -99,22 +99,32 @@ export const StudentsList: React.FC<StudentsProps> = ({
                                                     </span>
                                                 ))}
                                                 <div className="relative group/add">
-                                                    <button className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-500">
+                                                    <button className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 dark:bg-white/10 hover:bg-blue-500/20 hover:text-blue-500 text-gray-500 transition-colors">
                                                         <Plus size={12} />
                                                     </button>
-                                                    {/* Fixed: Use padding-top (pt-2) instead of margin-top (mt-1) to prevent hover gaps */}
-                                                    <div className="absolute top-full left-0 pt-2 w-32 hidden group-hover/add:block z-50">
-                                                        <div className="bg-[#222] border border-white/10 rounded-lg shadow-xl overflow-hidden">
-                                                            {classes.filter(c => !(student.enrolled_classes || []).includes(c.name)).map(c => (
-                                                                <button 
-                                                                    key={c.id}
-                                                                    onClick={() => handleAddClass(student, c.name)}
-                                                                    className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/10 hover:text-white truncate"
-                                                                >
-                                                                    {c.name}
-                                                                </button>
-                                                            ))}
-                                                            {classes.length === 0 && <div className="px-3 py-2 text-xs text-gray-500">No classes</div>}
+                                                    {/* The Bridge: A larger transparent area to prevent hover-loss when moving mouse to the list */}
+                                                    <div className="absolute top-full pt-2 w-48 hidden group-hover/add:block z-50 -translate-x-1/2 left-1/2">
+                                                        <div className="bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                            <div className="px-3 py-2 border-b border-white/5 bg-white/5">
+                                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Enroll In</span>
+                                                            </div>
+                                                            <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                                {classes.filter(c => !(student.enrolled_classes || []).includes(c.name)).map(c => (
+                                                                    <button 
+                                                                        key={c.id}
+                                                                        onClick={() => handleAddClass(student, c.name)}
+                                                                        className="w-full text-left px-3 py-2.5 text-xs text-gray-300 hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-between group/item"
+                                                                    >
+                                                                        <span className="truncate">{c.name}</span>
+                                                                        <Plus size={10} className="opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                                                                    </button>
+                                                                ))}
+                                                                {classes.filter(c => !(student.enrolled_classes || []).includes(c.name)).length === 0 && (
+                                                                    <div className="px-3 py-4 text-center text-xs text-gray-500">
+                                                                        Already enrolled in all classes
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

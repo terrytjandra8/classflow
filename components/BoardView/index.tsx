@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Board, Note, LockMode, ClassGroup } from '../../types';
+import { Board, Note, LockMode, ClassGroup, Profile } from '../../types';
 import { useBoardData } from './logic/useBoardData';
 import { useNoteActions } from '../../hooks/useNoteActions';
 import { BoardLayout } from './Board';
@@ -13,6 +13,7 @@ import { AssessmentManager } from '../Activities/Assessment/AssessmentManager/in
 import { BoardProvider, BoardContextType } from './BoardContext';
 import { resolveBackgroundStyle } from '../../utils/theme';
 import { classService } from '../../services/classService';
+import { profileService } from '../../services/profileService';
 import { ScreenshotGuard } from '../Security/ScreenshotGuard';
 import { supabase } from '../../services/supabaseClient';
 import { mapBoard } from '../../utils/mappers';
@@ -51,6 +52,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const [isSimulatingStudent, setIsSimulatingStudent] = useState(false);
     const [addNoteLocation, setAddNoteLocation] = useState<any>(null); 
     const [classList, setClassList] = useState<ClassGroup[]>([]);
+    const [students, setStudents] = useState<Profile[]>([]);
     const [highlightedUserId, setHighlightedUserId] = useState<string | null>(null);
     const [editingNote, setEditingNote] = useState<Note | null>(null);
 
@@ -90,15 +92,19 @@ export const BoardView: React.FC<BoardViewProps> = ({
     }, [board.guide, board.guideDismissed, isPresentationMode]);
 
     useEffect(() => {
-        const fetchClasses = async () => {
+        const fetchData = async () => {
             if (!isStudent && !isPresentationMode) {
                 try {
-                    const classes = await classService.getClasses();
+                    const [classes, studentsList] = await Promise.all([
+                        classService.getClasses(),
+                        profileService.getRelevantStudents()
+                    ]);
                     setClassList(classes);
-                } catch (e) { console.error("Failed to load classes", e); }
+                    setStudents(studentsList);
+                } catch (e) { console.error("Failed to load board management data", e); }
             }
         };
-        fetchClasses();
+        fetchData();
     }, [isStudent, isPresentationMode]);
 
     const canManageBoard = !isStudent && !isSimulatingStudent && !isPresentationMode;
@@ -141,19 +147,29 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     const handleModalSubmit = async (noteData: any) => {
         if (editingNote) {
-            await updateNote(editingNote.id, noteData);
-        } else {
-            let calculatedCreatedAt: number | undefined = undefined;
-            if (typeof addNoteLocation === 'object' && addNoteLocation.relativeId) {
-                const targetNote = notes.find(n => n.id === addNoteLocation.relativeId);
-                if (targetNote) {
-                    const isNewestFirst = board.sortOrder !== 'date_asc';
-                    const epsilon = 100; 
-                    calculatedCreatedAt = targetNote.createdAt + (addNoteLocation.position === 'before' ? (isNewestFirst ? epsilon : -epsilon) : (isNewestFirst ? -epsilon : epsilon));
-                }
-            }
-            await createNote({ ...noteData, sectionId: typeof addNoteLocation === 'string' ? addNoteLocation : (addNoteLocation?.sectionId || undefined), x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined, y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined, createdAt: calculatedCreatedAt });
+            updateNote(editingNote.id, noteData);
+            setIsModalOpen(false);
+            setEditingNote(null);
+            return;
         }
+
+        let calculatedCreatedAt: number | undefined = undefined;
+        if (typeof addNoteLocation === 'object' && addNoteLocation.relativeId) {
+            const targetNote = notes.find(n => n.id === addNoteLocation.relativeId);
+            if (targetNote) {
+                const isNewestFirst = board.sortOrder !== 'date_asc';
+                const epsilon = 100; 
+                calculatedCreatedAt = targetNote.createdAt + (addNoteLocation.position === 'before' ? (isNewestFirst ? epsilon : -epsilon) : (isNewestFirst ? -epsilon : epsilon));
+            }
+        }
+        await createNote({ 
+            ...noteData, 
+            sectionId: typeof addNoteLocation === 'string' ? addNoteLocation : (addNoteLocation?.sectionId || undefined), 
+            x: typeof addNoteLocation === 'object' ? addNoteLocation.x : undefined, 
+            y: typeof addNoteLocation === 'object' ? addNoteLocation.y : undefined, 
+            createdAt: calculatedCreatedAt 
+        });
+        
         setIsModalOpen(false);
         setEditingNote(null);
     };
@@ -170,7 +186,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         openSettings: () => setIsSettingsOpen(true), openShare: () => setIsShareModalOpen(true), openBoardAnalysis: () => {}, 
         isSimulating, toggleSimulation: () => setIsSimulating(!isSimulating),
         isSimulatingStudent, toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
-        isAiLoading: false, summarize: () => {}, backgroundStyle, fontClass, userAvatar, onlineUsers, typingUsers, setTypingStatus, isPresentationMode, classList, launchProjectorMode,
+        isAiLoading: false, summarize: () => {}, backgroundStyle, fontClass, userAvatar, onlineUsers, typingUsers, setTypingStatus, isPresentationMode, classList, students, launchProjectorMode,
         ...sectionManagement, highlightedUserId, setHighlightedUserId
     }), [
         board, sortedNotes, userId, username, userRole, isStudent, isSimulatingStudent, canManageBoard, isLoadingNotes,

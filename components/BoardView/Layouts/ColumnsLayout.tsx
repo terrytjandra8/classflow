@@ -12,7 +12,8 @@ import {
     IconMove, IconDrag, IconClose, IconPlus,
     IconCopyOff, IconWatermark
 } from '../../Icons';
-import { GitMerge, Ungroup, CheckCircle, Circle, X, Palette } from 'lucide-react';
+import { GitMerge, Ungroup, CheckCircle, Circle, X, Palette, UserPlus, UserCheck } from 'lucide-react';
+import { AssignStudentsModal } from '../AssignStudentsModal';
 
 // Preset color palette for groups
 const GROUP_COLORS = [
@@ -35,8 +36,10 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, toggleSectionRearrange,
         toggleSectionCopy, toggleSectionWatermark,
-        deleteNote, likeNote, addComment, isPresentationMode, userId
+        deleteNote, likeNote, addComment, isPresentationMode, userId, students
     } = useBoard();
+
+    const [assigningSection, setAssigningSection] = useState<string | null>(null);
 
     const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
@@ -306,12 +309,17 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
 
         const sectionNotes = localNotes.filter((n: any) => n.sectionId === section.id || (!n.sectionId && idx === 0));
-        const canAdd = canManageBoard || (!isLocked && !section.locked);
         const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
         const repliesOn = section.repliesEnabled !== undefined ? section.repliesEnabled : (board.repliesEnabled !== false);
         const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
         const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
         const canDragNotes = canManageBoard || (sectionCanDrag && !isLocked && !section.locked);
+        
+        // NEW: Check if student can post in this specific section
+        const canPostInSection = BoardRules.canPostInSection(board, section.id, userId, !!isStudent);
+        
+        const canAdd = canManageBoard || (!isLocked && !section.locked && canPostInSection);
+        
         const showControls = canManageBoard || !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
 
         const isSelected = selectedForMerge.has(section.id);
@@ -441,8 +449,26 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                                         <IconClose size={14} />
                                     </button>
                                 </Tooltip>
+                                
+                                {/* NEW: Assign Students Button */}
+                                <Tooltip content="Assign Students to this column">
+                                    <button 
+                                        onClick={() => setAssigningSection(section.id)} 
+                                        className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.assignedStudentIds?.length ? 'text-blue-500 bg-blue-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                                    >
+                                        <UserPlus size={14} />
+                                    </button>
+                                </Tooltip>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Assignment Status Badge */}
+                {section.assignedStudentIds && section.assignedStudentIds.length > 0 && (
+                    <div className="bg-blue-500/10 border border-blue-500/20 p-2 mb-2 rounded text-[10px] text-blue-400 font-bold uppercase tracking-wide flex items-center gap-2 justify-center">
+                        <UserCheck size={12} /> {section.assignedStudentIds.length} Students Assigned
+                        {section.blurUnassigned && <span className="text-[8px] bg-orange-500/20 text-orange-400 px-1 rounded ml-1">Blur Active</span>}
                     </div>
                 )}
 
@@ -674,6 +700,25 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                         </Tooltip>
                     </div>
                 )}
+            {/* Assignment Modal */}
+            {assigningSection && (
+                <AssignStudentsModal
+                    isOpen={!!assigningSection}
+                    onClose={() => setAssigningSection(null)}
+                    sectionTitle={activeSections.find(s => s.id === assigningSection)?.title || ''}
+                    allStudents={students || []}
+                    assignedIds={activeSections.find(s => s.id === assigningSection)?.assignedStudentIds || []}
+                    blurUnassigned={activeSections.find(s => s.id === assigningSection)?.blurUnassigned || false}
+                    targetGrade={board.targetGrade}
+                    onSave={(assignedIds, blurUnassigned) => {
+                        updateBoard({
+                            sections: activeSections.map(s => 
+                                s.id === assigningSection ? { ...s, assignedStudentIds: assignedIds, blurUnassigned } : s
+                            )
+                        });
+                    }}
+                />
+            )}
             </div>
         </div>
     );

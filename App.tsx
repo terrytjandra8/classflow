@@ -369,7 +369,7 @@ function AppContent() {
             const poll = async () => {
                 await fetchBoards();
             };
-            
+
             poll();
 
             // Poll every 5 seconds as a fail-proof fallback
@@ -625,8 +625,8 @@ function AppContent() {
     // 0. Landing Page View
     if (!session && !isGuest && view === 'landing') {
         return (
-            <LandingPage 
-                onStart={() => setView('auth')} 
+            <LandingPage
+                onStart={() => setView('auth')}
                 onGoogleLogin={async () => {
                     const { error } = await (supabase.auth as any).signInWithOAuth({
                         provider: 'google',

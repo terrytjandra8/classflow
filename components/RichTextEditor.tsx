@@ -269,49 +269,6 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
 
     const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
         if(readOnly || isBlocked) return;
-
-        // DEFINITIVE SECURITY: Check if the event was triggered by a real human (isTrusted)
-        // Most scripts, extensions, and console hacks result in isTrusted === false
-        if (e.nativeEvent instanceof Event && !e.nativeEvent.isTrusted) {
-            setIsBlocked(true);
-            if (editorRef.current) editorRef.current.contentEditable = "false";
-            console.error("⛔ [SECURITY] Non-trusted input (script/extension) detected.");
-            setTimeout(() => { 
-               setIsBlocked(false); 
-               if (editorRef.current) editorRef.current.contentEditable = "true";
-            }, 5000);
-            return;
-        }
-
-        const currentLength = e.currentTarget.textContent?.length || 0;
-        const added = currentLength - lastContentLength.current;
-        lastContentLength.current = currentLength;
-
-        const now = Date.now();
-        const diff = now - lastInputTime.current;
-        lastInputTime.current = now;
-
-        // Security Check: Burst Detection
-        if (added > 10 && !isPasting.current) {
-             setIsBlocked(true);
-             console.error("⛔ [SECURITY] Instant text insertion detected.");
-             setTimeout(() => { setIsBlocked(false); rapidInputCount.current = 0; }, 5000);
-             return;
-        }
-
-        // Security Check: Human Timing
-        if (diff < 30) {
-            rapidInputCount.current++;
-            if (rapidInputCount.current > 10) { 
-                setIsBlocked(true);
-                console.error("⛔ [SECURITY] Auto-typer detected and blocked.");
-                setTimeout(() => { setIsBlocked(false); rapidInputCount.current = 0; }, 5000);
-                return;
-            }
-        } else {
-            rapidInputCount.current = Math.max(0, rapidInputCount.current - 1);
-        }
-
         handleUpdate();
     };
 
