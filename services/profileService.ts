@@ -68,25 +68,42 @@ export const profileService = {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('saved_colors, saved_gradients')
+            .select('preferences')
             .eq('id', user.id)
             .maybeSingle();
 
-        if (error) return null;
-        return data as UserPreferences;
+        if (error || !data || !data.preferences) return { saved_colors: [], saved_gradients: [] };
+        
+        const prefs = data.preferences as any;
+        return {
+            saved_colors: Array.isArray(prefs.saved_colors) ? prefs.saved_colors : [],
+            saved_gradients: Array.isArray(prefs.saved_gradients) ? prefs.saved_gradients : []
+        };
     },
 
     async saveColor(color: string) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const current = await this.getPreferences();
-        const colors = current?.saved_colors || [];
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const currentPrefs = (profile?.preferences as any) || {};
+        const colors = Array.isArray(currentPrefs.saved_colors) ? currentPrefs.saved_colors : [];
+        
         if (colors.includes(color)) return;
 
         await supabase
             .from('profiles')
-            .update({ saved_colors: [...colors, color] })
+            .update({ 
+                preferences: { 
+                    ...currentPrefs, 
+                    saved_colors: [...colors, color] 
+                } 
+            })
             .eq('id', user.id);
     },
 
@@ -94,12 +111,23 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const current = await this.getPreferences();
-        const colors = (current?.saved_colors || []).filter(c => c !== color);
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const currentPrefs = (profile?.preferences as any) || {};
+        const colors = (Array.isArray(currentPrefs.saved_colors) ? currentPrefs.saved_colors : []).filter((c: string) => c !== color);
 
         await supabase
             .from('profiles')
-            .update({ saved_colors: colors })
+            .update({ 
+                preferences: { 
+                    ...currentPrefs, 
+                    saved_colors: colors 
+                } 
+            })
             .eq('id', user.id);
     },
 
@@ -107,13 +135,25 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const current = await this.getPreferences();
-        const gradients = current?.saved_gradients || [];
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const currentPrefs = (profile?.preferences as any) || {};
+        const gradients = Array.isArray(currentPrefs.saved_gradients) ? currentPrefs.saved_gradients : [];
+        
         if (gradients.includes(gradient)) return;
 
         await supabase
             .from('profiles')
-            .update({ saved_gradients: [...gradients, gradient] })
+            .update({ 
+                preferences: { 
+                    ...currentPrefs, 
+                    saved_gradients: [...gradients, gradient] 
+                } 
+            })
             .eq('id', user.id);
     },
 
@@ -121,12 +161,23 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const current = await this.getPreferences();
-        const gradients = (current?.saved_gradients || []).filter(g => g !== gradient);
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const currentPrefs = (profile?.preferences as any) || {};
+        const gradients = (Array.isArray(currentPrefs.saved_gradients) ? currentPrefs.saved_gradients : []).filter((g: string) => g !== gradient);
 
         await supabase
             .from('profiles')
-            .update({ saved_gradients: gradients })
+            .update({ 
+                preferences: { 
+                    ...currentPrefs, 
+                    saved_gradients: gradients 
+                } 
+            })
             .eq('id', user.id);
     }
 };
