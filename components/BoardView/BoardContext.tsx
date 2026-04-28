@@ -62,6 +62,10 @@ export interface BoardContextType {
     // Highlighting
     highlightedUserId: string | null;
     setHighlightedUserId: (id: string | null) => void;
+
+    // Merge Mode (Grouping Columns)
+    isMergeMode: boolean;
+    setIsMergeMode: (enabled: boolean) => void;
 }
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);

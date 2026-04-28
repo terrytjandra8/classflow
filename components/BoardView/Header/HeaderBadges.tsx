@@ -1,12 +1,11 @@
-
-import React from 'react';
-import { Users, ChevronDown, Plus, EyeOff } from 'lucide-react';
+import { Users, ChevronDown, Plus, EyeOff, GitMerge } from 'lucide-react';
 import { useHeaderLogic } from './useHeaderLogic';
 
 export const HeaderBadges: React.FC = () => {
     const { 
         board, canManageBoard, updateBoard, classList, 
-        isClassMenuOpen, setIsClassMenuOpen, handleCreateClass, isLive 
+        isClassMenuOpen, setIsClassMenuOpen, handleCreateClass, isLive,
+        isMergeMode, setIsMergeMode
     } = useHeaderLogic();
 
     return (
@@ -87,6 +86,21 @@ export const HeaderBadges: React.FC = () => {
                             <EyeOff size={10} /> Draft
                         </>
                     )}
+                </button>
+            )}
+
+            {/* Merge Mode Toggle (Only for Columns format) */}
+            {canManageBoard && board.format === 'columns' && (
+                <button 
+                    onClick={() => setIsMergeMode(!isMergeMode)}
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                        isMergeMode 
+                        ? 'bg-blue-600 border-blue-500 text-white shadow-lg' 
+                        : 'bg-gray-800/50 border-white/10 text-gray-400 hover:bg-gray-700/50 hover:text-white'
+                    }`}
+                >
+                    <GitMerge size={10} />
+                    Merge
                 </button>
             )}
         </div>

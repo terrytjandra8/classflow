@@ -27,7 +27,8 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, toggleSectionRearrange,
         toggleSectionCopy, toggleSectionWatermark,
-        deleteNote, likeNote, addComment, isPresentationMode, userId, students
+        deleteNote, likeNote, addComment, isPresentationMode, userId, students,
+        isMergeMode, setIsMergeMode
     } = useBoard();
 
     const [assigningSection, setAssigningSection] = useState<string | null>(null);
@@ -42,7 +43,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
 
     // Merge mode state
     const [selectedForMerge, setSelectedForMerge] = useState<Set<string>>(new Set());
-    const [isMergeMode, setIsMergeMode] = useState(false);
     const [pendingGroupTitle, setPendingGroupTitle] = useState('');
     const [pendingGroupColor, setPendingGroupColor] = useState(GROUP_COLORS[0].accent);
     // Which group's color palette is open
@@ -492,18 +492,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                     </div>
                 )}
 
-                {/* Merge entry button */}
-                {canManageBoard && !isMergeMode && (
-                    <div className="flex items-start h-full px-2 pt-1">
-                        <Tooltip content="Merge columns together">
-                            <button onClick={() => setIsMergeMode(true)}
-                                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-blue-500/20 text-gray-400 hover:text-blue-300 border border-white/10 hover:border-blue-500/30 transition-all text-xs font-semibold">
-                                <GitMerge size={14} />
-                                Merge
-                            </button>
-                        </Tooltip>
-                    </div>
-                )}
                 {/* Assignment Modal */}
                 {assigningSection && (
                     <AssignStudentsModal

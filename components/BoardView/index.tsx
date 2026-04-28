@@ -56,6 +56,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const [students, setStudents] = useState<Profile[]>([]);
     const [highlightedUserId, setHighlightedUserId] = useState<string | null>(null);
     const [editingNote, setEditingNote] = useState<Note | null>(null);
+    const [isMergeMode, setIsMergeMode] = useState(false);
 
     // Sync board state
     useEffect(() => { setLiveBoard(initialBoard); }, [initialBoard]);
@@ -247,12 +248,13 @@ export const BoardView: React.FC<BoardViewProps> = ({
         isSimulating, toggleSimulation: () => setIsSimulating(!isSimulating),
         isSimulatingStudent, toggleStudentSimulation: () => setIsSimulatingStudent(!isSimulatingStudent),
         isAiLoading: false, summarize: () => {}, backgroundStyle, fontClass, userAvatar, onlineUsers, typingUsers, setTypingStatus, isPresentationMode, classList, students, launchProjectorMode,
-        ...sectionManagement, highlightedUserId, setHighlightedUserId
+        ...sectionManagement, highlightedUserId, setHighlightedUserId,
+        isMergeMode, setIsMergeMode
     }), [
         board, sortedNotes, userId, username, userRole, isStudent, isSimulatingStudent, canManageBoard, isLoadingNotes,
         onUpdateBoard, deleteNote, likeNote, addComment, updateNote, duplicateNote, openAddNoteModal, openEditNoteModal, onBack, 
         isSimulating, backgroundStyle, fontClass, userAvatar, onlineUsers, isPresentationMode, classList, launchProjectorMode,
-        sectionManagement, highlightedUserId
+        sectionManagement, highlightedUserId, isMergeMode
     ]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
