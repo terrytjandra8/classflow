@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Board, Note, ClassGroup } from '../../types';
+import { Board, Note, ClassGroup, Profile } from '../../types';
 
 export interface BoardContextType {
     board: Board;

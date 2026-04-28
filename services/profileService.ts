@@ -2,6 +2,11 @@
 import { supabase } from './supabaseClient';
 import { Profile } from '../types';
 
+export interface UserPreferences {
+    saved_colors: string[];
+    saved_gradients: string[];
+}
+
 export const profileService = {
     /**
      * Fetches the profile of the currently logged-in user.
@@ -32,13 +37,11 @@ export const profileService = {
 
     /**
      * Fetches students relevant to the current teacher.
-     * This uses the same logic as adminService but returns only profiles.
      */
     async getRelevantStudents(): Promise<Profile[]> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
-        // Fetch all profiles. RLS will filter for students the teacher can see.
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
@@ -54,5 +57,76 @@ export const profileService = {
             enrolled_classes: Array.isArray(p.enrolled_classes) ? p.enrolled_classes : [],
             role: (p.role || 'student').toLowerCase()
         })).filter(p => p.role === 'student');
+    },
+
+    /**
+     * Fetches user preferences (saved colors, gradients, etc.)
+     */
+    async getPreferences(): Promise<UserPreferences | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('saved_colors, saved_gradients')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (error) return null;
+        return data as UserPreferences;
+    },
+
+    async saveColor(color: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const current = await this.getPreferences();
+        const colors = current?.saved_colors || [];
+        if (colors.includes(color)) return;
+
+        await supabase
+            .from('profiles')
+            .update({ saved_colors: [...colors, color] })
+            .eq('id', user.id);
+    },
+
+    async deleteColor(color: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const current = await this.getPreferences();
+        const colors = (current?.saved_colors || []).filter(c => c !== color);
+
+        await supabase
+            .from('profiles')
+            .update({ saved_colors: colors })
+            .eq('id', user.id);
+    },
+
+    async saveGradient(gradient: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const current = await this.getPreferences();
+        const gradients = current?.saved_gradients || [];
+        if (gradients.includes(gradient)) return;
+
+        await supabase
+            .from('profiles')
+            .update({ saved_gradients: [...gradients, gradient] })
+            .eq('id', user.id);
+    },
+
+    async deleteGradient(gradient: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const current = await this.getPreferences();
+        const gradients = (current?.saved_gradients || []).filter(g => g !== gradient);
+
+        await supabase
+            .from('profiles')
+            .update({ saved_gradients: gradients })
+            .eq('id', user.id);
     }
-};
+};
