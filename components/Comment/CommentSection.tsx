@@ -29,14 +29,14 @@ interface CommentSectionProps {
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId, userId, onAddComment, onUpdateNote, reactionsEnabled, noteColor, isStudent, disablePaste, repliesEnabled, isSectionAnonymous, isReadOnly, noteAuthorId, isCommentsDisabled, isFeedbackPublic }) => {
-    const { board, username, userAvatar: contextAvatar, canManageBoard } = useBoard();
+    const { board, username, userAvatar: contextAvatar, canManageBoard, isPresentationMode } = useBoard();
     const allowLinks = board.allowLinks; 
 
     // FILTER: If comments are disabled for the board/section, they act as private feedback.
     // Visible only to: Teacher, Note Author, OR Everyone if isFeedbackPublic is true.
     const visibleComments = React.useMemo(() => {
         // Teacher sees everything in normal mode
-        if (canManageBoard && !board.isPresentationMode) return comments; 
+        if (canManageBoard && !isPresentationMode) return comments; 
         
         if (!isCommentsDisabled) return comments; // Normal mode: public comments
 
@@ -47,7 +47,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
         if (isNoteAuthor) return comments; // Author sees the feedback
 
         return []; // Other students (and teacher in presentation mode) see nothing
-    }, [comments, canManageBoard, board.isPresentationMode, isCommentsDisabled, userId, noteAuthorId, isFeedbackPublic]);
+    }, [comments, canManageBoard, isPresentationMode, isCommentsDisabled, userId, noteAuthorId, isFeedbackPublic]);
 
     const [showAllComments, setShowAllComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
