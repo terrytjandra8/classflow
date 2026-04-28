@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { X, Image, Link, Type, PenTool, UploadCloud, ShieldAlert, Palette, Edit3, Check } from 'lucide-react';
+import { X, Image, Link, Type, PenTool, UploadCloud, ShieldAlert, Palette, Edit3, Check, Search, Film, Loader2 } from 'lucide-react';
+
 import { NoteColor, NoteType, Note } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { RichTextEditor, DebouncedRichTextEditor } from './RichTextEditor';
@@ -97,6 +98,31 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const resizeStart = useRef({ w: 0, h: 0, x: 0, y: 0 });
   const openCountRef = useRef(0);
   const [editorKey, setEditorKey] = useState('initial');
+  const [giphySearch, setGiphySearch] = useState('');
+  const [giphyResults, setGiphyResults] = useState<any[]>([]);
+  const [isSearchingGiphy, setIsSearchingGiphy] = useState(false);
+  const [gifUrl, setGifUrl] = useState<string | null>(null);
+
+
+  const GIPHY_API_KEY = 'RKmBxWsi0EgRtMrBK79HE4hVXpeuTytn';
+
+  const searchGiphy = async (query: string) => {
+      if (!query.trim()) {
+          setGiphyResults([]);
+          return;
+      }
+      setIsSearchingGiphy(true);
+      try {
+          const response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g`);
+          const data = await response.json();
+          setGiphyResults(data.data || []);
+      } catch (error) {
+          console.error("Giphy search failed:", error);
+      } finally {
+          setIsSearchingGiphy(false);
+      }
+  };
+
 
   const isEditing = !!noteToEdit;
   const sectionSuffix = activeSectionId ? `_${activeSectionId}` : '';
@@ -247,10 +273,12 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
     setTypingStatus(false);
     try {
         let finalContent = content;
-        if (activeMode === 'image' && imageFile) finalContent = await handleUploadFile(imageFile) || '';
+        if (activeMode === 'image' && gifUrl) finalContent = gifUrl;
+        else if (activeMode === 'image' && imageFile) finalContent = await handleUploadFile(imageFile) || '';
         else if (activeMode === 'image' && imageBase64) finalContent = imageBase64;
         else if (activeMode === 'drawing' && drawingBlob) finalContent = await handleUploadFile(drawingBlob) || '';
         else if (activeMode === 'drawing' && drawingUrl) finalContent = drawingUrl;
+
         
         if (!finalContent && !title && !isEditing && activeMode !== 'link') return;
         if (activeMode === 'link' && !attachmentUrl && !isEditing) return;
@@ -440,15 +468,62 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
                 )}
 
                 {activeMode === 'image' && (
-                    <div className={`h-48 md:h-64 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden group ${isDragOver ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 hover:border-white/30 hover:bg-white/5'}`} onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={(e) => { e.preventDefault(); setIsDragOver(false); if (e.dataTransfer.files?.[0]) processImageFile(e.dataTransfer.files[0]); }} onClick={() => !imageBase64 && fileInputRef.current?.click()}>
-                        {imageBase64 ? (
-                            <><img src={imageBase64} alt="Preview" className="w-full h-full object-contain p-2" /><button onClick={(e) => { e.stopPropagation(); setImageBase64(null); setImageFile(null); }} className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors backdrop-blur-md"><X size={16} /></button></>
-                        ) : (
-                            <div className="text-center p-6"><div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform"><UploadCloud size={32} className="text-indigo-400" /></div><p className="text-sm font-bold text-white mb-1">Click or drag image</p><p className="text-xs text-white/40">JPG, PNG, GIF</p></div>
-                        )}
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && processImageFile(e.target.files[0])} />
+                    <div className="flex flex-col gap-4">
+                        <div className={`h-40 md:h-48 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden group ${isDragOver ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 hover:border-white/30 hover:bg-white/5'}`} onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={(e) => { e.preventDefault(); setIsDragOver(false); if (e.dataTransfer.files?.[0]) processImageFile(e.dataTransfer.files[0]); }} onClick={() => !imageBase64 && fileInputRef.current?.click()}>
+                            {imageBase64 ? (
+                                <><img src={imageBase64} alt="Preview" className="w-full h-full object-contain p-2" /><button onClick={(e) => { e.stopPropagation(); setImageBase64(null); setImageFile(null); setGifUrl(null); }} className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full transition-colors backdrop-blur-md"><X size={16} /></button></>
+                            ) : (
+                                <div className="text-center p-6"><div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><UploadCloud size={24} className="text-indigo-400" /></div><p className="text-sm font-bold text-white mb-1">Click or drag image</p><p className="text-xs text-white/40">JPG, PNG, GIF</p></div>
+                            )}
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && processImageFile(e.target.files[0])} />
+                        </div>
+
+                        {/* Giphy Search */}
+                        <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col gap-3">
+                            <div className="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2 focus-within:ring-1 ring-indigo-500 transition-all shrink-0">
+                                <Search size={16} className="text-gray-500" />
+                                <input 
+                                    type="text" 
+                                    value={giphySearch} 
+                                    onChange={(e) => { setGiphySearch(e.target.value); if (!e.target.value) setGiphyResults([]); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchGiphy(giphySearch); } }}
+                                    placeholder="Search GIPHY (Safe Mode)..."
+                                    className="flex-1 bg-transparent text-sm text-white outline-none placeholder-white/20"
+                                />
+                                {isSearchingGiphy ? (
+                                    <Loader2 size={16} className="animate-spin text-indigo-400" />
+                                ) : (
+                                    <button onClick={() => searchGiphy(giphySearch)} className="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors">Search</button>
+                                )}
+                            </div>
+                            
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                                {giphyResults.map((gif, i) => (
+                                    <div key={i} className="relative aspect-video group/gif">
+                                        <img 
+                                            src={gif.images.fixed_height_small.url} 
+                                            alt={gif.title}
+                                            className="w-full h-full object-cover rounded-lg cursor-pointer hover:ring-2 ring-indigo-500 transition-all bg-white/5"
+                                            onClick={() => { 
+                                                setGifUrl(gif.images.original.url); 
+                                                setImageBase64(gif.images.fixed_height.url); 
+                                                setImageFile(null);
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                                {giphyResults.length === 0 && !isSearchingGiphy && (
+                                    <div className="col-span-full flex flex-col items-center justify-center gap-2 py-8 opacity-30">
+                                        <Film size={32} />
+                                        <span className="text-xs font-bold uppercase tracking-widest">Search for GIFs</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
+
+
 
                 {activeMode === 'drawing' && (
                      <div className="h-full w-full relative min-h-[250px] md:min-h-[300px] flex-1 flex flex-col touch-none">

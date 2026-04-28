@@ -10,17 +10,19 @@ interface AssignStudentsModalProps {
     assignedIds: string[];
     blurUnassigned: boolean;
     targetGrade?: string;
+    allAssignedOnBoard?: string[];
     onSave: (assignedIds: string[], blurUnassigned: boolean) => void;
 }
 
 export const AssignStudentsModal: React.FC<AssignStudentsModalProps> = ({
-    isOpen, onClose, sectionTitle, allStudents, assignedIds, blurUnassigned, targetGrade, onSave
+    isOpen, onClose, sectionTitle, allStudents, assignedIds, blurUnassigned, targetGrade, allAssignedOnBoard, onSave
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>(assignedIds);
     const [isBlurEnabled, setIsBlurEnabled] = useState(blurUnassigned);
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [isBackdropBlurEnabled, setIsBackdropBlurEnabled] = useState(true);
+    const [hideAssignedToOthers, setHideAssignedToOthers] = useState(false);
     
     // Draggable state
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -36,6 +38,11 @@ export const AssignStudentsModal: React.FC<AssignStudentsModalProps> = ({
             list = list.filter(s => s.enrolled_classes?.includes(targetGrade));
         }
 
+        // 1b. Hide students already assigned to other columns
+        if (hideAssignedToOthers && allAssignedOnBoard) {
+            list = list.filter(s => !allAssignedOnBoard.includes(s.id));
+        }
+
         // 2. Apply search term
         if (searchTerm) {
             list = list.filter(s => 
@@ -43,6 +50,7 @@ export const AssignStudentsModal: React.FC<AssignStudentsModalProps> = ({
                 s.email.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
+
         // 3. Sort: Selected first, then alphabetical
         return [...list].sort((a, b) => {
             const aSelected = selectedIds.includes(a.id);
@@ -54,7 +62,8 @@ export const AssignStudentsModal: React.FC<AssignStudentsModalProps> = ({
             // If both same selection state, sort alphabetically
             return a.full_name.localeCompare(b.full_name);
         });
-    }, [allStudents, searchTerm, targetGrade, showAllStudents, selectedIds]);
+    }, [allStudents, searchTerm, targetGrade, showAllStudents, selectedIds, hideAssignedToOthers, allAssignedOnBoard]);
+
 
     const toggleStudent = (id: string) => {
         setSelectedIds(prev => 
@@ -168,6 +177,25 @@ export const AssignStudentsModal: React.FC<AssignStudentsModalProps> = ({
                             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isBlurEnabled ? 'left-6' : 'left-1'}`} />
                         </button>
                     </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-white/5">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${hideAssignedToOthers ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/40'}`}>
+                                <Users size={18} />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-white">Hide assigned students</span>
+                                <span className="text-[10px] text-white/40 italic">Hide those assigned to other columns</span>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setHideAssignedToOthers(!hideAssignedToOthers)}
+                            className={`w-11 h-6 rounded-full transition-colors relative ${hideAssignedToOthers ? 'bg-blue-500' : 'bg-slate-700'}`}
+                        >
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${hideAssignedToOthers ? 'left-6' : 'left-1'}`} />
+                        </button>
+                    </div>
+
                 </div>
 
                 {/* Search Bar */}

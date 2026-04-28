@@ -10,6 +10,8 @@ import { NoteHeader } from './NoteHeader';
 import { NoteContent } from './NoteContent';
 import { NoteFooter } from './NoteFooter';
 import { CommentSection } from '../Comment/CommentSection';
+import { ConfirmationModal } from '../ui/ConfirmationModal';
+
 
 // Prop Interface
 interface NoteCardProps {
@@ -50,7 +52,9 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   
   const effectiveUserId = userId || contextUserId;
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const localRef = useRef<HTMLDivElement | null>(null);
+
 
   const [isStillEditable, setIsStillEditable] = useState(true);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
@@ -219,15 +223,16 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
       {!isTransparent && !isStickyNote && (
           <div className="relative z-10">
-            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={(id) => onDelete && onDelete(id)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} />
+            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={() => setShowDeleteConfirm(true)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} />
           </div>
       )}
 
       {isStickyNote && canDelete && (
           <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-1">
-                <button onClick={(e) => { e.stopPropagation(); if(onDelete) onDelete(note.id); }} className="p-1 hover:bg-black/10 rounded-full text-slate-500 hover:text-red-600 transition-colors" title="Delete"><X size={14} /></button>
+                <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} className="p-1 hover:bg-black/10 rounded-full text-slate-500 hover:text-red-600 transition-colors" title="Delete"><X size={14} /></button>
           </div>
       )}
+
 
       {isBlurActive ? (
           <div className="p-6 flex flex-col items-center justify-center text-center gap-2 opacity-50 select-none min-h-[100px] relative z-10">
@@ -255,6 +260,19 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
               )}
           </div>
       )}
+
+      <ConfirmationModal 
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={() => {
+              if (onDelete) onDelete(note.id);
+              setShowDeleteConfirm(false);
+          }}
+          title="Delete Post?"
+          message="Are you sure you want to permanently delete this post? This action cannot be undone."
+          confirmText="Delete Post"
+          type="danger"
+      />
 
     </div>
   );

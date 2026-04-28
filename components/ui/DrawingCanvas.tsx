@@ -152,22 +152,40 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         setPast(p=>[...p,[...next]]); setFuture([]); setElements(next);
     },[]);
 
-    const handleUndo=()=>{
+    const handleUndo= useCallback(() => {
         setPast(p=>{
             if(p.length<=1) return p;
             const prev=p[p.length-2];
             setFuture(f=>[elements,...f]); setElements([...prev]); setSelectedId(null);
             return p.slice(0,-1);
         });
-    };
-    const handleRedo=()=>{
+    }, [elements]);
+
+    const handleRedo= useCallback(() => {
         setFuture(f=>{
             if(!f.length) return f;
             const next=f[0];
             setPast(p=>[...p,[...elements]]); setElements([...next]); setSelectedId(null);
             return f.slice(1);
         });
-    };
+    }, [elements]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    if (e.shiftKey) handleRedo();
+                    else handleUndo();
+                } else if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    handleRedo();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleUndo, handleRedo]);
 
     // Notify export — synchronous atob conversion so blob is ALWAYS ready
     // before the modal can close (no async gap = no race-condition loss on quick exit)

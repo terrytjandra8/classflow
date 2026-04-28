@@ -20,16 +20,49 @@ interface EditModeProps {
 
 const markdownToHtml = (text: string) => {
     if (!text) return '';
+    // If it already looks like HTML, don't touch it
     if (/<\/?[a-z][\s\S]*>/i.test(text)) return text;
-    let html = text
+    
+    const lines = text.split('\n');
+    let inUl = false;
+    let inOl = false;
+    
+    const htmlLines = lines.map(line => {
+        const trimmed = line.trim();
+        const isUl = trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ');
+        const olMatch = trimmed.match(/^(\d+)\.\s/);
+        const isOl = !!olMatch;
+
+        let result = '';
+
+        if (isUl) {
+            if (inOl) { result += '</ol>'; inOl = false; }
+            if (!inUl) { result += '<ul>'; inUl = true; }
+            result += `<li>${trimmed.substring(2)}</li>`;
+        } else if (isOl) {
+            if (inUl) { result += '</ul>'; inUl = false; }
+            if (!inOl) { result += '<ol>'; inOl = true; }
+            result += `<li>${trimmed.substring(olMatch![0].length)}</li>`;
+        } else {
+            if (inUl) { result += '</ul>'; inUl = false; }
+            if (inOl) { result += '</ol>'; inOl = false; }
+            result += trimmed === '' ? '<br>' : line;
+        }
+        return result;
+    });
+
+    if (inUl) htmlLines.push('</ul>');
+    if (inOl) htmlLines.push('</ol>');
+
+    let html = htmlLines.join('\n')
         .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
+        .replace(/<(?!(ul|ol|li|\/ul|\/ol|\/li|br|b|i|b>|i>))/g, "&lt;") // Escape < if not part of allowed tags
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-        .replace(/_(.*?)_/g, '<i>$1</i>')
-        .replace(/\n/g, '<br>');
+        .replace(/_(.*?)_/g, '<i>$1</i>');
+        
     return html;
 };
+
 
 export const EditMode: React.FC<EditModeProps> = ({ note, onSave, onCancel, onUpdate, externalColor, setExternalColor, disablePaste, isStudent }) => {
     const { board } = useBoard();

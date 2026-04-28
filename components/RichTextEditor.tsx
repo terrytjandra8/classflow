@@ -85,11 +85,16 @@ const sanitizeHTML = (html: string): string => {
         if (!ALLOWED_PASTE_TAGS.includes(node.tagName)) {
             toRemove.push(node);
         } else {
-            // Clean styles but preserve alignment
+            // Clean styles but preserve alignment and basic text properties
             const style = node.getAttribute('style');
             if (style) {
-                const match = style.match(/text-align\s*:\s*([^;]+)/);
-                if (match) node.setAttribute('style', `text-align: ${match[1]}`);
+                const stylesToKeep = ['text-align', 'font-weight', 'font-style', 'text-decoration', 'color'];
+                const cleanedStyles = style.split(';').filter(s => {
+                    const prop = s.split(':')[0].trim().toLowerCase();
+                    return stylesToKeep.includes(prop);
+                }).join(';');
+                
+                if (cleanedStyles) node.setAttribute('style', cleanedStyles);
                 else node.removeAttribute('style');
             }
             node.removeAttribute('class');

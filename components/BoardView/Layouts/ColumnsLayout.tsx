@@ -1,38 +1,29 @@
 
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { NoteCard } from '../../NoteCard/index';
-import { EditableInput } from '../../ui/EditableInput';
 import { Tooltip } from '../../Tooltip';
 import { useBoard } from '../BoardContext';
 import { Note } from '../../../types';
 import { BoardRules } from '../../../utils/boardRules';
-import { 
-    IconLock, IconUnlock, IconVisible, IconHidden, IconBlur, 
-    IconAnonymous, IconComment, IconNoComment, IconReply, 
-    IconMove, IconDrag, IconClose, IconPlus,
-    IconCopyOff, IconWatermark
-} from '../../Icons';
-import { GitMerge, Ungroup, CheckCircle, Circle, X, Palette, UserPlus, UserCheck } from 'lucide-react';
+import { IconLock, IconHidden, IconPlus } from '../../Icons';
+import { GitMerge, UserCheck } from 'lucide-react';
 import { AssignStudentsModal } from '../AssignStudentsModal';
+import { ConfirmationModal } from '../../ui/ConfirmationModal';
 
-// Preset color palette for groups
-const GROUP_COLORS = [
-    { label: 'Blue',   accent: '#3b82f6', bg: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.45)' },
-    { label: 'Purple', accent: '#a855f7', bg: 'rgba(168,85,247,0.18)', border: 'rgba(168,85,247,0.45)' },
-    { label: 'Green',  accent: '#22c55e', bg: 'rgba(34,197,94,0.18)',  border: 'rgba(34,197,94,0.45)'  },
-    { label: 'Amber',  accent: '#f59e0b', bg: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.45)' },
-    { label: 'Red',    accent: '#ef4444', bg: 'rgba(239,68,68,0.18)',  border: 'rgba(239,68,68,0.45)'  },
-    { label: 'Pink',   accent: '#ec4899', bg: 'rgba(236,72,153,0.18)', border: 'rgba(236,72,153,0.45)' },
-    { label: 'Cyan',   accent: '#06b6d4', bg: 'rgba(6,182,212,0.18)',  border: 'rgba(6,182,212,0.45)'  },
-    { label: 'Slate',  accent: '#94a3b8', bg: 'rgba(148,163,184,0.18)',border: 'rgba(148,163,184,0.45)' },
-];
+
+// Sub-components
+import { GROUP_COLORS } from './Columns/constants';
+import { MergeToolbar } from './Columns/MergeToolbar';
+import { ColumnHeader } from './Columns/ColumnHeader';
+import { GroupedColumnSubHeader } from './Columns/GroupedColumnSubHeader';
+import { ColumnGroup } from './Columns/ColumnGroup';
 
 interface ColumnsLayoutProps {
     isStudent?: boolean;
 }
 
 export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsStudent }) => {
-    const { 
+    const {
         board, notes, updateBoard, openAddNote, updateNote, sectionIdFilter, canManageBoard, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionComments, toggleSectionReplies, toggleSectionRearrange,
         toggleSectionCopy, toggleSectionWatermark,
@@ -40,10 +31,11 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     } = useBoard();
 
     const [assigningSection, setAssigningSection] = useState<string | null>(null);
+    const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
 
     const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
-    
+
     const [localNotes, setLocalNotes] = useState<Note[]>(notes);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [draggingType, setDraggingType] = useState<'NOTE' | 'COLUMN' | null>(null);
@@ -56,7 +48,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     // Which group's color palette is open
     const [openColorPicker, setOpenColorPicker] = useState<string | null>(null);
 
-    const dragItemRef = useRef<string | null>(null); 
+    const dragItemRef = useRef<string | null>(null);
     const dragTypeRef = useRef<'NOTE' | 'COLUMN' | null>(null);
 
     useEffect(() => {
@@ -66,27 +58,50 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     }, [notes, draggingId, draggingType]);
 
     if (sectionIdFilter) {
-         return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;
+        return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;
     }
 
-    const activeSections = (board.sections && board.sections.length > 0) 
-        ? board.sections 
-        : [{ 
+    const activeSections = (board.sections && board.sections.length > 0)
+        ? board.sections
+        : [{
             id: 'default', title: 'Group 1', locked: false,
             isContentBlurred: false, isHidden: false, isAnonymous: false,
             commentsEnabled: true, repliesEnabled: true, studentsCanDrag: false
         }];
-    
+
+    // ── SECTION MANAGEMENT ──
+
     const addSection = () => {
-        const currentSections = (board.sections && board.sections.length > 0) 
-            ? board.sections 
+        const currentSections = (board.sections && board.sections.length > 0)
+            ? board.sections
             : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
-        updateBoard({ 
-            sections: [...currentSections, { id: Math.random().toString(36).substr(2, 9), title: `Group ${currentSections.length + 1}` }] 
+        updateBoard({
+            sections: [...currentSections, { id: Math.random().toString(36).substr(2, 9), title: `Group ${currentSections.length + 1}` }]
         });
     };
 
-    // Toggle column selection in merge mode
+    const renameSection = (id: string, newTitle: string) => updateBoard({ sections: activeSections.map(s => s.id === id ? { ...s, title: newTitle } : s) });
+    const deleteSection = (id: string) => setSectionToDelete(id);
+
+    const confirmDeleteSection = () => {
+        if (sectionToDelete) {
+            updateBoard({ sections: activeSections.filter(s => s.id !== sectionToDelete) });
+            setSectionToDelete(null);
+        }
+    };
+
+
+    const insertSectionAt = (index: number) => {
+        const currentSections = (board.sections && board.sections.length > 0)
+            ? board.sections : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
+        const newSection = { id: Math.random().toString(36).substr(2, 9), title: `New Group` };
+        const list = [...currentSections];
+        list.splice(index, 0, newSection);
+        updateBoard({ sections: list });
+    };
+
+    // ── MERGE / GROUP LOGIC ──
+
     const toggleSelectForMerge = (id: string) => {
         setSelectedForMerge(prev => {
             const next = new Set(prev);
@@ -98,7 +113,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         });
     };
 
-    // Merge all selected into a new group
     const mergeSelected = () => {
         if (selectedForMerge.size < 2) return;
         const groupId = Math.random().toString(36).substr(2, 9);
@@ -147,19 +161,15 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         setOpenColorPicker(null);
     };
 
-    const renameSection = (id: string, newTitle: string) => updateBoard({ sections: activeSections.map(s => s.id === id ? { ...s, title: newTitle } : s) });
-    const deleteSection = (id: string) => updateBoard({ sections: activeSections.filter(s => s.id !== id) });
-
-    const insertSectionAt = (index: number) => {
-        const currentSections = (board.sections && board.sections.length > 0) 
-            ? board.sections : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
-        const newSection = { id: Math.random().toString(36).substr(2, 9), title: `New Group` };
-        const list = [...currentSections];
-        list.splice(index, 0, newSection);
-        updateBoard({ sections: list });
+    const cancelMergeMode = () => {
+        setIsMergeMode(false);
+        setSelectedForMerge(new Set());
+        setPendingGroupTitle('');
+        setPendingGroupColor(GROUP_COLORS[0].accent);
     };
 
-    // --- DRAG HANDLERS ---
+    // ── DRAG HANDLERS ──
+
     const onDragStart = (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => {
         dragItemRef.current = id;
         dragTypeRef.current = type;
@@ -221,12 +231,12 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         }
 
         // Persist the change to the database
-        updateNote(draggedId, { 
+        updateNote(draggedId, {
             sectionId: targetSectionId,
             createdAt: newCreatedAt
         });
-        
-        setDraggingId(null); 
+
+        setDraggingId(null);
         setDraggingType(null);
         dragItemRef.current = null;
         dragTypeRef.current = null;
@@ -240,16 +250,11 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         if (e.clientY > bottom - 80) el.scrollTop += 10;
     }, []);
 
-    const handleAddRelative = (noteId: string, _: 'before' | 'after') => {
-        const note = localNotes.find(n => n.id === noteId);
-        if (note) openAddNote(note.sectionId || 'default');
-    };
-
     const handleMoveNote = useCallback((noteId: string, direction: 'up' | 'down') => {
         const index = localNotes.findIndex(n => n.id === noteId);
         if (index === -1) return;
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        
+
         if (targetIndex >= 0 && targetIndex < localNotes.length) {
             const targetNote = localNotes[targetIndex];
             // Swap Timestamps to swap positions
@@ -261,23 +266,18 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
 
     const onDragEnd = () => {
         // Cleanup dragging state
-        setDraggingId(null); 
+        setDraggingId(null);
         setDraggingType(null);
-        dragItemRef.current = null; 
+        dragItemRef.current = null;
         dragTypeRef.current = null;
     };
 
-    const cancelMergeMode = () => {
-        setIsMergeMode(false);
-        setSelectedForMerge(new Set());
-        setPendingGroupTitle('');
-        setPendingGroupColor(GROUP_COLORS[0].accent);
-    };
+    // ── COMPUTED VALUES ──
 
     const canDragColumns = canManageBoard || (board.studentsCanDragColumns && !isLocked);
 
     // Build render items: single columns or groups
-    type RenderItem = 
+    type RenderItem =
         | { type: 'single'; section: typeof activeSections[0]; idx: number }
         | { type: 'group'; groupId: string; groupTitle: string; groupColor: string; sections: { section: typeof activeSections[0]; idx: number }[] };
 
@@ -301,10 +301,8 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
 
     const existingGroups = renderItems.filter(i => i.type === 'group') as Extract<RenderItem, { type: 'group' }>[];
 
-    // Helper: get color config for a hex accent
-    const getColorConfig = (accent: string) => GROUP_COLORS.find(c => c.accent === accent) || GROUP_COLORS[0];
+    // ── RENDER COLUMN ──
 
-    // Renders a single column card
     const renderColumn = (section: typeof activeSections[0], idx: number, isGrouped = false) => {
         if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
 
@@ -314,14 +312,11 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
         const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
         const canDragNotes = canManageBoard || (sectionCanDrag && !isLocked && !section.locked);
-        
-        // NEW: Check if student can post in this specific section
-        const canPostInSection = BoardRules.canPostInSection(board, section.id, userId, !!isStudent);
-        
-        const canAdd = canManageBoard || (!isLocked && !section.locked && canPostInSection);
-        
-        const showControls = canManageBoard || !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
 
+        // Check if student can post in this specific section
+        const canPostInSection = BoardRules.canPostInSection(board, section.id, userId, !!isStudent);
+        const canAdd = canManageBoard || (!isLocked && !section.locked && canPostInSection);
+        const showControls = canManageBoard || !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
         const isSelected = selectedForMerge.has(section.id);
 
         return (
@@ -332,136 +327,41 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                 onDrop={(e) => onDrop(e, section.id)}
             >
                 {isGrouped ? (
-                    /* ── Minimal editable sub-label inside a group ── */
-                    <div className="flex items-center gap-1.5 px-2 py-1 border-b border-white/10">
-                        {section.locked && <IconLock size={10} className="text-red-400 shrink-0" />}
-                        {section.isHidden && <IconHidden size={10} className="text-red-400 shrink-0" />}
-                        <EditableInput
-                            disabled={!canManageBoard}
-                            className="text-xs font-semibold text-gray-300 bg-transparent outline-none w-full border border-transparent hover:border-white/20 rounded px-1 py-0.5 focus:bg-white/10 transition-all"
-                            value={section.title}
-                            onSave={(val) => renameSection(section.id, val)}
-                            style={{ color: board.groupTextColor }}
-                        />
-                        {canManageBoard && (
-                            <Tooltip content="Remove from group">
-                                <button onClick={() => unmergeSection(section.id)} className="p-0.5 text-white/30 hover:text-orange-400 transition-colors shrink-0">
-                                    <Ungroup size={11} />
-                                </button>
-                            </Tooltip>
-                        )}
-                    </div>
+                    <GroupedColumnSubHeader
+                        section={section}
+                        canManageBoard={canManageBoard}
+                        renameSection={renameSection}
+                        unmergeSection={unmergeSection}
+                        groupTextColor={board.groupTextColor}
+                    />
                 ) : (
-                    /* ── Full standalone column header ── */
-                    <div
-                        className={`flex flex-col gap-3 p-3 rounded-xl border transition-all relative cursor-pointer group ${
-                            isMergeMode && isSelected
-                                ? 'border-blue-400 bg-blue-500/20 ring-2 ring-blue-400/50'
-                                : isMergeMode
-                                ? 'border-blue-500/40 hover:border-blue-400 hover:bg-blue-500/10 bg-black/5 dark:bg-white/5'
-                                : section.isHidden
-                                ? 'border-dashed border-red-500/20 bg-red-500/5 cursor-default'
-                                : 'border-transparent hover:border-white/10 bg-black/5 dark:bg-white/5 cursor-default'
-                        }`}
-                        onClick={isMergeMode ? () => toggleSelectForMerge(section.id) : undefined}
-                    >
-                        {/* Row 1: Handle + Title + Status Badges */}
-                        <div className="flex items-center gap-2 w-full min-w-0">
-                            {isMergeMode && canManageBoard ? (
-                                <div className={`shrink-0 transition-colors ${isSelected ? 'text-blue-400' : 'text-white/30'}`}>
-                                    {isSelected ? <CheckCircle size={18} /> : <Circle size={18} />}
-                                </div>
-                            ) : (
-                                canDragColumns && (
-                                    <div className="text-gray-400 p-1 cursor-grab active:cursor-grabbing hover:text-white transition-colors shrink-0"
-                                        draggable={true} onDragStart={(e) => onDragStart(e, section.id, 'COLUMN')} title="Drag to reorder">
-                                        <IconDrag size={16} />
-                                    </div>
-                                )
-                            )}
-                            
-                            <div className="flex items-center gap-1 shrink-0">
-                                {section.locked && <div className="bg-red-500 text-white p-1 rounded shadow-sm"><IconLock size={10} strokeWidth={3} /></div>}
-                                {section.isHidden && <div className="bg-orange-500 text-white p-1 rounded shadow-sm"><IconHidden size={10} strokeWidth={3} /></div>}
-                                {section.disableCopy && <div className="bg-slate-700 text-white p-1 rounded shadow-sm"><IconCopyOff size={10} strokeWidth={3} /></div>}
-                                {section.isWatermarked && <div className="bg-red-600 text-white p-1 rounded shadow-sm"><IconWatermark size={10} strokeWidth={3} /></div>}
-                            </div>
-
-                            <EditableInput
-                                disabled={!canManageBoard || isMergeMode}
-                                className={`font-bold text-base bg-transparent border border-transparent hover:border-white/20 rounded px-1.5 py-1 w-full focus:bg-white/10 outline-none transition-all ${isMergeMode ? 'pointer-events-none' : ''} ${section.isHidden ? 'opacity-70' : 'opacity-100'} text-slate-800 dark:text-white`}
-                                value={section.title}
-                                onSave={(val) => renameSection(section.id, val)}
-                                style={{ color: board.groupTextColor }}
-                            />
-                        </div>
-
-                        {/* Row 2: Teacher Controls (only when manage and not merge) */}
-                        {canManageBoard && !isMergeMode && (
-                            <div className={`grid grid-cols-5 sm:flex sm:flex-wrap items-center gap-1 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                <Tooltip content={section.locked ? "Unlock" : "Lock"}>
-                                    <button onClick={() => toggleSectionLock(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.locked ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        {section.locked ? <IconLock size={14} /> : <IconUnlock size={14} />}
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={commentsOn ? "Disable Comments" : "Enable Comments"}>
-                                    <button onClick={() => toggleSectionComments(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${!commentsOn ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        {commentsOn ? <IconComment size={14} /> : <IconNoComment size={14} />}
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={repliesOn ? "Disable Replies" : "Enable Replies"}>
-                                    <button onClick={() => toggleSectionReplies(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${!repliesOn ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        <IconReply size={14} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={sectionCanDrag ? "Disable Dragging" : "Enable Dragging"}>
-                                    <button onClick={() => toggleSectionRearrange(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${sectionCanDrag ? 'text-green-500 bg-green-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        <IconMove size={14} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={isContentBlurred ? "Reveal Content" : "Blur Content"}>
-                                    <button onClick={() => toggleSectionContentBlur(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${isContentBlurred ? 'text-orange-500 bg-orange-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        {isContentBlurred ? <IconHidden size={14} /> : <IconBlur size={14} />}
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={section.isHidden ? "Show" : "Hide"}>
-                                    <button onClick={() => toggleSectionVisibility(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isHidden ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        {section.isHidden ? <IconHidden size={14} /> : <IconVisible size={14} />}
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={section.isAnonymous ? "Disable Anonymous" : "Enable Anonymous"}>
-                                    <button onClick={() => toggleSectionAnonymous(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isAnonymous ? 'text-purple-500 bg-purple-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        <IconAnonymous size={14} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={section.disableCopy ? "Enable Copying" : "Disable Copying"}>
-                                    <button onClick={() => toggleSectionCopy(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.disableCopy ? 'text-orange-500 bg-orange-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        <IconCopyOff size={14} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={section.isWatermarked ? "Disable Focus Guard" : "Enable Stay Focused Guard (Tab-switch tracking)"}>
-                                    <button onClick={() => toggleSectionWatermark(section.id)} className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.isWatermarked ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        <IconWatermark size={14} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content="Delete Column">
-                                    <button onClick={() => deleteSection(section.id)} className="p-1.5 hover:text-red-500 text-slate-400 transition-colors hover:bg-red-500/10 rounded-lg flex justify-center">
-                                        <IconClose size={14} />
-                                    </button>
-                                </Tooltip>
-                                
-                                {/* NEW: Assign Students Button */}
-                                <Tooltip content="Assign Students to this column">
-                                    <button 
-                                        onClick={() => setAssigningSection(section.id)} 
-                                        className={`p-1.5 rounded-lg transition-colors flex justify-center ${section.assignedStudentIds?.length ? 'text-blue-500 bg-blue-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-                                    >
-                                        <UserPlus size={14} />
-                                    </button>
-                                </Tooltip>
-                            </div>
-                        )}
-                    </div>
+                    <ColumnHeader
+                        section={section}
+                        isMergeMode={isMergeMode}
+                        isSelected={isSelected}
+                        canManageBoard={canManageBoard}
+                        canDragColumns={!!canDragColumns}
+                        groupTextColor={board.groupTextColor}
+                        commentsOn={!!commentsOn}
+                        repliesOn={!!repliesOn}
+                        isContentBlurred={!!isContentBlurred}
+                        sectionCanDrag={!!sectionCanDrag}
+                        showControls={!!showControls}
+                        onDragStart={onDragStart}
+                        renameSection={renameSection}
+                        toggleSelectForMerge={toggleSelectForMerge}
+                        toggleSectionLock={toggleSectionLock}
+                        toggleSectionComments={toggleSectionComments}
+                        toggleSectionReplies={toggleSectionReplies}
+                        toggleSectionRearrange={toggleSectionRearrange}
+                        toggleSectionContentBlur={toggleSectionContentBlur}
+                        toggleSectionVisibility={toggleSectionVisibility}
+                        toggleSectionAnonymous={toggleSectionAnonymous}
+                        toggleSectionCopy={toggleSectionCopy}
+                        toggleSectionWatermark={toggleSectionWatermark}
+                        deleteSection={deleteSection}
+                        setAssigningSection={setAssigningSection}
+                    />
                 )}
 
                 {/* Assignment Status Badge */}
@@ -490,10 +390,10 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                             className={`note-card-wrapper transition-transform duration-200 ease-out ${draggingId === note.id ? 'opacity-40' : ''}`}
                             draggable={canDragNotes} onDragStart={(e) => onDragStart(e, note.id, 'NOTE')}
                             onDragOver={(e) => onDragOverNote(e, note.id, section.id)} onDragEnd={onDragEnd}>
-                            <NoteCard 
-                                key={note.id} 
+                            <NoteCard
+                                key={note.id}
                                 note={note}
-                                userId={userId} 
+                                userId={userId}
                                 onDelete={deleteNote}
                                 onLike={likeNote}
                                 onAddComment={addComment}
@@ -521,77 +421,24 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         );
     };
 
+    // ── MAIN RENDER ──
+
     return (
         <div className="flex flex-col h-full overflow-hidden" onClick={() => setOpenColorPicker(null)}>
 
             {/* ── MERGE MODE TOOLBAR ── */}
             {canManageBoard && isMergeMode && (
-                <div className="flex items-center gap-3 px-5 py-3 bg-slate-900/80 border-b border-white/10 backdrop-blur-md shrink-0 z-20 shadow-lg">
-                    <GitMerge size={16} className="text-blue-400 shrink-0" />
-
-                    {/* Group name input */}
-                    <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Group Name</span>
-                        <input
-                            type="text"
-                            value={pendingGroupTitle}
-                            onChange={e => setPendingGroupTitle(e.target.value)}
-                            placeholder="e.g. Feedback Round"
-                            className="bg-white/10 border border-white/20 text-white text-sm font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-blue-400 w-44 placeholder-white/30 transition-colors"
-                        />
-                    </div>
-
-                    {/* Color picker */}
-                    <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Color</span>
-                        <div className="flex gap-1.5">
-                            {GROUP_COLORS.map(c => (
-                                <button key={c.accent} onClick={(e) => { e.stopPropagation(); setPendingGroupColor(c.accent); }}
-                                    title={c.label}
-                                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${pendingGroupColor === c.accent ? 'border-white scale-110' : 'border-transparent'}`}
-                                    style={{ backgroundColor: c.accent }} />
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="h-8 w-px bg-white/10 mx-1" />
-
-                    <span className="text-sm text-white/60">
-                        {selectedForMerge.size === 0
-                            ? 'Click columns to select'
-                            : `${selectedForMerge.size} column${selectedForMerge.size > 1 ? 's' : ''} selected`}
-                    </span>
-
-                    {selectedForMerge.size >= 2 && (
-                        <button onClick={mergeSelected}
-                            className="px-4 py-1.5 rounded-lg text-sm font-bold text-white transition-all hover:brightness-110 shadow-md"
-                            style={{ backgroundColor: pendingGroupColor }}>
-                            Merge {selectedForMerge.size} Columns
-                        </button>
-                    )}
-
-                    {/* Add to existing group */}
-                    {existingGroups.length > 0 && selectedForMerge.size >= 1 && (
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-white/40">Add to:</span>
-                            {existingGroups.map(g => {
-                                const cc = getColorConfig(g.groupColor);
-                                return (
-                                    <button key={g.groupId}
-                                        onClick={() => addToGroup(g.groupId, g.groupTitle, g.groupColor)}
-                                        className="px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors"
-                                        style={{ color: cc.accent, borderColor: cc.border, backgroundColor: cc.bg }}>
-                                        "{g.groupTitle}"
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <button onClick={cancelMergeMode} className="ml-auto p-1.5 text-white/40 hover:text-white transition-colors">
-                        <X size={16} />
-                    </button>
-                </div>
+                <MergeToolbar
+                    pendingGroupTitle={pendingGroupTitle}
+                    setPendingGroupTitle={setPendingGroupTitle}
+                    pendingGroupColor={pendingGroupColor}
+                    setPendingGroupColor={setPendingGroupColor}
+                    selectedForMerge={selectedForMerge}
+                    mergeSelected={mergeSelected}
+                    existingGroups={existingGroups}
+                    addToGroup={addToGroup}
+                    cancelMergeMode={cancelMergeMode}
+                />
             )}
 
             {/* ── BOARD COLUMNS ── */}
@@ -617,64 +464,21 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                     }
 
                     // ── MERGED GROUP ──
-                    const cc = getColorConfig(item.groupColor);
                     return (
-                        <div key={item.groupId} className="shrink-0 flex flex-col rounded-xl overflow-hidden shadow-lg"
-                            style={{ border: `2px solid ${cc.border}`, background: cc.bg }}
-                            onClick={e => e.stopPropagation()}>
-
-                            {/* Shared group header */}
-                            <div className="flex items-center gap-2 px-3 py-2 relative"
-                                style={{ backgroundColor: cc.accent + '28', borderBottom: `1px solid ${cc.border}` }}>
-
-                                {/* Editable group name */}
-                                <EditableInput
-                                    disabled={!canManageBoard}
-                                    className="font-bold text-base bg-transparent outline-none px-1 py-0.5 rounded border border-transparent focus:border-white/30 focus:bg-white/10 flex-1 min-w-0 transition-all"
-                                    style={{ color: '#ffffff' }}
-                                    value={item.groupTitle}
-                                    onSave={(val) => renameGroup(item.groupId, val)}
-                                />
-
-                                {canManageBoard && (
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        {/* Color picker toggle */}
-                                        <Tooltip content="Change group color">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setOpenColorPicker(openColorPicker === item.groupId ? null : item.groupId); }}
-                                                className="p-1.5 rounded-lg transition-colors hover:bg-white/10"
-                                                style={{ color: cc.accent }}>
-                                                <Palette size={13} />
-                                            </button>
-                                        </Tooltip>
-                                        <Tooltip content="Disband group">
-                                            <button onClick={() => disbandGroup(item.groupId)}
-                                                className="p-1.5 rounded-lg transition-colors text-white/40 hover:text-orange-400 hover:bg-white/10">
-                                                <Ungroup size={13} />
-                                            </button>
-                                        </Tooltip>
-                                    </div>
-                                )}
-
-                                {/* Color palette dropdown */}
-                                {openColorPicker === item.groupId && (
-                                    <div className="absolute top-full right-0 mt-1 p-2 rounded-xl bg-slate-800 border border-white/20 shadow-2xl flex gap-2 z-30"
-                                        onClick={e => e.stopPropagation()}>
-                                        {GROUP_COLORS.map(c => (
-                                            <button key={c.accent} onClick={() => updateGroupColor(item.groupId, c.accent)}
-                                                title={c.label}
-                                                className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${item.groupColor === c.accent ? 'border-white scale-110' : 'border-transparent'}`}
-                                                style={{ backgroundColor: c.accent }} />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Sub-columns side by side */}
-                            <div className="flex gap-2 p-2">
-                                {item.sections.map(({ section, idx }) => renderColumn(section, idx, true))}
-                            </div>
-                        </div>
+                        <ColumnGroup
+                            key={item.groupId}
+                            groupId={item.groupId}
+                            groupTitle={item.groupTitle}
+                            groupColor={item.groupColor}
+                            canManageBoard={canManageBoard}
+                            openColorPicker={openColorPicker}
+                            setOpenColorPicker={setOpenColorPicker}
+                            renameGroup={renameGroup}
+                            disbandGroup={disbandGroup}
+                            updateGroupColor={updateGroupColor}
+                        >
+                            {item.sections.map(({ section, idx }) => renderColumn(section, idx, true))}
+                        </ColumnGroup>
                     );
                 })}
 
@@ -700,26 +504,44 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                         </Tooltip>
                     </div>
                 )}
-            {/* Assignment Modal */}
-            {assigningSection && (
-                <AssignStudentsModal
-                    isOpen={!!assigningSection}
-                    onClose={() => setAssigningSection(null)}
-                    sectionTitle={activeSections.find(s => s.id === assigningSection)?.title || ''}
-                    allStudents={students || []}
-                    assignedIds={activeSections.find(s => s.id === assigningSection)?.assignedStudentIds || []}
-                    blurUnassigned={activeSections.find(s => s.id === assigningSection)?.blurUnassigned || false}
-                    targetGrade={board.targetGrade}
-                    onSave={(assignedIds, blurUnassigned) => {
-                        updateBoard({
-                            sections: activeSections.map(s => 
-                                s.id === assigningSection ? { ...s, assignedStudentIds: assignedIds, blurUnassigned } : s
-                            )
-                        });
-                    }}
+                {/* Assignment Modal */}
+                {assigningSection && (
+                    <AssignStudentsModal
+                        isOpen={!!assigningSection}
+                        onClose={() => setAssigningSection(null)}
+                        sectionTitle={activeSections.find(s => s.id === assigningSection)?.title || ''}
+                        allStudents={students || []}
+                        assignedIds={activeSections.find(s => s.id === assigningSection)?.assignedStudentIds || []}
+                        blurUnassigned={activeSections.find(s => s.id === assigningSection)?.blurUnassigned || false}
+                        targetGrade={board.targetGrade}
+                        allAssignedOnBoard={activeSections.reduce((acc, s) => {
+                            if (s.id !== assigningSection) {
+                                return [...acc, ...(s.assignedStudentIds || [])];
+                            }
+                            return acc;
+                        }, [] as string[])}
+                        onSave={(assignedIds, blurUnassigned) => {
+                            updateBoard({
+                                sections: activeSections.map(s =>
+                                    s.id === assigningSection ? { ...s, assignedStudentIds: assignedIds, blurUnassigned } : s
+                                )
+                            });
+                        }}
+                    />
+                )}
+                
+                <ConfirmationModal 
+                    isOpen={!!sectionToDelete}
+                    onClose={() => setSectionToDelete(null)}
+                    onConfirm={confirmDeleteSection}
+                    title="Delete Column?"
+                    message={`Are you sure you want to delete "${activeSections.find(s => s.id === sectionToDelete)?.title || 'this column'}"? This will also hide all notes in this column from the current view.`}
+                    confirmText="Delete Column"
+                    type="danger"
                 />
-            )}
+
             </div>
         </div>
     );
 };
+

@@ -8,6 +8,8 @@ import { useBoard } from '../BoardContext';
 import { Note } from '../../../types';
 import { BoardRules } from '../../../utils/boardRules';
 import { AssignStudentsModal } from '../AssignStudentsModal';
+import { ConfirmationModal } from '../../ui/ConfirmationModal';
+
 
 interface GridLayoutProps {
     gridClass: string;
@@ -25,6 +27,8 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
     } = useBoard();
 
     const [assigningSection, setAssigningSection] = useState<string | null>(null);
+    const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
+
 
     // Prioritize prop if passed, else context
     const isStudent = propIsStudent !== undefined ? propIsStudent : contextIsStudent;
@@ -103,7 +107,15 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
 
     const addSection = () => updateBoard({ sections: [...(board.sections || []), { id: Math.random().toString(36).substr(2, 9), title: `Group ${sections.length + 1}` }] });
     const renameSection = (id: string, newTitle: string) => updateBoard({ sections: sections.map(s => s.id === id ? { ...s, title: newTitle } : s) });
-    const deleteSection = (id: string) => updateBoard({ sections: sections.filter(s => s.id !== id) });
+    const deleteSection = (id: string) => setSectionToDelete(id);
+    
+    const confirmDeleteSection = () => {
+        if (sectionToDelete) {
+            updateBoard({ sections: sections.filter(s => s.id !== sectionToDelete) });
+            setSectionToDelete(null);
+        }
+    };
+
     
     const handleAddRelative = useCallback((noteId: string, position: 'before' | 'after') => {
         const note = localNotes.find((n: any) => n.id === noteId);
@@ -296,6 +308,12 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                     assignedIds={sections.find(s => s.id === assigningSection)?.assignedStudentIds || []}
                     blurUnassigned={sections.find(s => s.id === assigningSection)?.blurUnassigned || false}
                     targetGrade={board.targetGrade}
+                    allAssignedOnBoard={sections.reduce((acc, s) => {
+                        if (s.id !== assigningSection) {
+                            return [...acc, ...(s.assignedStudentIds || [])];
+                        }
+                        return acc;
+                    }, [] as string[])}
                     onSave={(assignedIds, blurUnassigned) => {
                         updateBoard({
                             sections: sections.map(s => 
@@ -305,6 +323,16 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                     }}
                 />
             )}
+
+            <ConfirmationModal 
+                isOpen={!!sectionToDelete}
+                onClose={() => setSectionToDelete(null)}
+                onConfirm={confirmDeleteSection}
+                title="Delete Section?"
+                message={`Are you sure you want to delete "${sections.find(s => s.id === sectionToDelete)?.title || 'this section'}"? This will hide all notes in this section from the view.`}
+                confirmText="Delete Section"
+                type="danger"
+            />
         </div>
     );
 };

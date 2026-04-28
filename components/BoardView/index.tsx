@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Board, Note, LockMode, ClassGroup, Profile } from '../../types';
 import { useBoardData } from './logic/useBoardData';
 import { useNoteActions } from '../../hooks/useNoteActions';
@@ -17,6 +17,7 @@ import { profileService } from '../../services/profileService';
 import { ScreenshotGuard } from '../Security/ScreenshotGuard';
 import { supabase } from '../../services/supabaseClient';
 import { mapBoard } from '../../utils/mappers';
+import { useHistory } from '../../hooks/useHistory';
 
 // Custom Hooks for Clean Code
 import { useViolationTracking } from './logic/useViolationTracking';
@@ -78,6 +79,65 @@ export const BoardView: React.FC<BoardViewProps> = ({
         board, boardId: board.id, userId, username, userAvatar, userRole, setNotes,
         onTouchBoard: () => onUpdateBoard({ updated_at: new Date().toISOString() } as any) 
     });
+
+    // History Tracking
+    const history = useHistory({ board: liveBoard, notes });
+    const isHistoryApplying = useRef(false);
+
+    // Snapshot state when it changes (debounced)
+    useEffect(() => {
+        if (isHistoryApplying.current) return;
+        const timer = setTimeout(() => {
+            history.pushState({ board: liveBoard, notes });
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, [liveBoard, notes]);
+
+    const handleUndo = useCallback(async () => {
+        const prevState = history.undo();
+        if (prevState) {
+            isHistoryApplying.current = true;
+            setLiveBoard(prevState.board);
+            setNotes(prevState.notes);
+            onUpdateBoard(prevState.board);
+            setTimeout(() => { isHistoryApplying.current = false; }, 1100);
+        }
+    }, [history, onUpdateBoard, setNotes]);
+
+    const handleRedo = useCallback(async () => {
+        const nextState = history.redo();
+        if (nextState) {
+            isHistoryApplying.current = true;
+            setLiveBoard(nextState.board);
+            setNotes(nextState.notes);
+            onUpdateBoard(nextState.board);
+            setTimeout(() => { isHistoryApplying.current = false; }, 1100);
+        }
+    }, [history, onUpdateBoard, setNotes]);
+
+    useEffect(() => {
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            // Disable global board undo/redo if any modal or overlay is open
+            if (isModalOpen || isSettingsOpen || isShareModalOpen || isRecipeSidebarOpen) return;
+
+            const isInput = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName) || (e.target as HTMLElement).isContentEditable;
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key.toLowerCase() === 'z') {
+                    if (isInput) return;
+                    e.preventDefault();
+                    if (e.shiftKey) handleRedo();
+                    else handleUndo();
+                } else if (e.key.toLowerCase() === 'y') {
+                    if (isInput) return;
+                    e.preventDefault();
+                    handleRedo();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [handleUndo, handleRedo, isModalOpen, isSettingsOpen, isShareModalOpen, isRecipeSidebarOpen]);
+
 
     // --- REFACTORED LOGIC HOOKS ---
     const { handleViolation } = useViolationTracking({ board, notes, setNotes, userId, username, isStudent: isStudent || isSimulatingStudent, isSimulatingStudent, updateNote, incrementViolation });
@@ -205,7 +265,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         );
     };
 
-    // Shared Components and Overlays
     const renderOverlays = () => !isPresentationMode && (
         <BoardOverlays 
             board={board} isStudent={isStudent || isSimulatingStudent} username={username}
@@ -220,7 +279,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
         />
     );
 
-    // Board Formats
     const wrapProvider = (content: React.ReactNode) => (
         <BoardProvider value={contextValue}>
             {renderProtectedContent(content)}
