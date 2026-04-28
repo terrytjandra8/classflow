@@ -66,6 +66,7 @@ export const mapBoard = (row: BoardRow): Board => {
         // Anti-Cheat & Security
         disableCopy: settings.disableCopy ?? false,
         blockScreenshots: settings.blockScreenshots ?? true,
+        disableFocusGuard: settings.disableFocusGuard ?? false,
         
         // Collaborators
         collaborators: settings.collaborators || [],

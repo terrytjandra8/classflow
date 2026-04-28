@@ -4,6 +4,7 @@ import { ShieldAlert, UserCheck, Lock, Activity } from 'lucide-react';
 
 interface ScreenshotGuardProps {
     blockScreenshots: boolean;
+    enableFocusGuard?: boolean; // NEW: Toggle specifically for focus loss blur
     children: React.ReactNode;
     studentName?: string;
     onViolation?: (type: 'security' | 'focus') => void;
@@ -11,7 +12,15 @@ interface ScreenshotGuardProps {
     boardFormat?: string;
 }
 
-export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreenshots: isEnabled, children, studentName = "Student", onViolation, boardId, boardFormat }) => {
+export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ 
+    blockScreenshots: isEnabled, 
+    enableFocusGuard = true,
+    children, 
+    studentName = "Student", 
+    onViolation, 
+    boardId, 
+    boardFormat 
+}) => {
     const [lockType, setLockType] = useState<'security' | 'focus' | null>(null);
     const lockTypeRef = useRef<'security' | 'focus' | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -64,8 +73,8 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreensho
 
         window.addEventListener('keydown', handleKeyDown, true);
         
-        // Exclude focus tracking for Quizzes if requested
-        if (boardFormat !== 'quiz') {
+        // Exclude focus tracking if disabled or for specific formats
+        if (enableFocusGuard && boardFormat !== 'quiz') {
             window.addEventListener('blur', () => applyShield('focus'));
             window.addEventListener('mouseleave', () => applyShield('focus'));
             window.addEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
@@ -73,12 +82,14 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ blockScreensho
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, true);
-            if (boardFormat !== 'quiz') {
+            if (enableFocusGuard && boardFormat !== 'quiz') {
+                window.removeEventListener('blur', () => applyShield('focus'));
                 window.removeEventListener('mouseleave', () => applyShield('focus'));
+                window.removeEventListener('focus', () => { if (lockTypeRef.current === 'focus') releaseShield(); });
             }
             releaseShield();
         };
-    }, [isEnabled, applyShield, releaseShield, boardFormat]);
+    }, [isEnabled, enableFocusGuard, applyShield, releaseShield, boardFormat]);
 
     if (!isEnabled) return <>{children}</>;
 

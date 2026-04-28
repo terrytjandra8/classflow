@@ -260,8 +260,17 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const renderProtectedContent = (content: React.ReactNode) => {
         const hasWatermarkedSection = board.sections?.some(s => s.isWatermarked);
         const protectionEnabled = (!!board.blockScreenshots || !!hasWatermarkedSection) && (isStudent || isSimulatingStudent);
+        const enableFocusGuard = !board.disableFocusGuard;
+
         return (
-            <ScreenshotGuard blockScreenshots={protectionEnabled} studentName={username} onViolation={handleViolation} boardId={board.id} boardFormat={board.format}>
+            <ScreenshotGuard 
+                blockScreenshots={protectionEnabled} 
+                enableFocusGuard={enableFocusGuard}
+                studentName={username} 
+                onViolation={handleViolation} 
+                boardId={board.id} 
+                boardFormat={board.format}
+            >
                 {content}
             </ScreenshotGuard>
         );

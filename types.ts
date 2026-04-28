@@ -248,6 +248,7 @@ export interface Board {
   isAnonymous?: boolean;
   disableCopy?: boolean; // NEW: Global disable text selection
   blockScreenshots?: boolean; // NEW: Watermark & Blur on focus lost
+  disableFocusGuard?: boolean; // NEW: Only show watermark, don't blur on focus loss
   collaborators?: string[]; // NEW: List of User IDs
   
   // Appearance
