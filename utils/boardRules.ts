@@ -111,8 +111,9 @@ export const BoardRules = {
         isStudent: boolean,
         isPresentationMode: boolean = false
     ): boolean => {
-        // 1. Teachers always see everything UNLESS in presentation mode
-        if (!isStudent && !isPresentationMode) return false;
+        // 1. Initial Bypass: Non-students (teachers) NOT in presentation mode always see everything
+        const isEffectiveStudent = isStudent || isPresentationMode;
+        if (!isEffectiveStudent) return false;
         
         // In presentation mode, treat viewer as generic (not author of student posts)
         const effectiveViewerId = isPresentationMode ? null : viewerId;
@@ -134,14 +135,17 @@ export const BoardRules = {
             return !!board.blurTeacherPosts;
         }
 
-        // 4. Peer Posts logic
+        // 4. Explicit Release Override
+        if (note.isFeedbackPublic) return false;
+
+        // 5. Peer Posts logic
         const isGlobalBlur = board.blurOtherPosts;
         const isColumnExplicitBlur = !!sectionBlurred;
         
         // NEW: Specific Assignment Blur
         // If a column is assigned and blurUnassigned is ON, we blur for everyone NOT assigned.
         let isAssignmentBlur = false;
-        if (isStudent && note.sectionId && board.sections) {
+        if (isEffectiveStudent && note.sectionId && board.sections) {
             const section = board.sections.find(s => s.id === note.sectionId);
             if (section?.blurUnassigned && section.assignedStudentIds && section.assignedStudentIds.length > 0) {
                 const isAssigned = !!viewerId && section.assignedStudentIds.includes(viewerId);

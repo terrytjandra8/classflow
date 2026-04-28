@@ -68,11 +68,17 @@ export const BoardView: React.FC<BoardViewProps> = ({
         return () => { supabase.removeChannel(channel); };
     }, [initialBoard.id]);
 
-    const isExpired = liveBoard.autoLockTime && Date.now() >= liveBoard.autoLockTime;
+    const isStudentUser = isStudent || isSimulatingStudent;
+    const isExpired = liveBoard.autoLockTime && Date.now() >= liveBoard.autoLockTime && isStudentUser;
+    
+    // Auto-Live logic: if scheduled and in the future, treat as draft for students
+    const isWaitingForLive = liveBoard.autoLiveTime && Date.now() < liveBoard.autoLiveTime && isStudentUser;
+
     const board = useMemo(() => ({
         ...liveBoard,
-        lockMode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode
-    }), [liveBoard, isExpired]);
+        lockMode: (isExpired ? 'readonly' : liveBoard.lockMode) as LockMode,
+        isPublished: isWaitingForLive ? false : liveBoard.isPublished
+    }), [liveBoard, isExpired, isWaitingForLive]);
 
     // Data and Actions
     const { notes, setNotes, isLoading: isLoadingNotes, onlineUsers, typingUsers, setTypingStatus } = useBoardData(board, username, userAvatar, userId, userRole);
@@ -168,7 +174,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         fetchData();
     }, [isStudent, isPresentationMode]);
 
-    const canManageBoard = !isStudent && !isSimulatingStudent && !isPresentationMode;
+    const canManageBoard = !isStudent;
 
     const sortedNotes = useMemo(() => {
         let filtered = notes;

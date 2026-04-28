@@ -57,62 +57,149 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({ board, onUpdat
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                        <Radio size={16} className="text-green-500"/> Schedule Auto-Live
-                    </label>
-                    <div className="flex gap-2 items-center">
-                        <input 
-                            ref={autoLiveInputRef}
-                            onClick={() => autoLiveInputRef.current?.showPicker()}
-                            type="datetime-local"
-                            value={board.autoLiveTime ? getLocalISOString(board.autoLiveTime) : ''}
-                            onChange={(e) => onUpdate({ autoLiveTime: e.target.value ? new Date(e.target.value).getTime() : null })}
-                            className="flex-1 bg-[#111] border border-white/10 rounded-lg p-2 text-white outline-none text-xs font-mono cursor-pointer"
-                        />
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                            <Radio size={16} className="text-green-500"/> Schedule Auto-Live
+                        </label>
                         {board.autoLiveTime && (
-                            <button 
-                                onClick={() => onUpdate({ autoLiveTime: null })} 
-                                className="text-xs text-red-400 hover:text-white px-3 py-2 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
-                            >
-                                Clear
-                            </button>
+                            <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                                Scheduled
+                            </span>
                         )}
                     </div>
-                    <p className="text-[10px] text-gray-500">
-                        Board will automatically switch from <strong>Draft</strong> to <strong>Live</strong> at this time.
-                    </p>
+                    
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5 space-y-3">
+                        <div className="flex gap-2 items-center">
+                            <input 
+                                ref={autoLiveInputRef}
+                                onClick={() => autoLiveInputRef.current?.showPicker()}
+                                type="datetime-local"
+                                value={board.autoLiveTime ? getLocalISOString(board.autoLiveTime) : ''}
+                                onChange={(e) => {
+                                    const time = e.target.value ? new Date(e.target.value).getTime() : null;
+                                    const updates: any = { autoLiveTime: time };
+                                    if (time && time > Date.now()) updates.isPublished = false;
+                                    onUpdate(updates);
+                                }}
+                                className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none text-xs font-mono cursor-pointer hover:bg-white/10 transition-colors"
+                            />
+                            {board.autoLiveTime && (
+                                <button 
+                                    onClick={() => onUpdate({ autoLiveTime: null })} 
+                                    className="p-2.5 text-red-400 hover:text-white bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
+                                    title="Clear"
+                                >
+                                    <Eye size={16} className="rotate-45" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Presets */}
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                            {[5, 10, 15, 30, 60].map(mins => (
+                                <button
+                                    key={mins}
+                                    onClick={() => onUpdate({ 
+                                        autoLiveTime: Date.now() + mins * 60000,
+                                        isPublished: false
+                                    })}
+                                    className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-gray-400 hover:bg-green-500/10 hover:border-green-500/30 hover:text-green-400 transition-all"
+                                >
+                                    +{mins}m
+                                </button>
+                            ))}
+                        </div>
+
+                        <p className="text-[10px] text-gray-500 leading-tight">
+                            Board will automatically switch from <strong>Draft</strong> to <strong>Live</strong> at the selected time.
+                        </p>
+                    </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                        <CalendarClock size={16} className="text-red-500"/> Schedule Auto-Lock
-                    </label>
-                    <div className="flex gap-2 items-center">
-                        <input 
-                            ref={autoLockInputRef}
-                            onClick={() => autoLockInputRef.current?.showPicker()}
-                            type="datetime-local"
-                            value={board.autoLockTime ? getLocalISOString(board.autoLockTime) : ''}
-                            onChange={(e) => onUpdate({ autoLockTime: e.target.value ? new Date(e.target.value).getTime() : null })}
-                            className="flex-1 bg-[#111] border border-white/10 rounded-lg p-2 text-white outline-none text-xs font-mono cursor-pointer"
-                        />
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                            <CalendarClock size={16} className="text-red-500"/> Schedule Auto-Lock
+                        </label>
                         {board.autoLockTime && (
-                            <button 
-                                onClick={() => onUpdate({ autoLockTime: null })} 
-                                className="text-xs text-red-400 hover:text-white px-3 py-2 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
-                            >
-                                Clear
-                            </button>
+                            <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                                Locked Soon
+                            </span>
                         )}
                     </div>
-                    <p className="text-[10px] text-gray-500">
-                        Board will automatically switch to <strong>Read Only</strong> at this time.
-                    </p>
+
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5 space-y-3">
+                        <div className="flex gap-2 items-center">
+                            <input 
+                                ref={autoLockInputRef}
+                                onClick={() => autoLockInputRef.current?.showPicker()}
+                                type="datetime-local"
+                                value={board.autoLockTime ? getLocalISOString(board.autoLockTime) : ''}
+                                onChange={(e) => {
+                                    const time = e.target.value ? new Date(e.target.value).getTime() : null;
+                                    const updates: any = { autoLockTime: time };
+                                    if (time && time > Date.now()) updates.lockMode = 'unlocked';
+                                    onUpdate(updates);
+                                }}
+                                className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2.5 text-white outline-none text-xs font-mono cursor-pointer hover:bg-white/10 transition-colors"
+                            />
+                            {board.autoLockTime && (
+                                <button 
+                                    onClick={() => onUpdate({ autoLockTime: null })} 
+                                    className="p-2.5 text-red-400 hover:text-white bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
+                                    title="Clear"
+                                >
+                                    <Eye size={16} className="rotate-45" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Presets */}
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                            {[5, 10, 15, 30, 45, 60].map(mins => (
+                                <button
+                                    key={mins}
+                                    onClick={() => onUpdate({ 
+                                        autoLockTime: Date.now() + mins * 60000,
+                                        lockMode: 'unlocked'
+                                    })}
+                                    className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-gray-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all"
+                                >
+                                    +{mins}m
+                                </button>
+                            ))}
+                        </div>
+
+                        {board.autoLockTime && (
+                            <div className="p-2 bg-red-500/5 rounded-lg border border-red-500/10">
+                                <p className="text-[10px] font-bold text-red-400 flex items-center gap-1.5">
+                                    <CalendarClock size={12} />
+                                    Locks {new Date(board.autoLockTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                                    ({Math.max(0, Math.round((board.autoLockTime - Date.now()) / 60000))} mins left)
+                                </p>
+                            </div>
+                        )}
+
+                        <p className="text-[10px] text-gray-500 leading-tight">
+                            Board will automatically switch to <strong>Read Only</strong> mode at the selected time.
+                        </p>
+                    </div>
                 </div>
 
                 <div className="space-y-2">
                      <label className="text-sm font-bold text-gray-200">Board Status</label>
+                     
+                     {/* Teacher Warning for Expired Timers */}
+                     {board.autoLockTime && Date.now() >= board.autoLockTime && (
+                         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-2 flex items-center gap-3 animate-pulse">
+                             <div className="p-1.5 bg-red-500/20 rounded-lg text-red-400"><Lock size={14}/></div>
+                             <div className="text-[10px] font-bold text-red-400 uppercase tracking-wider">
+                                 Board is currently LOCKED for students (Scheduled)
+                             </div>
+                         </div>
+                     )}
+
                      <div className="grid grid-cols-1 gap-2">
                          <button 
                             onClick={() => onUpdate({ lockMode: 'unlocked' })}

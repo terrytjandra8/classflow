@@ -372,7 +372,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
             width: size.width,
             height: size.height
         }}
-        className="fixed top-1/2 left-1/2 z-[1000] bg-[#0a0a0a]/90 backdrop-blur-2xl border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow overflow-hidden group"
+        className={`fixed top-1/2 left-1/2 z-[1000] bg-[#0a0a0a]/90 border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow overflow-hidden group ${!board.settings?.disableModalBlur ? 'backdrop-blur-2xl' : ''}`}
       >
             <div className="absolute inset-0 pointer-events-none z-0 md:rounded-3xl overflow-hidden">
                 <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] animate-blob"></div>

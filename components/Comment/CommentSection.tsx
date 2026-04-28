@@ -23,11 +23,31 @@ interface CommentSectionProps {
     repliesEnabled?: boolean; 
     isSectionAnonymous?: boolean; 
     isReadOnly?: boolean;
+    noteAuthorId?: string;
+    isCommentsDisabled?: boolean;
+    isFeedbackPublic?: boolean;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId, userId, onAddComment, onUpdateNote, reactionsEnabled, noteColor, isStudent, disablePaste, repliesEnabled, isSectionAnonymous, isReadOnly }) => {
-    const { board, username, userAvatar: contextAvatar } = useBoard();
+export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId, userId, onAddComment, onUpdateNote, reactionsEnabled, noteColor, isStudent, disablePaste, repliesEnabled, isSectionAnonymous, isReadOnly, noteAuthorId, isCommentsDisabled, isFeedbackPublic }) => {
+    const { board, username, userAvatar: contextAvatar, canManageBoard } = useBoard();
     const allowLinks = board.allowLinks; 
+
+    // FILTER: If comments are disabled for the board/section, they act as private feedback.
+    // Visible only to: Teacher, Note Author, OR Everyone if isFeedbackPublic is true.
+    const visibleComments = React.useMemo(() => {
+        // Teacher sees everything in normal mode
+        if (canManageBoard && !board.isPresentationMode) return comments; 
+        
+        if (!isCommentsDisabled) return comments; // Normal mode: public comments
+
+        // Private Feedback Mode:
+        if (isFeedbackPublic) return comments; // Teacher released this feedback to everyone
+
+        const isNoteAuthor = userId && noteAuthorId === userId;
+        if (isNoteAuthor) return comments; // Author sees the feedback
+
+        return []; // Other students (and teacher in presentation mode) see nothing
+    }, [comments, canManageBoard, board.isPresentationMode, isCommentsDisabled, userId, noteAuthorId, isFeedbackPublic]);
 
     const [showAllComments, setShowAllComments] = useState(false);
     const [commentInput, setCommentInput] = useState('');
@@ -171,9 +191,18 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
 
     return (
         <div className="px-4 pb-4 pt-0">
-            {comments.length > 0 && (
+            {visibleComments.length > 0 && (
                 <div className="mb-3">
-                    {(showAllComments ? comments : comments.slice(-2)).map(comment => (
+                    {isCommentsDisabled && (
+                        <div className="flex items-center gap-2 mb-2 px-1">
+                            {isFeedbackPublic ? (
+                                <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Released Feedback</span>
+                            ) : (
+                                <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">Private Feedback</span>
+                            )}
+                        </div>
+                    )}
+                    {(showAllComments ? visibleComments : visibleComments.slice(-2)).map(comment => (
                         <CommentItem 
                             key={comment.id}
                             comment={comment}
@@ -183,7 +212,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
                             handleDeleteComment={handleDeleteComment}
                             handleEditComment={handleEditComment}
                             handleReplyComment={handleReplyComment}
-                            isColoredCard={noteColor !== NoteColor.TRANSPARENT} // For internal styling of bubbles
+                            isColoredCard={noteColor !== NoteColor.TRANSPARENT} 
                             isTeacher={isTeacher}
                             disablePaste={disablePaste}
                             allowLinks={allowLinks} 
@@ -194,12 +223,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
                             isReadOnly={isReadOnly}
                         />
                     ))}
-                    {comments.length > 2 && !showAllComments && (
+                    {visibleComments.length > 2 && !showAllComments && (
                         <button 
                             onClick={(e) => { e.stopPropagation(); setShowAllComments(true); }}
                             className={`text-[10px] font-bold cursor-pointer hover:underline bg-transparent border-none p-2 w-full text-center outline-none rounded-xl transition-colors ${isSolidCard ? 'text-slate-600 bg-black/5 hover:bg-black/10' : 'text-slate-500 dark:text-slate-400 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
                         >
-                            View all {comments.length} comments
+                            View all {visibleComments.length} {isCommentsDisabled ? 'feedback items' : 'comments'}
                         </button>
                     )}
                 </div>
@@ -252,7 +281,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
                                         submitComment();
                                     }
                                 }}
-                                placeholder="Add a comment..."
+                                placeholder={isCommentsDisabled ? "Add feedback..." : "Add a comment..."}
                                 className="w-full bg-transparent text-sm outline-none min-w-0 resize-none overflow-hidden leading-relaxed placeholder-current opacity-60 focus:opacity-100"
                             />
                         </div>

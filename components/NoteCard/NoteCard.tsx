@@ -223,7 +223,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
       {!isTransparent && !isStickyNote && (
           <div className="relative z-10">
-            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={() => setShowDeleteConfirm(true)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} />
+            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={() => setShowDeleteConfirm(true)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} onUpdate={onUpdate} canManageBoard={canManageBoard} commentsEnabled={commentsEnabledBool} />
           </div>
       )}
 
@@ -255,8 +255,24 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                 )}
               <NoteFooter note={note} userId={effectiveUserId} onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }} commentsEnabled={commentsEnabledBool} reactionsEnabled={reactionsEnabledBool} />
 
-              {commentsEnabledBool && !isBlurActive && (
-                  <CommentSection comments={note.comments || []} noteId={note.id} userId={effectiveUserId} onAddComment={onAddComment} onUpdateNote={onUpdate} reactionsEnabled={reactionsEnabledBool} noteColor={note.color} isStudent={isStudentBool} disablePaste={disablePasteBool} repliesEnabled={repliesEnabledBool} isSectionAnonymous={isSectionAnonymousBool} isReadOnly={isReadOnly} />
+              {((commentsEnabledBool || canManageBoard) && !isBlurActive) && (
+                  <CommentSection 
+                      comments={note.comments || []} 
+                      noteId={note.id} 
+                      userId={effectiveUserId} 
+                      onAddComment={onAddComment} 
+                      onUpdateNote={onUpdate} 
+                      reactionsEnabled={reactionsEnabledBool} 
+                      noteColor={note.color} 
+                      isStudent={isStudentBool} 
+                      disablePaste={disablePasteBool} 
+                      repliesEnabled={repliesEnabledBool} 
+                      isSectionAnonymous={isSectionAnonymousBool} 
+                      isReadOnly={isReadOnly && !canManageBoard} 
+                      noteAuthorId={note.author_id}
+                      isCommentsDisabled={!commentsEnabledBool}
+                      isFeedbackPublic={note.isFeedbackPublic}
+                  />
               )}
           </div>
       )}

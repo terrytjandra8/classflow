@@ -115,7 +115,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, board, 
 
   // --- STANDARD MODAL VIEW ---
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className={`fixed inset-0 z-[1000] flex items-center justify-center p-4 transition-all duration-300 animate-fade-in ${!board.settings?.disableModalBlur ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent'}`}>
       <div className={`rounded-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] ${containerClass}`}>
         
         <div className={`p-4 flex items-center justify-between ${headerClass}`}>

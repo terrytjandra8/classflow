@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { ShieldCheck, MoreVertical, X, Pin, Ghost, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, MoreVertical, X, Pin, Ghost, ShieldAlert, MessageSquare, MessageSquareOff } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
 import { NoteMenu } from './NoteMenu';
 import { Avatar } from '../ui/Avatar';
@@ -27,11 +27,14 @@ interface NoteHeaderProps {
     showMenu: boolean;
     setShowMenu: (show: boolean) => void;
     showUpdatedAt?: boolean;
+    onUpdate?: (id: string, updates: Partial<Note>) => void;
+    canManageBoard?: boolean;
+    commentsEnabled?: boolean;
 }
 
 export const NoteHeader: React.FC<NoteHeaderProps> = ({
     note, canDelete, canEdit, onDelete, onEdit, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, isStickyNote, isTransparent, isSectionAnonymous,
-    showMenu, setShowMenu, showUpdatedAt
+    showMenu, setShowMenu, showUpdatedAt, onUpdate, canManageBoard, commentsEnabled
 }) => {
     const { board, isStudent, userId, isPresentationMode, username } = useBoard();
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -110,35 +113,55 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                 </div>
             </div>
 
-            {(canEdit || canDelete) && (
-                <div className="relative">
+            <div className="flex items-center gap-1.5 relative">
+                {canManageBoard && onUpdate && commentsEnabled === false && (
                     <button
-                        ref={triggerRef}
-                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-                        className={`p-1 rounded-full transition-colors ${showMenu ? 'bg-black/10 text-slate-900' : `${menuIconColor} ${iconHoverBg}`}`}>
-                        <MoreVertical size={16} />
+                        onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { isFeedbackPublic: !note.isFeedbackPublic }); }}
+                        className={`p-1 rounded-full transition-all ${
+                            note.isFeedbackPublic 
+                                ? 'text-emerald-500 bg-emerald-500/10' 
+                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-black/5'
+                        }`}
+                        title={
+                            note.isFeedbackPublic 
+                                ? 'Release Feedback to Everyone' 
+                                : 'Keep Feedback Private'
+                        }
+                    >
+                        {note.isFeedbackPublic ? <MessageSquare size={16} /> : <MessageSquareOff size={16} />}
                     </button>
+                )}
 
-                    {showMenu && (
-                        <NoteMenu
-                            triggerRef={triggerRef}
-                            note={note}
-                            canEdit={canEdit}
-                            canDelete={canDelete}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                            onColorChange={onColorChange}
-                            onPin={onPin}
-                            onDuplicate={onDuplicate}
-                            onAddBefore={onAddBefore}
-                            onAddAfter={onAddAfter}
-                            onMove={onMove}
-                            onClose={() => setShowMenu(false)}
-                            isTeacher={!isStudent}
-                        />
-                    )}
-                </div>
-            )}
+                {(canEdit || canDelete) && (
+                    <div className="relative">
+                        <button
+                            ref={triggerRef}
+                            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                            className={`p-1 rounded-full transition-colors ${showMenu ? 'bg-black/10 text-slate-900' : `${menuIconColor} ${iconHoverBg}`}`}>
+                            <MoreVertical size={16} />
+                        </button>
+
+                        {showMenu && (
+                            <NoteMenu
+                                triggerRef={triggerRef}
+                                note={note}
+                                canEdit={canEdit}
+                                canDelete={canDelete}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
+                                onColorChange={onColorChange}
+                                onPin={onPin}
+                                onDuplicate={onDuplicate}
+                                onAddBefore={onAddBefore}
+                                onAddAfter={onAddAfter}
+                                onMove={onMove}
+                                onClose={() => setShowMenu(false)}
+                                isTeacher={!isStudent}
+                            />
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

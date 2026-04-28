@@ -86,7 +86,8 @@ export interface Note {
   attachmentUrl?: string;
   isPinned?: boolean;
   isPlaceholder?: boolean;
-  isWatermarked?: boolean; // NEW: Watermark toggle
+  isWatermarked?: boolean; // NEW: Watermark toggle per note
+  isFeedbackPublic?: boolean; // NEW: Toggle to make private feedback visible to all students
   likes: number;
   likedBy?: string[];
   comments?: Comment[];

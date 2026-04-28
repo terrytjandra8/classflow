@@ -38,8 +38,22 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
 
     const [localNotes, setLocalNotes] = useState<Note[]>(notes);
+    const [localSections, setLocalSections] = useState(board.sections || []);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [draggingType, setDraggingType] = useState<'NOTE' | 'COLUMN' | null>(null);
+
+    // Sync local state when external data changes, but not while dragging
+    useEffect(() => {
+        if (!draggingId || draggingType !== 'NOTE') {
+            setLocalNotes(notes);
+        }
+    }, [notes, draggingId, draggingType]);
+
+    useEffect(() => {
+        if (!draggingId || draggingType !== 'COLUMN') {
+            setLocalSections(board.sections || []);
+        }
+    }, [board.sections, draggingId, draggingType]);
 
     // Merge mode state
     const [selectedForMerge, setSelectedForMerge] = useState<Set<string>>(new Set());
@@ -51,18 +65,12 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const dragItemRef = useRef<string | null>(null);
     const dragTypeRef = useRef<'NOTE' | 'COLUMN' | null>(null);
 
-    useEffect(() => {
-        if (!draggingId || draggingType !== 'NOTE') {
-            setLocalNotes(notes);
-        }
-    }, [notes, draggingId, draggingType]);
-
     if (sectionIdFilter) {
         return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;
     }
 
-    const activeSections = (board.sections && board.sections.length > 0)
-        ? board.sections
+    const activeSections = (localSections && localSections.length > 0)
+        ? localSections
         : [{
             id: 'default', title: 'Group 1', locked: false,
             isContentBlurred: false, isHidden: false, isAnonymous: false,
@@ -72,9 +80,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     // ── SECTION MANAGEMENT ──
 
     const addSection = () => {
-        const currentSections = (board.sections && board.sections.length > 0)
-            ? board.sections
-            : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
+        const currentSections = activeSections;
         updateBoard({
             sections: [...currentSections, { id: Math.random().toString(36).substr(2, 9), title: `Group ${currentSections.length + 1}` }]
         });
@@ -92,8 +98,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
 
 
     const insertSectionAt = (index: number) => {
-        const currentSections = (board.sections && board.sections.length > 0)
-            ? board.sections : [{ id: 'default-' + Math.random(), title: 'Group 1' }];
+        const currentSections = activeSections;
         const newSection = { id: Math.random().toString(36).substr(2, 9), title: `New Group` };
         const list = [...currentSections];
         list.splice(index, 0, newSection);
@@ -199,48 +204,54 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         if (dragTypeRef.current === 'COLUMN') {
             const draggedId = dragItemRef.current;
             if (!draggedId || draggedId === targetSectionId) return;
-            const sections = [...activeSections];
-            const fi = sections.findIndex(s => s.id === draggedId);
-            const ti = sections.findIndex(s => s.id === targetSectionId);
-            if (fi === -1 || ti === -1) return;
-            const [moved] = sections.splice(fi, 1);
-            sections.splice(ti, 0, moved);
-            updateBoard({ sections });
+            
+            setLocalSections(prev => {
+                const sections = [...prev];
+                const fi = sections.findIndex(s => s.id === draggedId);
+                const ti = sections.findIndex(s => s.id === targetSectionId);
+                if (fi === -1 || ti === -1) return prev;
+                const [moved] = sections.splice(fi, 1);
+                sections.splice(ti, 0, moved);
+                return sections;
+            });
         }
-    }, [activeSections, updateBoard]);
+    }, []);
 
     const onDrop = useCallback((e: React.DragEvent, targetSectionId: string) => {
         e.preventDefault();
-        if (dragTypeRef.current !== 'NOTE') return;
         const draggedId = dragItemRef.current;
         if (!draggedId) return;
 
-        // Calculate New Timestamp for persistence (matching GridLayout logic)
-        // This ensures the note stays in the correct relative position after refresh
-        const newIndex = localNotes.findIndex(n => n.id === draggedId);
-        const prevNote = newIndex > 0 ? localNotes[newIndex - 1] : null;
-        const nextNote = newIndex < localNotes.length - 1 ? localNotes[newIndex + 1] : null;
+        if (dragTypeRef.current === 'COLUMN') {
+            // Persist the final order from localSections
+            updateBoard({ sections: localSections });
+        } else if (dragTypeRef.current === 'NOTE') {
+            // Calculate New Timestamp for persistence (matching GridLayout logic)
+            const newIndex = localNotes.findIndex(n => n.id === draggedId);
+            const prevNote = newIndex > 0 ? localNotes[newIndex - 1] : null;
+            const nextNote = newIndex < localNotes.length - 1 ? localNotes[newIndex + 1] : null;
 
-        let newCreatedAt = Date.now();
-        if (prevNote && nextNote) {
-            newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
-        } else if (prevNote) {
-            newCreatedAt = prevNote.createdAt - 1000;
-        } else if (nextNote) {
-            newCreatedAt = nextNote.createdAt + 1000;
+            let newCreatedAt = Date.now();
+            if (prevNote && nextNote) {
+                newCreatedAt = (prevNote.createdAt + nextNote.createdAt) / 2;
+            } else if (prevNote) {
+                newCreatedAt = prevNote.createdAt - 1000;
+            } else if (nextNote) {
+                newCreatedAt = nextNote.createdAt + 1000;
+            }
+
+            // Persist the change to the database
+            updateNote(draggedId, {
+                sectionId: targetSectionId,
+                createdAt: newCreatedAt
+            });
         }
-
-        // Persist the change to the database
-        updateNote(draggedId, {
-            sectionId: targetSectionId,
-            createdAt: newCreatedAt
-        });
 
         setDraggingId(null);
         setDraggingType(null);
         dragItemRef.current = null;
         dragTypeRef.current = null;
-    }, [localNotes, updateNote]);
+    }, [localNotes, localSections, updateNote, updateBoard]);
 
     const handleAutoScroll = useCallback((e: React.DragEvent) => {
         if (dragTypeRef.current !== 'NOTE') return;
