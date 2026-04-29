@@ -1,5 +1,5 @@
 
-import { Board } from '../types';
+import { Board, Note } from '../types';
 
 /**
  * UserRules — Single source of truth for role-based behavior.
@@ -118,7 +118,7 @@ export const UserRules = {
             if (section?.locked) return false;
 
             // 4. Assignments check: If column is assigned, user MUST be in it
-            if (section.assignedStudentIds && section.assignedStudentIds.length > 0) {
+            if (section && section.assignedStudentIds && section.assignedStudentIds.length > 0) {
                 return !!ctx.userId && section.assignedStudentIds.includes(ctx.userId);
             }
         }

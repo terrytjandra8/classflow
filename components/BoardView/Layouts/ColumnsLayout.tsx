@@ -323,11 +323,6 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         const repliesOn = section.repliesEnabled !== undefined ? section.repliesEnabled : (board.repliesEnabled !== false);
         const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
         const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
-        const userCtx = { userId, board, isStudent: !!contextIsStudent, isSimulatingStudent: !!board.isSimulatingStudent || false };
-        // UserRules expects ctx: { userId, board, isStudent, isSimulatingStudent }
-        // Wait, contextIsStudent might already include isSimulatingStudent in some places, 
-        // but let's be explicit based on BoardContext's actual props.
-        
         // Let's get the real values from useBoard
         const { isSimulatingStudent: simStudent } = useBoard();
         const fullCtx = { userId, board, isStudent: !!contextIsStudent && !simStudent, isSimulatingStudent: !!simStudent };

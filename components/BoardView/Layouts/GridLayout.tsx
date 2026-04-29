@@ -149,14 +149,13 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                 const { isSimulatingStudent: simStudent } = useBoard();
                 const fullCtx = { userId, board, isStudent: !!contextIsStudent && !simStudent, isSimulatingStudent: !!simStudent };
 
-                const canAddToSection = UserRules.canAddPost(fullCtx, section.id);
-                const canDragInSection = UserRules.canDragNote(fullCtx, undefined, !!sectionCanDrag);
-                
+                const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
                 const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
                 const isHidden = section.isHidden;
                 const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
-                
-                const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
+
+                const canAddToSection = UserRules.canAddPost(fullCtx, section.id);
+                const canDragInSection = UserRules.canDragNote(fullCtx, undefined, !!sectionCanDrag);
 
                 return (
                     <div key={section.id} className="animate-fade-in relative">
