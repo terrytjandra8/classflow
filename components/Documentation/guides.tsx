@@ -102,6 +102,31 @@ const TeacherColumnManagement = () => (
     </div>
 );
 
+const TeacherActivities = () => (
+    <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Activities: Quiz & Assessment</h2>
+        <p className="text-slate-600 dark:text-gray-300">ClassBoard transforms static boards into dynamic learning activities. Use the format switcher in the top toolbar to change modes.</p>
+        
+        <DocCard icon={<BrainCircuit size={18} className="text-pink-500" />} title="Synchronized Quiz">
+            <p>Engage students with a real-time, teacher-controlled quiz.</p>
+            <ul className="list-disc list-inside space-y-2 mt-2">
+                <li><strong className="text-slate-700 dark:text-white">Teacher Control:</strong> You control the pace. Students' screens update instantly as you move through questions.</li>
+                <li><strong className="text-slate-700 dark:text-white">Live Leaderboard:</strong> Watch the scoreboard update in real-time as students submit answers.</li>
+                <li><strong className="text-slate-700 dark:text-white">Gamified Feedback:</strong> Students receive instant visual feedback on their performance.</li>
+            </ul>
+        </DocCard>
+
+        <DocCard icon={<GitBranch size={18} className="text-blue-500" />} title="Structured Assessment">
+            <p>Run formal evaluations with phased control.</p>
+            <ul className="list-disc list-inside space-y-2 mt-2">
+                <li><strong className="text-slate-700 dark:text-white">Reading Phase:</strong> Students can view materials but cannot edit or create notes.</li>
+                <li><strong className="text-slate-700 dark:text-white">Active Phase:</strong> Students can create and edit their submissions within the board.</li>
+                <li><strong className="text-slate-700 dark:text-white">Auto-Lock:</strong> Switch to 'Finished' mode to instantly revoke editing permissions for all students.</li>
+            </ul>
+        </DocCard>
+    </div>
+);
+
 const TeacherAdmin = () => (
     <div className="space-y-6">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Class Management</h2>
@@ -173,17 +198,17 @@ const StudentContent = () => (
         <p className="text-slate-600 dark:text-gray-300">Express your ideas by creating rich, multimedia notes.</p>
         <DocCard icon={<Edit size={18} className="text-green-500" />} title="Creating & Editing Notes">
              <ul className="list-disc list-inside space-y-3">
-                <li><strong className="text-slate-700 dark:text-white">Create a note:</strong> Simply double-click anywhere on the board to start a new note.</li>
-                <li><strong className="text-slate-700 dark:text-white">Add content:</strong> A rich text editor will appear. You can type your message, format it, and change the note's color.</li>
-                <li><strong className="text-slate-700 dark:text-white">Include media:</strong> Use the toolbar to add images (<Image size={14} className="inline-block"/>) or links (<LinkIcon size={14} className="inline-block"/>).</li>
+                <li><strong className="text-slate-700 dark:text-white">Create a note:</strong> Double-click anywhere or click the 'Add Note' button.</li>
+                <li><strong className="text-slate-700 dark:text-white">Rich Content:</strong> Use Markdown for formatting, add bullet points, or highlight text.</li>
+                <li><strong className="text-slate-700 dark:text-white">Multimedia:</strong> Embed images (<Image size={14} className="inline-block"/>) and attach files or links (<LinkIcon size={14} className="inline-block"/>).</li>
+                <li><strong className="text-slate-700 dark:text-white">Interactions:</strong> Like classmates' posts, leave comments, and drag notes to organize ideas.</li>
              </ul>
         </DocCard>
-        <DocCard icon={<BrainCircuit size={18} className="text-pink-500" />} title="AI-Powered Features">
-            <p>Supercharge your creativity with built-in AI tools. Inside the note editor, you can:</p>
+        <DocCard icon={<BrainCircuit size={18} className="text-pink-500" />} title="Interactive Activities">
+            <p>Your screen will change automatically when your teacher starts a Quiz or Assessment.</p>
              <ul className="list-disc list-inside space-y-2 mt-2">
-                <li>Generate ideas for what to write.</li>
-                <li>Summarize long passages of text.</li>
-                <li>Get feedback on your writing.</li>
+                <li><strong className="text-slate-700 dark:text-white">Live Quiz:</strong> Vote on questions in real-time and climb the leaderboard.</li>
+                <li><strong className="text-slate-700 dark:text-white">Controlled Exams:</strong> Follow the 'Reading' and 'Active' phases as directed by your teacher.</li>
             </ul>
         </DocCard>
     </div>
@@ -196,6 +221,7 @@ export const TEACHER_SECTIONS = [
     { id: 'quick-start', label: 'Quick Start' },
     { id: 'dashboard', label: 'Dashboard & Filters' },
     { id: 'layouts', label: 'Choosing a Layout' },
+    { id: 'activities', label: 'Quiz & Assessment' },
     { id: 'settings', label: 'Board Settings' },
     { id: 'columns', label: 'Columns & Content' },
     { id: 'management', label: 'Class Management' },
@@ -238,6 +264,7 @@ export const TeacherGuide: React.FC = () => (
         </section>
         <section id="dashboard" className="scroll-mt-24"><TeacherDashboardNav /></section>
         <section id="layouts" className="scroll-mt-24"><TeacherLayouts /></section>
+        <section id="activities" className="scroll-mt-24"><TeacherActivities /></section>
         <section id="settings" className="scroll-mt-24"><TeacherSettingsDoc /></section>
         <section id="columns" className="scroll-mt-24"><TeacherColumnManagement /></section>
         <section id="management" className="scroll-mt-24"><TeacherAdmin /></section>

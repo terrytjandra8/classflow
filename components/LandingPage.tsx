@@ -165,23 +165,23 @@ const Features = () => {
     const featureItems = [
         {
             icon: <Layout className="text-pink-500" />,
-            title: "Visual Collaboration",
-            desc: "Infinite canvases for brainstorming, grouping ideas, and solving problems together in real-time."
+            title: "Dynamic Layouts",
+            desc: "Grid, List, and Sandbox layouts that adapt to your teaching style. Organize notes effortlessly or go freeform for mind-mapping."
         },
         {
             icon: <Zap className="text-yellow-400" />,
-            title: "Instant Quizzes",
-            desc: "Convert notes into gamified quizzes instantly. High energy, low friction, maximum engagement."
+            title: "Synchronized Quizzes",
+            desc: "Turn your boards into live, competitive quizzes. Teacher-led progression ensures the whole class stays on the same page."
         },
         {
-            icon: <ShieldCheck className="text-blue-500" />,
-            title: "Security First",
-            desc: "Screenshot protection, unique access codes, and total control over board visibility."
+            icon: <CheckCircle2 className="text-blue-500" />,
+            title: "Phased Assessments",
+            desc: "Run secure exams with Reading and Active phases. Automatically lock submissions once time is up with professional precision."
         },
         {
-            icon: <BarChart3 className="text-green-400" />,
-            title: "Learning Insights",
-            desc: "Detailed analytics on student participation and performance to drive better outcomes."
+            icon: <ShieldCheck className="text-green-400" />,
+            title: "Global Visibility",
+            desc: "Admins gain school-wide oversight with Global View. Track activity across every board from a single, unified dashboard."
         }
     ];
 
@@ -367,8 +367,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGoogleLogin
                     </h1>
 
                     <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed animate-in slide-in-from-bottom-10 duration-700 delay-200">
-                        The interactive digital wall for modern educators.
-                        Engage your students with gamified quizzes, real-time collaboration, and bulletproof security.
+                        The unified digital canvas for modern educators.
+                        Engage your students with synchronized quizzes, phased assessments, and real-time collaboration tools that bring lessons to life.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in slide-in-from-bottom-10 duration-700 delay-300">
