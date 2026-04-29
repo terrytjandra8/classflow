@@ -1,7 +1,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import { Board, Note } from '../../../types';
-import { getViolationKey, encryptViolationCount, decryptViolationCount } from '../../../utils/security';
+import { encryptViolationCount, decryptViolationCount } from '../../../utils/security';
 import { supabase } from '../../../services/supabaseClient';
 
 interface ViolationTrackingProps {
@@ -16,6 +16,17 @@ interface ViolationTrackingProps {
     incrementViolation: (id: string, currentCount: number) => Promise<void>;
 }
 
+/**
+ * useViolationTracking
+ * 
+ * Tracks focus/screenshot violations and persists them to ALL of a student's notes.
+ * 
+ * RULES:
+ *   - Only REAL students write violation counts (never teacher simulations)
+ *   - Teacher simulation still triggers the overlay (for debugging) but does NOT persist
+ *   - ALL notes by the same student on the same board get the SAME violation count
+ *   - The count is the MAX found across all sources + 1 (never resets, never splits)
+ */
 export const useViolationTracking = ({
     board,
     notes,
@@ -34,80 +45,81 @@ export const useViolationTracking = ({
     useEffect(() => { notesRef.current = notes; }, [notes]);
 
     const handleViolation = useCallback(async (type: 'security' | 'focus') => {
-        if (!isStudent && !isSimulatingStudent) {
+        // ─── RULE: Teacher simulation shows overlay but does NOT persist ───
+        // The overlay itself is handled by ScreenshotGuard. Here we only
+        // decide whether to write to the DB.
+        if (isSimulatingStudent) {
+            // Don't persist — the overlay already appeared for debugging
+            return;
+        }
+
+        // Only real students persist violations
+        if (!isStudent) {
             return;
         }
         
+        // Throttle: 2 seconds between violations
         const now = Date.now();
         if (now - lastViolationTime.current < 2000) return;
         lastViolationTime.current = now;
 
         const currentNotes = notesRef.current;
         
-        // Primary Match by System ID
-        const studentNotes = currentNotes.filter(n => n.author_id === userId);
-        
-        // Secondary Fallback: Name match (Amnesty)
-        const nameMatches = currentNotes.filter(n => {
-            const isNameMatch = n.author?.trim().toLowerCase() === username?.trim().toLowerCase();
-            const isNotMe = n.author_id !== userId;
-            const isNotTeacher = n.authorRole !== 'teacher' && n.author !== 'Teacher';
-            
-            return isNameMatch && isNotMe && isNotTeacher;
+        // ─── Find ALL notes that belong to this student ───
+        // Match by author_id OR by name (for legacy notes without author_id)
+        const allMyNotes = currentNotes.filter(n => {
+            if (n.author_id === userId) return true;
+            // Fallback: name match for notes without author_id, excluding teacher notes
+            if (!n.author_id && n.author?.trim().toLowerCase() === username?.trim().toLowerCase()) {
+                if (n.authorRole !== 'teacher' && n.author !== 'Teacher') return true;
+            }
+            return false;
         });
 
-        // Combine ID matches and Name matches
-        let allMyNotes = [...studentNotes];
-        if (studentNotes.length === 0 && nameMatches.length > 0) {
-            for (const n of nameMatches) {
-                updateNote(n.id, { author_id: userId } as any);
+        // Claim any unclaimed notes that match by name
+        for (const n of allMyNotes) {
+            if (!n.author_id && userId) {
+                updateNote(n.id, { author_id: userId });
             }
-            allMyNotes = [...nameMatches];
         }
         
-        // --- STEP 1: ALWAYS UPDATE MASTER LOCAL STORAGE (Even if zero notes) ---
+        // ─── Calculate the single global count ───
+        // Source 1: localStorage master key (survives page refreshes)
         const masterKey = `board_violations_${board.id}_${userId}`;
-        const currentMasterCount = decryptViolationCount(localStorage.getItem(masterKey));
+        const localCount = decryptViolationCount(localStorage.getItem(masterKey));
         
-        // Find the highest known count (Local Master vs any DB notes)
-        let maxViolations = currentMasterCount;
+        // Source 2: highest count from any of the student's notes in the DB
+        let dbMaxCount = 0;
         for (const n of allMyNotes) {
-            maxViolations = Math.max(maxViolations, n.violation_count || 0);
+            dbMaxCount = Math.max(dbMaxCount, n.violation_count || 0);
         }
 
-        const newGlobalCount = maxViolations + 1;
+        // The true count is the MAX of all sources + 1
+        const newCount = Math.max(localCount, dbMaxCount) + 1;
         
-        // Save to Master Key immediately (Always works!)
-        localStorage.setItem(masterKey, encryptViolationCount(newGlobalCount));
+        // ─── Persist to localStorage immediately ───
+        localStorage.setItem(masterKey, encryptViolationCount(newCount));
 
         if (allMyNotes.length === 0) {
             return;
         }
 
-        // --- STEP 2: SYNC TO EXISTING NOTES ---
-        // Optimistic UI update
+        // ─── Optimistic UI: update ALL student notes to the same count ───
         setNotes((prev: Note[]) => prev.map((n: Note) => {
-            const isMe = n.author_id === userId || 
-                         (!!userId && !!username && n.author?.trim().toLowerCase() === username.trim().toLowerCase() && n.authorRole === 'student');
-            return isMe ? { ...n, violation_count: newGlobalCount } : n;
+            const isMine = n.author_id === userId || 
+                (!n.author_id && n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.authorRole !== 'teacher');
+            return isMine ? { ...n, violation_count: newCount } : n;
         }));
 
-        // Batch Update Database
-        const { error } = await supabase
+        // ─── Write to DB: update ALL notes by this student on this board ───
+        const noteIds = allMyNotes.map(n => n.id);
+        await supabase
             .from('notes')
-            .update({ violation_count: newGlobalCount })
+            .update({ violation_count: newCount })
             .eq('board_id', board.id)
-            .or(`author_id.eq.${userId},author.eq.${username}`);
+            .in('id', noteIds);
 
-        if (error) {
-            // Error logged to console is usually okay, but I'll remove the success logs
-        } else {
-            // Update local storage for individual notes to keep them consistent
-            for (const n of allMyNotes) {
-                localStorage.setItem(getViolationKey(n.id), encryptViolationCount(newGlobalCount));
-            }
-        }
-    }, [isStudent, isSimulatingStudent, userId, username, board.id, board.sections, board.blockScreenshots, updateNote, incrementViolation, setNotes]);
+    }, [isStudent, isSimulatingStudent, userId, username, board.id, updateNote, setNotes]);
 
     return { handleViolation };
 };

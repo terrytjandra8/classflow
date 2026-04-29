@@ -152,7 +152,7 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             </div>
                         </div>
                         <div 
-                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), disablePaste: !board.disablePaste } })}
+                            onClick={() => onUpdate({ disablePaste: !board.disablePaste })}
                             className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.disablePaste ? 'bg-red-500' : 'bg-white/20 hover:bg-white/30'}`}
                         >
                             <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.disablePaste ? 'translate-x-6' : 'translate-x-0'}`}></div>
@@ -188,7 +188,7 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             </div>
                         </div>
                         <div 
-                            onClick={() => onUpdate({ settings: { ...(board.settings || {}), disableCopy: !board.disableCopy } })}
+                            onClick={() => onUpdate({ disableCopy: !board.disableCopy })}
                             className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.disableCopy ? 'bg-orange-500' : 'bg-white/20 hover:bg-white/30'}`}
                         >
                             <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.disableCopy ? 'translate-x-6' : 'translate-x-0'}`}></div>
@@ -201,7 +201,7 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             <div className="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg"><CameraOff size={18}/></div>
                             <div>
                                 <div className="text-sm font-bold text-gray-200">Anti-Screenshot Mode</div>
-                                <div className="text-xs text-gray-500">Watermark screen & blur on focus loss</div>
+                                <div className="text-xs text-gray-500">Watermark screen to protect integrity</div>
                             </div>
                         </div>
                         <div 
@@ -212,24 +212,22 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                         </div>
                     </div>
 
-                    {/* Focus Guard Sub-toggle */}
-                    {board.blockScreenshots && (
-                        <div className="flex items-center justify-between pl-4 animate-in fade-in slide-in-from-top-1 border-t border-yellow-500/10 pt-2">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg"><Clock size={14}/></div>
-                                <div>
-                                    <div className="text-xs font-bold text-gray-300">Stay Focused Guard</div>
-                                    <div className="text-[10px] text-gray-500">Blur screen when student switches tabs</div>
-                                </div>
-                            </div>
-                            <div 
-                                onClick={() => onUpdate({ disableFocusGuard: !board.disableFocusGuard })}
-                                className={`w-8 h-4 rounded-full p-0.5 cursor-pointer transition-colors ${!board.disableFocusGuard ? 'bg-blue-500' : 'bg-white/20 hover:bg-white/30'}`}
-                            >
-                                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${!board.disableFocusGuard ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                    {/* Focus Guard */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Clock size={18}/></div>
+                            <div>
+                                <div className="text-sm font-bold text-gray-200">Stay Focused Guard</div>
+                                <div className="text-xs text-gray-500">Blur screen when student switches tabs</div>
                             </div>
                         </div>
-                    )}
+                        <div 
+                            onClick={() => onUpdate({ disableFocusGuard: !board.disableFocusGuard })}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${!board.disableFocusGuard ? 'bg-blue-500' : 'bg-white/20 hover:bg-white/30'}`}
+                        >
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${!board.disableFocusGuard ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ANONYMITY MODE */}

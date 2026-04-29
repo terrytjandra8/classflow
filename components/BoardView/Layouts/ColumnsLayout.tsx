@@ -383,18 +383,20 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                     </div>
                 )}
 
+                {/* Add Post button — outside scroll area so it stays visible */}
+                {canAdd && !isMergeMode && (
+                    <button onClick={() => canAdd && openAddNote(section.id)} disabled={!canAdd}
+                        className={`w-full py-2 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-sm hover:shadow-md backdrop-blur-sm mb-1 shrink-0 text-sm ${!canAdd ? 'border-2 border-dashed border-red-500/20 text-red-400 cursor-not-allowed bg-red-500/5' : 'bg-white/50 dark:bg-white/5 border border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold'}`}>
+                        {canAdd ? <><div className="bg-pink-500 text-white rounded-full p-0.5"><IconPlus size={12} className="group-hover:scale-110 transition-transform" /></div> Add Post</> : <><IconLock size={12} /> Locked</>}
+                    </button>
+                )}
+
                 {/* ── Notes area ── */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10 min-h-[100px] relative rounded-xl space-y-3" onDragOver={handleAutoScroll}>
                     {section.isHidden && (
                         <div className="bg-red-500/10 border border-red-500/20 p-2 mb-2 rounded text-[10px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-2 justify-center">
                             <IconHidden size={12} /> Hidden from students
                         </div>
-                    )}
-                    {canAdd && !isMergeMode && (
-                        <button onClick={() => canAdd && openAddNote(section.id)} disabled={!canAdd}
-                            className={`w-full py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-sm hover:shadow-md backdrop-blur-sm mb-3 ${!canAdd ? 'border-2 border-dashed border-red-500/20 text-red-400 cursor-not-allowed bg-red-500/5' : 'bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold'}`}>
-                            {canAdd ? <><div className="bg-pink-500 text-white rounded-full p-1"><IconPlus size={14} className="group-hover:scale-110 transition-transform" /></div> Add Post</> : <><IconLock size={14} /> Locked</>}
-                        </button>
                     )}
                     {sectionNotes.map((note: any) => (
                         <div key={note.id} id={`note-${note.id}`}

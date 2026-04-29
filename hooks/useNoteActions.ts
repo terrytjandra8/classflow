@@ -180,18 +180,9 @@ export const useNoteActions = ({
         if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
         if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString();
         
-        // --- SECURE LOCAL SYNC ---
-        // If a local encrypted violation count exists, merge it into the update
-        const localKey = getViolationKey(id);
-        const localViolations = decryptViolationCount(localStorage.getItem(localKey));
-        
+        // Violation count is only set if explicitly passed (by useViolationTracking)
         if (updates.violation_count !== undefined) {
             dbUpdates.violation_count = updates.violation_count;
-            // Clear local storage after explicit update to prevent double-counting
-            localStorage.removeItem(localKey);
-        } else if (localViolations > 0) {
-            // Pick up pending local violations if not explicitly provided
-            dbUpdates.violation_count = localViolations;
         }
 
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', id);
@@ -204,29 +195,11 @@ export const useNoteActions = ({
         // Removed: updateBoardTimestamp() - causing race conditions on busy boards
     }, [setNotes, onTouchBoard]);
     
-    const incrementViolation = useCallback(async (id: string, currentCount: number = 0) => {
-
-        
-        // Optimistic update for instant UI feedback
-        setNotes(currentNotes => currentNotes.map(n => 
-            n.id === id ? { ...n, violation_count: (n.violation_count || 0) + 1 } : n
-        ));
-
-        // Call secure RPC - this bypasses RLS using SECURITY DEFINER
-        const { error } = await supabase.rpc('increment_violation_count', { target_note_id: id });
-        
-        if (error) {
-            console.error("[FocusGuard] RPC Error:", error.message);
-            // Fallback: If RPC fails (e.g. not created yet), try a standard update as a last resort
-            await supabase.from('notes').update({ 
-                violation_count: currentCount + 1 
-            }).eq('id', id);
-        } else {
-
-            // Clear local storage after successful DB sync
-            localStorage.removeItem(getViolationKey(id));
-        }
-    }, [setNotes]);
+    // Legacy stub — violation tracking is now fully handled by useViolationTracking
+    // Kept for interface compatibility
+    const incrementViolation = useCallback(async (_id: string, _currentCount: number = 0) => {
+        // No-op: useViolationTracking.handleViolation() handles all persistence
+    }, []);
 
     const deleteNote = useCallback(async (id: string) => {
         setNotes(currentNotes => {

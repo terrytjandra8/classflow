@@ -44,7 +44,7 @@ export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board,
 
   const visibleTabs = useMemo(() => {
       if (board.format === 'quiz' || board.format === 'poll') {
-          return ALL_TABS.filter(t => t !== 'Layout' && t !== 'Engagement');
+          return ALL_TABS.filter(t => t !== 'Layout');
       }
       return ALL_TABS;
   }, [board.format]);

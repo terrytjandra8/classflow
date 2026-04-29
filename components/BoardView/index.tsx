@@ -15,6 +15,7 @@ import { resolveBackgroundStyle } from '../../utils/theme';
 import { classService } from '../../services/classService';
 import { profileService } from '../../services/profileService';
 import { ScreenshotGuard } from '../Security/ScreenshotGuard';
+import { UserRules } from '../../utils/userRules';
 import { supabase } from '../../services/supabaseClient';
 import { mapBoard } from '../../utils/mappers';
 import { useHistory } from '../../hooks/useHistory';
@@ -264,18 +265,23 @@ export const BoardView: React.FC<BoardViewProps> = ({
     ]);
 
     const renderProtectedContent = (content: React.ReactNode) => {
-        const hasWatermarkedSection = board.sections?.some(s => s.isWatermarked);
-        const protectionEnabled = (!!board.blockScreenshots || !!hasWatermarkedSection) && (isStudent || isSimulatingStudent);
-        const enableFocusGuard = !board.disableFocusGuard;
+        const userCtx = {
+            userId, userRole, board,
+            isStudent, isSimulatingStudent,
+        };
+
+        // If user is not protected (teacher/owner, not simulating), skip the guard entirely
+        if (!UserRules.shouldRenderSecurityGuard(userCtx)) {
+            return <>{content}</>;
+        }
 
         return (
             <ScreenshotGuard 
-                blockScreenshots={protectionEnabled} 
-                enableFocusGuard={enableFocusGuard}
+                blockScreenshots={UserRules.shouldEnableScreenshotProtection(userCtx)} 
+                enableFocusGuard={UserRules.shouldEnableFocusGuard(userCtx)}
                 studentName={username} 
                 onViolation={handleViolation} 
                 boardId={board.id} 
-                boardFormat={board.format}
             >
                 {content}
             </ScreenshotGuard>

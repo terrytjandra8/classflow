@@ -1,30 +1,44 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ShieldAlert, UserCheck, Lock, Activity } from 'lucide-react';
+import { ShieldAlert, Lock, Activity } from 'lucide-react';
 
 interface ScreenshotGuardProps {
+    /** Whether screenshot protection (watermark + keydown interception) is on */
     blockScreenshots: boolean;
-    enableFocusGuard?: boolean; // NEW: Toggle specifically for focus loss blur
+    /** Whether focus guard (blur on mouse leave / tab switch) is on */
+    enableFocusGuard: boolean;
     children: React.ReactNode;
     studentName?: string;
     onViolation?: (type: 'security' | 'focus') => void;
     boardId?: string;
-    boardFormat?: string;
 }
 
-export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({ 
-    blockScreenshots: isEnabled, 
-    enableFocusGuard = true,
-    children, 
-    studentName = "Student", 
-    onViolation, 
-    boardId, 
-    boardFormat 
+/**
+ * ScreenshotGuard
+ * 
+ * This component wraps content and enforces two independent protections:
+ *   1. Screenshot Protection — watermark overlay + PrintScreen interception
+ *   2. Focus Guard — blurs content + shows overlay when cursor leaves page or tab switches
+ * 
+ * IMPORTANT: The caller (BoardView) is responsible for deciding WHETHER to render
+ * this component at all vs just rendering children directly. This component
+ * assumes it is ALWAYS active when mounted — no internal teacher bypasses.
+ * 
+ * LAYOUT: Uses React Fragment (<>) at the top level so it adds ZERO wrapper divs
+ * to the DOM tree. This ensures the student layout is identical to the teacher layout.
+ * Watermark and overlay use fixed positioning — they don't need a parent container.
+ */
+export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
+    blockScreenshots,
+    enableFocusGuard,
+    children,
+    studentName = 'Student',
+    onViolation,
+    boardId,
 }) => {
-    const [lockType, setLockType] = useState<'security' | 'focus' | null>(null);
-    const lockTypeRef = useRef<'security' | 'focus' | null>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const overlayRef = useRef<HTMLDivElement>(null);
+    const [isLocked, setIsLocked] = useState(false);
+    const [lockReason, setLockReason] = useState<'security' | 'focus' | null>(null);
+    const lockReasonRef = useRef<'security' | 'focus' | null>(null);
 
     // Generate a fake but official-looking session ID
     const sessionId = useMemo(() => {
@@ -34,111 +48,144 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
         return `CB-${res}-${new Date().getFullYear()}`;
     }, []);
 
-    const applyShield = useCallback((type: 'security' | 'focus') => {
-        lockTypeRef.current = type;
-        setLockType(type);
-        if (onViolation) onViolation(type);
-        if (contentRef.current) contentRef.current.style.filter = 'blur(40px) brightness(0.2)';
-        if (overlayRef.current) {
-            overlayRef.current.style.opacity = '1';
-            overlayRef.current.style.pointerEvents = 'auto';
-        }
+    const firstName = studentName.split(' ')[0].toUpperCase();
+
+    // ─── LOCK / UNLOCK ──────────────────────────────────────────────
+
+    const lock = useCallback((reason: 'security' | 'focus') => {
+        lockReasonRef.current = reason;
+        setLockReason(reason);
+        setIsLocked(true);
     }, []);
 
-    const releaseShield = useCallback(() => {
-        lockTypeRef.current = null;
-        setLockType(null);
-        if (contentRef.current) contentRef.current.style.filter = '';
-        if (overlayRef.current) {
-            overlayRef.current.style.opacity = '0';
-            overlayRef.current.style.pointerEvents = 'none';
+    const unlock = useCallback(() => {
+        const reason = lockReasonRef.current;
+        lockReasonRef.current = null;
+        setLockReason(null);
+        setIsLocked(false);
+        if (reason && onViolation) {
+            onViolation(reason);
         }
-    }, []);
+    }, [onViolation]);
+
+    // ─── SCREENSHOT PROTECTION ──────────────────────────────────────
 
     useEffect(() => {
-        const handleSecurityViolation = (e: KeyboardEvent) => {
-            const key = e.key?.toLowerCase() ?? '';
-            const kc = e.keyCode;
-            const isSS = key === 'printscreen' || kc === 44 || (e.ctrlKey && (key === 'f5' || kc === 116));
-            if (isSS) {
-                applyShield('security');
-                setTimeout(() => { if (lockTypeRef.current === 'security') releaseShield(); }, 4000);
+        if (!blockScreenshots) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5'))) {
+                e.preventDefault();
+                lock('security');
             }
         };
 
-        const handleFocusBlur = () => applyShield('focus');
-        const handleMouseLeave = () => applyShield('focus');
-        const handleFocusGain = () => { if (lockTypeRef.current === 'focus') releaseShield(); };
-
-        if (isEnabled) {
-            window.addEventListener('keydown', handleSecurityViolation, true);
-        }
-        
-        if (enableFocusGuard && boardFormat !== 'quiz') {
-            window.addEventListener('blur', handleFocusBlur);
-            window.addEventListener('mouseleave', handleMouseLeave);
-            window.addEventListener('focus', handleFocusGain);
-        }
+        document.addEventListener('keydown', handleKeyDown, true);
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'PrintScreen') e.preventDefault();
+        }, true);
 
         return () => {
-            window.removeEventListener('keydown', handleSecurityViolation, true);
-            window.removeEventListener('blur', handleFocusBlur);
-            window.removeEventListener('mouseleave', handleMouseLeave);
-            window.removeEventListener('focus', handleFocusGain);
-            releaseShield();
+            document.removeEventListener('keydown', handleKeyDown, true);
         };
-    }, [isEnabled, enableFocusGuard, applyShield, releaseShield, boardFormat]);
+    }, [blockScreenshots, lock]);
 
-    if (!isEnabled && !enableFocusGuard) return <>{children}</>;
+    // ─── FOCUS GUARD ────────────────────────────────────────────────
 
-    const firstName = studentName.split(' ')[0].toUpperCase();
+    useEffect(() => {
+        if (!enableFocusGuard) return;
+
+        const onDocMouseLeave = (e: MouseEvent) => {
+            if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+                lock('focus');
+            }
+        };
+
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                lock('focus');
+            }
+        };
+
+        const onWindowBlur = () => {
+            lock('focus');
+        };
+
+        const onMouseEnter = () => {
+            // Mouse returned — don't auto-unlock, user must click RESUME
+        };
+
+        const onWindowFocus = () => {
+            // Window regained focus — don't auto-unlock
+        };
+
+        // Attach all listeners
+        document.documentElement.addEventListener('mouseleave', onDocMouseLeave);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        window.addEventListener('blur', onWindowBlur);
+        window.addEventListener('mouseenter', onMouseEnter);
+        window.addEventListener('focus', onWindowFocus);
+
+        return () => {
+            document.documentElement.removeEventListener('mouseleave', onDocMouseLeave);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            window.removeEventListener('blur', onWindowBlur);
+            window.removeEventListener('mouseenter', onMouseEnter);
+            window.removeEventListener('focus', onWindowFocus);
+        };
+    }, [enableFocusGuard, lock, unlock]);
+
+    // ─── RENDER ─────────────────────────────────────────────────────
+    // Uses Fragment (<>) — NO wrapper divs that would break the parent layout.
+    // Watermark + overlay are fixed-position, children flow directly into parent.
 
     return (
-        <div className="relative h-screen w-full bg-slate-50 dark:bg-[#050505] overflow-hidden" onClick={() => { if (lockType === 'focus') releaseShield(); }}>
-            <style>{`
-                @media print { body * { display: none !important; } }
-                
-                .security-watermark {
-                    position: absolute;
-                    inset: 0;
-                    pointer-events: none;
-                    z-index: 50;
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    opacity: 0.04;
-                    user-select: none;
-                }
-                .watermark-text {
-                    transform: rotate(-25deg);
-                    font-size: 14px;
-                    font-weight: 900;
-                    padding: 60px;
-                    color: currentColor;
-                    white-space: nowrap;
-                }
-            `}</style>
+        <>
+            {/* Print protection */}
+            <style>{`@media print { body * { display: none !important; } }`}</style>
 
-            {/* Identity Watermark */}
-            <div className="security-watermark">
-                {Array.from({ length: 15 }).map((_, i) => (
-                    <div key={i} className="watermark-text">
-                        {studentName} • SECURE EXAM SESSION
-                    </div>
-                ))}
-            </div>
+            {/* Watermark overlay — fixed position, no layout impact */}
+            {blockScreenshots && (
+                <div
+                    className="fixed inset-0 pointer-events-none z-50 grid grid-cols-3 select-none"
+                    style={{ opacity: 0.04 }}
+                >
+                    {Array.from({ length: 15 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="whitespace-nowrap font-black text-sm p-[60px]"
+                            style={{ transform: 'rotate(-25deg)' }}
+                        >
+                            {studentName} • SECURE EXAM SESSION
+                        </div>
+                    ))}
+                </div>
+            )}
 
-            <div ref={contentRef} className="h-full w-full transition-all duration-300">
+            {/* Main content — single wrapper for blur only, inherits parent size */}
+            <div
+                className="h-full w-full"
+                style={{
+                    filter: isLocked ? 'blur(40px) brightness(0.2)' : 'none',
+                    pointerEvents: isLocked ? 'none' : 'auto',
+                    transition: 'filter 0.3s ease',
+                }}
+            >
                 {children}
             </div>
 
-            {/* Academic Integrity Lock Overlay */}
-            <div ref={overlayRef}
-                className="absolute inset-0 z-[10000] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 transition-opacity duration-200"
-                style={{ opacity: 0, pointerEvents: 'none' }}>
+            {/* Academic Integrity Lock Overlay — fixed position, no layout impact */}
+            <div
+                className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-center p-8 transition-opacity duration-150"
+                style={{
+                    opacity: isLocked ? 1 : 0,
+                    pointerEvents: isLocked ? 'auto' : 'none',
+                }}
+            >
                 <div className="max-w-md w-full bg-white dark:bg-[#111] p-10 rounded-[3rem] shadow-2xl text-center border border-white/10 relative overflow-hidden">
                     {/* Top Status Bar */}
                     <div className="absolute top-0 left-0 right-0 h-2 bg-red-600"></div>
-                    
+
                     <div className="bg-red-500/10 text-red-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                         <ShieldAlert size={32} />
                     </div>
@@ -150,7 +197,7 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
                     <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 leading-tight">
                         ATTENTION, {firstName}
                     </h2>
-                    
+
                     <div className="h-px w-16 bg-slate-200 dark:bg-white/10 mx-auto mb-6"></div>
 
                     <p className="text-slate-500 dark:text-gray-400 font-medium mb-8 leading-relaxed">
@@ -169,7 +216,10 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
                         </div>
                     </div>
 
-                    <button onClick={() => releaseShield()} className="w-full bg-slate-900 text-white dark:bg-white dark:text-black font-black py-5 rounded-2xl text-lg transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-3">
+                    <button
+                        onClick={unlock}
+                        className="w-full bg-slate-900 text-white dark:bg-white dark:text-black font-black py-5 rounded-2xl text-lg transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-3"
+                    >
                         <Lock size={18} />
                         RESUME SESSION
                     </button>
@@ -180,6 +230,6 @@ export const ScreenshotGuard: React.FC<ScreenshotGuardProps> = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
