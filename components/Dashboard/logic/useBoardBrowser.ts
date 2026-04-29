@@ -52,7 +52,8 @@ export const useBoardBrowser = (
     studentClasses: string[] = [],
     classes: ClassGroup[] = [],
     setClasses: (classes: ClassGroup[]) => void,
-    onUpdateBoard?: (id: string, updates: Partial<Board>) => void
+    onUpdateBoard?: (id: string, updates: Partial<Board>) => void,
+    onFetchGlobal?: () => void // ADDED
 ) => {
     const [sidebarFilter, setSidebarFilterState] = useState<string>(() => {
         const key = isStudent ? 'cb_student_sidebar_filter' : 'cb_teacher_sidebar_filter';
@@ -64,6 +65,13 @@ export const useBoardBrowser = (
         setSidebarFilterState(newFilter);
         localStorage.setItem(key, newFilter);
     };
+
+    // Lazy load global boards when switching to global views
+    useEffect(() => {
+        if ((sidebarFilter === 'all_boards' || sidebarFilter === 'global_trash') && onFetchGlobal) {
+            onFetchGlobal();
+        }
+    }, [sidebarFilter, onFetchGlobal]);
 
     const [filter, setFilter] = useState('');
     const [sortBy, setSortBy] = useState<'created' | 'updated'>('created');
@@ -97,6 +105,9 @@ export const useBoardBrowser = (
                 b.targetGrade && viewableClasses.includes(b.targetGrade)
             );
         } else {
+            // Check if we are in a Global admin view
+            const isGlobalView = sidebarFilter === 'all_boards' || sidebarFilter === 'global_trash';
+
             if (sidebarFilter === 'trashed') {
                 result = result.filter(b => b.isTrashed && b.owner_id === userId);
             } else if (sidebarFilter === 'global_trash') {
@@ -105,14 +116,21 @@ export const useBoardBrowser = (
                 result = result.filter(b => !b.isTrashed);
             } else {
                 result = result.filter(b => !b.isTrashed);
+                
+                // If not in global view, restrict non-student results to only those owned by the user
+                // This keeps "Recents", "Favourites", and Class folders clean for superadmins
+                if (!isGlobalView) {
+                    result = result.filter(b => b.owner_id === userId || (b.collaborators && b.collaborators.includes(userId!)));
+                }
+
                 if (selectedClass && selectedClass !== 'All Classes') {
                     result = result.filter(b => (b.targetGrade || 'General').trim().toLowerCase() === selectedClass.trim().toLowerCase());
                 }
+                
                 if (sidebarFilter === 'favourites') {
                     result = result.filter(b => b.isFavorite);
-                } else if (sidebarFilter === 'made_by_me') {
-                    result = result.filter(b => b.owner_id === userId || (b.collaborators && b.collaborators.includes(userId!)));
-                } else if (sidebarFilter !== 'recents') {
+                } else if (sidebarFilter !== 'recents' && sidebarFilter !== 'made_by_me') {
+                     // Filter by class folder name
                      result = result.filter(b => (b.targetGrade || 'General') === sidebarFilter);
                 }
             }

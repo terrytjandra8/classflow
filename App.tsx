@@ -117,6 +117,9 @@ function AppContent() {
     // Access Check State for Guests
     const [accessCheckStatus, setAccessCheckStatus] = useState<'idle' | 'checking' | 'allowed' | 'denied'>('idle');
 
+    const isSuperAdmin = session?.user?.email?.trim().toLowerCase() === 'terry.tjandra@integrated.ipeka.sch.id';
+    const isStudent = !isGuest && userRole === 'student';
+
     // Keep track of active board ID for realtime updates without breaking useEffect dependencies
     const activeBoardIdRef = useRef<string | null>(null);
     useEffect(() => { activeBoardIdRef.current = activeBoardId; }, [activeBoardId]);
@@ -199,7 +202,7 @@ function AppContent() {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
-            if (newSession) {
+            if (newSession && !session) {
                 setIsGuest(false);
                 fetchProfile();
                 const params = new URLSearchParams(window.location.search);
@@ -235,15 +238,27 @@ function AppContent() {
         }
     };
 
-    const fetchBoards = async () => {
+    const hasFetchedGlobal = useRef(false);
+
+    const fetchBoards = async (scope: 'owned' | 'all' = 'owned') => {
         try {
-            const data = await boardService.getBoards();
-            setBoards(data);
+            const data = await boardService.getBoards(scope);
+            setBoards(prev => {
+                const existingIds = new Set(prev.map(b => b.id));
+                const newBoards = data.filter(b => !existingIds.has(b.id));
+                return [...prev, ...newBoards];
+            });
+            if (scope === 'all') hasFetchedGlobal.current = true;
             return data;
         } catch (e) {
             console.error("Failed to fetch boards", e);
             return [];
         }
+    };
+
+    const fetchGlobalBoards = async () => {
+        if (hasFetchedGlobal.current) return;
+        await fetchBoards('all');
     };
 
     // Sync theme to DOM
@@ -773,7 +788,10 @@ function AppContent() {
                     username={username}
                     userAvatar={userAvatar}
                     userId={session?.user?.id}
+                    isSuperAdmin={isSuperAdmin}
+                    isStudent={isStudent}
                     onJoinByCode={handleJoinByCode}
+                    onFetchGlobal={fetchGlobalBoards}
                 />
             )}
 

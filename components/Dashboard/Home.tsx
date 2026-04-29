@@ -29,12 +29,14 @@ interface HomeProps {
     studentClasses: string[];
     classes: ClassGroup[];
     setClasses: (classes: ClassGroup[]) => void;
+    onFetchGlobal?: () => void; // ADDED
 }
 
 export const Home: React.FC<HomeProps> = ({ 
     boards, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash,
     onJoinBoard, onNavigateToMake, onOpenSetup, onUpdateBoard, username, userAvatar, userId, theme, isSuperAdmin, isStudent, selectedClass, studentClasses,
-    classes, setClasses
+    classes, setClasses,
+    onFetchGlobal // ADDED
 }) => {
     
     const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
@@ -56,7 +58,11 @@ export const Home: React.FC<HomeProps> = ({
         openConfirmModal,
         handleConfirmAction,
         handleMenuAction
-    } = useBoardBrowser(boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, onDuplicateBoard, onToggleFavorite, isStudent, studentClasses, classes, setClasses, onUpdateBoard);
+    } = useBoardBrowser(
+        boards, userId, onDeleteBoard, onEmptyTrash, selectedClass, onSelectBoard, 
+        onDuplicateBoard, onToggleFavorite, isStudent, studentClasses, classes, setClasses, 
+        onUpdateBoard, onFetchGlobal // PASSED
+    );
 
     const getDisplayTitle = () => {
         if (isStudent) {

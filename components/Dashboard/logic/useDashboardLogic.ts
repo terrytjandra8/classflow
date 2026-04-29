@@ -7,10 +7,24 @@ import { SUPER_ADMIN_EMAIL } from '../constants';
 
 export type TabView = 'home' | 'gallery' | 'make' | 'admin' | 'system' | 'documentation';
 
-export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolean>) => {
+export const useDashboardLogic = (
+    userId: string | undefined, 
+    onJoinByCode: (code: string) => Promise<boolean>,
+    isSuperAdminProp?: boolean,
+    isStudentProp?: boolean
+) => {
     const [userEmail, setUserEmail] = useState('');
-    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-    const [isStudent, setIsStudent] = useState(false);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(isSuperAdminProp || false);
+    const [isStudent, setIsStudent] = useState(isStudentProp || false);
+
+    // Update state if props change
+    useEffect(() => {
+        if (isSuperAdminProp !== undefined) setIsSuperAdmin(isSuperAdminProp);
+    }, [isSuperAdminProp]);
+
+    useEffect(() => {
+        if (isStudentProp !== undefined) setIsStudent(isStudentProp);
+    }, [isStudentProp]);
 
     const [activeTab, setActiveTabState] = useState<TabView>('home');
 
@@ -78,6 +92,8 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
     };
 
     const fetchUserAndClasses = useCallback(async () => {
+        if (!userId) return;
+
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             if (user.email) {
@@ -134,16 +150,10 @@ export const useDashboardLogic = (onJoinByCode: (code: string) => Promise<boolea
                 }
             }
         }
-    }, []); // Removed isStudent to prevent re-fetch loop when state updates
+    }, [userId]);
 
     useEffect(() => {
         fetchUserAndClasses();
-
-        window.addEventListener('focus', fetchUserAndClasses);
-
-        return () => {
-            window.removeEventListener('focus', fetchUserAndClasses);
-        };
     }, [fetchUserAndClasses]);
 
     useEffect(() => {

@@ -10,12 +10,38 @@ type BoardInsert = Database['public']['Tables']['boards']['Insert'];
 type BoardUpdate = Database['public']['Tables']['boards']['Update'];
 
 export const boardService = {
-    async getBoards() {
-        // RLS policies handle visibility (Owner + Public + Published)
-        const { data, error } = await supabase
-            .from('boards')
-            .select('*')
-            .order('updated_at', { ascending: false });
+    async getBoards(scope: 'owned' | 'all' = 'owned') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
+        // Case insensitive check
+        const isSuperAdmin = user.email?.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase();
+        
+        // Fetch user profile to check role (default to non-student if fetch fails)
+        let isStudent = false;
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            isStudent = profile?.role === 'student';
+        } catch (e) {
+            console.warn("Could not fetch profile role, defaulting to teacher access", e);
+        }
+        
+        let query = supabase.from('boards').select('*');
+
+        if (isStudent && !isSuperAdmin) {
+            // Students (who aren't superadmins): don't filter by owner_id — let RLS handle visibility
+            // RLS will only return published boards for their enrolled classes
+        } else if (scope === 'owned' || !isSuperAdmin) {
+            // Teachers or Super Admins in 'owned' view: filter by ownership
+            query = query.eq('owner_id', user.id);
+        }
+        // If isSuperAdmin and scope is 'all', we skip the filter entirely.
+
+        const { data, error } = await query.order('updated_at', { ascending: false });
         
         if (error) throw error;
         return (data as BoardRow[]).map(mapBoard);

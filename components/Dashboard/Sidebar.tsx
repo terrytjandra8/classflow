@@ -43,8 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
 
     // Filter classes to only show ones owned by the current user or legacy classes (no owner)
-    // This matches the logic in adminService.fetchStats to ensure consistency with the Admin Dashboard
-    const myClasses = userId ? classes.filter(cls => cls.owner_id === userId || !cls.owner_id) : [];
+    // For superadmins, show ALL classes.
+    const myClasses = userId ? classes.filter(cls => isSuperAdmin || cls.owner_id === userId || !cls.owner_id) : [];
 
     return (
         <>

@@ -31,11 +31,17 @@ interface DashboardProps {
   userAvatar: string | null;
   userId?: string;
   onJoinByCode: (code: string) => Promise<boolean>;
+  onFetchGlobal?: () => void;
+  isSuperAdmin?: boolean; // ADDED
+  isStudent?: boolean; // ADDED
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
     boards, onCreateBoard, onSelectBoard, onDeleteBoard, onDuplicateBoard, onToggleFavorite, onEmptyTrash, onUpdateBoard,
-    theme, onToggleTheme, username, userAvatar, userId, onJoinByCode
+    theme, onToggleTheme, username, userAvatar, userId, onJoinByCode,
+    onFetchGlobal,
+    isSuperAdmin: isSuperAdminProp,
+    isStudent: isStudentProp
 }) => {
   
   const {
@@ -51,7 +57,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       showProfileMenu, setShowProfileMenu,
       profileMenuRef,
       handleLogout
-  } = useDashboardLogic(onJoinByCode);
+  } = useDashboardLogic(userId, onJoinByCode, isSuperAdminProp, isStudentProp);
 
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   
@@ -295,6 +301,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 studentClasses={studentClasses}
                 classes={classes}
                 setClasses={setClasses}
+                onFetchGlobal={onFetchGlobal} // ADDED
              />
           )}
           
