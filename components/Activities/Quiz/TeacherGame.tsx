@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QuizState, QuizQuestion, Board, Note } from '../../../types';
-import { Play, SkipForward, Users, Trophy, CheckCircle, MonitorPlay, Minimize2, Music, Pause, Volume2, Gamepad2, Hourglass, XCircle, ShieldAlert, Edit2, Flame } from 'lucide-react';
+import { Users, Play, Trophy, CheckCircle2, XCircle, Hourglass, SkipForward, Timer, LayoutPanelTop, Info, Minimize2, ZoomIn, ZoomOut, Search, Music, Volume2, Pause, ShieldAlert, Flame, GripVertical } from 'lucide-react';
 import { QuizEditor } from '../QuizEditor';
 import { MUSIC_TRACKS } from '../../../hooks/useQuizAudio';
 import { noteService } from '../../../services/noteService';
@@ -43,6 +43,43 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
     startGame, nextStep, openProjectorMode, SoundControl, backgroundStyle, isPresenting, togglePresentation, onUpdateBoard, resetGame, enterLobby
 }) => {
     const [isMusicMenuOpen, setIsMusicMenuOpen] = useState(false);
+    const [showResults, setShowResults] = useState(false);
+    const [zoomScale, setZoomScale] = useState(1);
+    const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 }); // Relative offset from initial position
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef({ x: 0, y: 0 });
+
+    const handleZoom = (delta: number) => {
+        setZoomScale(prev => Math.min(Math.max(prev + delta, 0.5), 2.5));
+    };
+
+    const handleDragStart = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        dragStartRef.current = {
+            x: e.clientX - zoomPos.x,
+            y: e.clientY - zoomPos.y
+        };
+    };
+
+    useEffect(() => {
+        const handleDrag = (e: MouseEvent) => {
+            if (!isDragging) return;
+            setZoomPos({
+                x: e.clientX - dragStartRef.current.x,
+                y: e.clientY - dragStartRef.current.y
+            });
+        };
+        const handleDragEnd = () => setIsDragging(false);
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleDrag);
+            window.addEventListener('mouseup', handleDragEnd);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleDrag);
+            window.removeEventListener('mouseup', handleDragEnd);
+        };
+    }, [isDragging]);
     const [showHistory, setShowHistory] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false); // Added confirmation state
     const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
@@ -175,91 +212,88 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                 </div>
             )}
 
-            {isPresenting && (
-                <div className="absolute top-6 right-6 z-50 flex gap-2">
-                    <SoundControl />
-                    <button onClick={() => togglePresentation(false)} className="bg-black/50 text-white p-3 rounded-full hover:bg-black/80 backdrop-blur-md border border-white/10 transition-colors">
-                        <Minimize2 size={24} />
-                    </button>
-                </div>
-            )}
 
             {/* SCENE: LOBBY - Optimized for All Screens */}
             {state === 'lobby' && (
-                <div className="flex-1 flex flex-col p-6 lg:p-10 relative z-10 overflow-y-auto no-scrollbar">
-                    <div className="flex-1 flex flex-col items-center justify-center gap-10 lg:gap-12 max-w-7xl mx-auto w-full py-4 lg:py-8">
-                        <div className="text-center space-y-4 lg:space-y-6 animate-in slide-in-from-top-10 duration-700">
-                            <Logo size="xl" className="mx-auto mb-8 drop-shadow-2xl" />
-                            <h1 className="text-5xl sm:text-7xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-none py-2 uppercase">
-                                join the game
-                            </h1>
-                            <div className="flex items-center justify-center gap-4 text-white/30 font-mono animate-in fade-in delay-300">
-                                <div className="flex gap-1.5">
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-75"></span>
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-150"></span>
+                <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10">
+                        <div 
+                            className="flex flex-col items-center gap-6 lg:gap-12 max-w-7xl mx-auto w-full pt-4 pb-32 lg:pt-8 transition-transform duration-300 ease-out"
+                            style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center' }}
+                        >
+                            <div className="text-center flex flex-col items-center gap-2 lg:gap-6 animate-in slide-in-from-top-10 duration-700">
+                                <Logo size="lg" className="drop-shadow-2xl h-10 lg:h-16" />
+                                <h1 className="text-3xl sm:text-5xl lg:text-[clamp(3rem,6vw,7rem)] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 tracking-tighter drop-shadow-2xl leading-tight py-1 uppercase">
+                                    join the game
+                                </h1>
+                                <div className="flex items-center justify-center gap-3 text-white/30 font-mono animate-in fade-in delay-300">
+                                    <div className="flex gap-1">
+                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse delay-75"></span>
+                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse delay-150"></span>
+                                    </div>
+                                    <span className="font-black uppercase tracking-widest text-[9px] lg:text-xs">Waiting for players...</span>
                                 </div>
-                                <span className="font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs">Waiting for players to enter...</span>
                             </div>
-                        </div>
 
-                        {/* Holographic Ticket - Optimized Width to prevent clipping */}
-                        <div className="relative group perspective-1000 animate-in zoom-in duration-700 delay-200">
-                            <div className="absolute -inset-10 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 rounded-[4rem] blur-3xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                            <div className="relative bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 lg:p-12 text-center w-full max-w-[24rem] lg:max-w-[32rem] transform transition-all hover:scale-[1.01] shadow-2xl ring-1 ring-white/5">
-                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                                <div className="text-[9px] lg:text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-4">Class Access Code</div>
-                                <div className="text-6xl lg:text-8xl font-mono font-black text-white tracking-[0.05em] drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] mb-8 break-all lg:break-normal">
-                                    {board.classCode}
-                                </div>
-                                <div className="flex flex-col items-center gap-2 pt-6 border-t border-white/5">
-                                    <div className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em]">Step 1: Go to</div>
-                                    <div className="text-2xl lg:text-3xl text-white font-black tracking-tight bg-white/5 px-6 py-2 rounded-2xl border border-white/5 lowercase">
-                                        {typeof window !== 'undefined' ? window.location.host : 'classboards.ai'}
+                            {/* Holographic Ticket */}
+                            <div className="relative group perspective-1000 animate-in zoom-in duration-700 delay-200">
+                                <div className="absolute -inset-10 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 rounded-[4rem] blur-3xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                                <div className="relative bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl lg:rounded-[3rem] p-4 lg:p-10 text-center w-full max-w-[18rem] lg:max-w-[30rem] transform transition-all hover:scale-[1.01] shadow-2xl ring-1 ring-white/5">
+                                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                    <div className="text-[7px] lg:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 lg:mb-4">Access Code</div>
+                                    <div className="text-4xl lg:text-7xl font-mono font-black text-white tracking-[0.05em] drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] mb-2 lg:mb-8">
+                                        {board.classCode}
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1 pt-3 lg:pt-6 border-t border-white/5">
+                                        <div className="text-[7px] lg:text-[8px] text-gray-400 font-black uppercase tracking-widest">Step 1: Go to</div>
+                                        <div className="text-lg lg:text-2xl text-white font-black tracking-tight bg-white/5 px-4 lg:px-6 py-1 lg:py-2 rounded-lg lg:rounded-2xl border border-white/5 lowercase">
+                                            {typeof window !== 'undefined' ? window.location.host : 'classboards.ai'}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-purple-600/5 rounded-full blur-3xl"></div>
+                            </div>
+
+                            {/* Players List (In scrollable area) */}
+                            <div className="w-full max-w-5xl">
+                                <div className="flex flex-wrap justify-center gap-3 lg:gap-4 p-2">
+                                    {onlineUsers?.map((u, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2 lg:px-6 lg:py-3 rounded-xl lg:rounded-2xl font-bold text-sm lg:text-lg text-white shadow-xl animate-in zoom-in duration-300 hover:bg-white/10 hover:scale-105 transition-all cursor-default flex items-center gap-3" 
+                                            style={{ animationDelay: `${i * 30}ms` }}
+                                        >
+                                            <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>
+                                            {u.user}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-auto w-full max-w-7xl mx-auto pt-6 border-t border-white/5">
-                        <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-10">
-                            <div className="flex items-center gap-6">
-                                <div className="p-5 bg-blue-500/10 rounded-[2rem] border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-                                    <Users size={40} className="text-blue-400" />
+                    {/* Sticky Action Footer - Always Visible */}
+                    <div className="flex-none p-3 lg:p-5 bg-black/60 backdrop-blur-2xl border-t border-white/10 relative z-20">
+                        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 lg:p-3 bg-blue-500/10 rounded-lg lg:rounded-xl border border-blue-500/20">
+                                    <Users size={16} className="text-blue-400 lg:w-6 lg:h-6" />
                                 </div>
                                 <div>
-                                    <div className="text-6xl font-black text-white tabular-nums tracking-tighter">{onlineUsers?.length || 0}</div>
-                                    <div className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em]">Players in Lobby</div>
+                                    <div className="text-xl lg:text-3xl font-black text-white tabular-nums leading-none">{onlineUsers?.length || 0}</div>
+                                    <div className="text-[7px] lg:text-[9px] text-gray-500 font-black uppercase tracking-widest mt-1">Players Joined</div>
                                 </div>
                             </div>
+                            
                             <button 
                                 onClick={startGame} 
-                                className="group relative bg-white text-black px-20 py-7 rounded-[2.5rem] font-black text-3xl shadow-[0_20px_60px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all flex items-center gap-4 overflow-hidden ring-4 ring-white/10"
+                                className="group relative bg-white text-black px-6 lg:px-12 py-2.5 lg:py-4 rounded-lg lg:rounded-2xl font-black text-sm lg:text-xl shadow-[0_10px_30px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 lg:gap-3 overflow-hidden ring-1 lg:ring-2 ring-white/10"
                             >
                                 <span className="relative z-10">START GAME</span>
-                                <Play fill="currentColor" size={28} className="relative z-10" />
+                                <Play fill="currentColor" size={14} className="relative z-10 lg:w-5 lg:h-5" />
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                             </button>
-                        </div>
-
-                        <div className="flex flex-wrap gap-4 max-h-48 overflow-y-auto custom-scrollbar p-2">
-                            {onlineUsers?.map((u, i) => (
-                                <div 
-                                    key={i} 
-                                    className="bg-white/5 backdrop-blur-md border border-white/10 px-6 py-3 rounded-2xl font-bold text-lg text-white shadow-xl animate-in zoom-in duration-300 hover:bg-white/10 hover:scale-110 hover:border-white/20 transition-all cursor-default flex items-center gap-3" 
-                                    style={{ animationDelay: `${i * 30}ms` }}
-                                >
-                                    <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></div>
-                                    {u.user}
-                                </div>
-                            ))}
-                            {(!onlineUsers || onlineUsers.length === 0) && (
-                                <div className="w-full text-center py-10 text-gray-600 font-bold italic">
-                                    Tell your students to enter the code to join!
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -298,78 +332,77 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                         )}
                     </div>
 
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 gap-10">
-                        {/* Question Card */}
-                        <div className="w-full max-w-5xl text-center">
-                            <h2 className="text-4xl md:text-6xl font-black text-white leading-tight drop-shadow-2xl tracking-tight">
-                                {currentQ.question}
-                            </h2>
-                        </div>
-                        
-                        {/* Question Media */}
-                        {currentQ.mediaUrl && (
-                            <div className="w-full max-w-2xl h-64 md:h-80 bg-white/5 rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative group">
-                                {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
-                                    <iframe 
-                                        src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
-                                        className="w-full h-full border-0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                        allowFullScreen
-                                    />
-                                ) : (
-                                    <img 
-                                        src={currentQ.mediaUrl} 
-                                        alt="Question Media" 
-                                        className="w-full h-full object-contain"
-                                        onError={(e) => {
-                                            (e.target as any).style.display = 'none';
-                                            (e.target as any).nextSibling.style.display = 'flex';
-                                        }}
-                                    />
-                                )}
-                                <div className="hidden absolute inset-0 items-center justify-center text-gray-500 font-bold italic bg-white/5">
-                                    Unsupported Media Format
-                                </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+                        <div 
+                            className="flex flex-col items-center p-4 lg:p-8 gap-4 lg:gap-10 pb-40 transition-transform duration-300 ease-out"
+                            style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center' }}
+                        >
+                            {/* Question Card */}
+                            <div className="w-full max-w-5xl text-center px-4 animate-in slide-in-from-top-6 duration-500">
+                                <h2 className="text-[clamp(1rem,2.5vw,2rem)] font-black text-white leading-tight drop-shadow-2xl tracking-tight">
+                                    {currentQ.question}
+                                </h2>
                             </div>
-                        )}
-
-                        {/* Answer Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-6xl flex-1 max-h-[50vh]">
-                            {currentQ.options.map((opt, idx) => {
-                                const isCorrect = idx === currentQ.correctIndex;
-                                const isReveal = state === 'reveal';
-                                
-                                // Reveal Styling
-                                const dim = isReveal && !isCorrect;
-                                const highlight = isReveal && isCorrect;
-
-                                return (
-                                    <div 
-                                        key={idx} 
-                                        className={`
-                                            relative rounded-3xl flex items-center p-8 transition-all duration-500 border-2
-                                            ${dim ? 'opacity-30 scale-95 grayscale border-transparent bg-white/5' : 'opacity-100 scale-100'}
-                                            ${highlight ? 'bg-green-500/20 border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' : (!isReveal ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/5 border-transparent')}
-                                        `}
-                                    >
-                                        {/* Color Indicator Bar */}
-                                        <div className={`absolute left-0 top-0 bottom-0 w-3 rounded-l-3xl ${idx === 0 ? 'bg-red-500' : idx === 1 ? 'bg-blue-500' : idx === 2 ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-                                        
-                                        <div className="ml-6 flex items-center gap-6 w-full">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black shrink-0 ${idx === 0 ? 'text-red-400 bg-red-500/10' : idx === 1 ? 'text-blue-400 bg-blue-500/10' : idx === 2 ? 'text-yellow-400 bg-yellow-500/10' : 'text-green-400 bg-green-500/10'}`}>
-                                                {SHAPES[idx]}
+                            
+                            {/* Question Media */}
+                            {currentQ.mediaUrl && (
+                                <div className="w-full max-w-xl min-h-[100px] max-h-[30vh] bg-white/5 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group shrink-0">
+                                    {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
+                                        <iframe 
+                                            src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} 
+                                            className="w-full h-full border-0 min-h-[180px]"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                            allowFullScreen
+                                        />
+                                    ) : (
+                                        <img 
+                                            src={currentQ.mediaUrl} 
+                                            alt="Question Media" 
+                                            className="w-full h-full object-contain max-h-[30vh]"
+                                            onError={(e) => {
+                                                (e.target as any).style.display = 'none';
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+ 
+                            {/* Answer Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 lg:gap-4 w-full max-w-6xl">
+                                {currentQ.options.map((opt, idx) => {
+                                    const isCorrect = idx === currentQ.correctIndex;
+                                    const isReveal = state === 'reveal';
+                                    
+                                    const dim = isReveal && !isCorrect;
+                                    const highlight = isReveal && isCorrect;
+ 
+                                    return (
+                                        <div 
+                                            key={idx} 
+                                            className={`
+                                                relative rounded-xl lg:rounded-2xl flex items-center p-3 lg:p-5 transition-all duration-500 border-2
+                                                ${dim ? 'opacity-30 scale-95 grayscale border-transparent bg-white/5' : 'opacity-100 scale-100'}
+                                                ${highlight ? 'bg-green-500/20 border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' : (!isReveal ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/5 border-transparent')}
+                                            `}
+                                        >
+                                            <div className={`absolute left-0 top-0 bottom-0 w-1.5 lg:w-3 rounded-l-xl lg:rounded-l-2xl ${idx === 0 ? 'bg-red-500' : idx === 1 ? 'bg-blue-500' : idx === 2 ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+                                            
+                                            <div className="ml-3 lg:ml-6 flex items-center gap-3 lg:gap-6 w-full">
+                                                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center text-lg lg:text-xl font-black shrink-0 ${idx === 0 ? 'text-red-400 bg-red-500/10' : idx === 1 ? 'text-blue-400 bg-blue-500/10' : idx === 2 ? 'text-yellow-400 bg-yellow-500/10' : 'text-green-400 bg-green-500/10'}`}>
+                                                    {SHAPES[idx % 4]}
+                                                </div>
+                                                <span className="text-sm lg:text-[clamp(0.9rem,1.8vw,1.6rem)] font-bold text-white drop-shadow-md leading-tight">{opt}</span>
                                             </div>
-                                            <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-md">{opt}</span>
+ 
+                                            {isReveal && isCorrect && (
+                                                <div className="absolute right-3 lg:right-6 bg-green-500 text-black p-1 lg:p-1.5 rounded-full shadow-xl animate-bounce">
+                                                    <CheckCircle2 size={18} className="lg:w-6 lg:h-6" />
+                                                </div>
+                                            )}
                                         </div>
-
-                                        {isReveal && isCorrect && (
-                                            <div className="absolute right-6 bg-green-500 text-black p-2 rounded-full shadow-xl animate-bounce">
-                                                <CheckCircle size={32} />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -625,6 +658,43 @@ export const TeacherGame: React.FC<TeacherGameProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Draggable Floating Zoom Controls */}
+            <div 
+                className="fixed top-24 right-8 z-[200] flex items-center gap-3 select-none"
+                style={{ 
+                    transform: `translate(${zoomPos.x}px, ${zoomPos.y}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                }}
+            >
+                <div className="flex items-center gap-1 bg-black/80 backdrop-blur-2xl border border-white/20 rounded-full pl-1 pr-2 py-1 shadow-2xl ring-1 ring-white/10 group">
+                    <div 
+                        onMouseDown={handleDragStart}
+                        className="p-2 cursor-grab active:cursor-grabbing text-white/20 hover:text-white/60 transition-colors"
+                    >
+                        <GripVertical size={16} />
+                    </div>
+                    <button onClick={() => handleZoom(-0.1)} className="p-2 text-white/60 hover:text-white transition-colors" title="Zoom Out">
+                        <ZoomOut size={18} />
+                    </button>
+                    <div className="h-4 w-px bg-white/10 mx-1"></div>
+                    <span className="text-[10px] font-black text-white/40 w-12 text-center uppercase tracking-tighter tabular-nums">
+                        {Math.round(zoomScale * 100)}%
+                    </span>
+                    <div className="h-4 w-px bg-white/10 mx-1"></div>
+                    <button onClick={() => handleZoom(0.1)} className="p-2 text-white/60 hover:text-white transition-colors" title="Zoom In">
+                        <ZoomIn size={18} />
+                    </button>
+                    <button onClick={() => setZoomScale(1)} className="p-2 text-white/40 hover:text-white border-l border-white/10 ml-1 hover:bg-white/5 rounded-full transition-all" title="Reset Zoom">
+                        <Search size={14} />
+                    </button>
+                </div>
+                {isPresenting && (
+                    <button onClick={() => togglePresentation(false)} className="bg-black/60 text-white p-4 rounded-full hover:bg-black/80 backdrop-blur-md border border-white/20 shadow-2xl transition-all hover:scale-110 active:scale-95">
+                        <Minimize2 size={24} />
+                    </button>
+                )}
+            </div>
         </div>
     );
 };

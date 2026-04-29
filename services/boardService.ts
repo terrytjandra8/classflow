@@ -78,6 +78,7 @@ export const boardService = {
             // Security Defaults (Global)
             disablePaste: board.disablePaste ?? true, // Default to true for all boards
             blockScreenshots: board.blockScreenshots ?? true, // Default to true for all boards
+            disableFocusGuard: board.disableFocusGuard ?? (board.format === 'quiz' ? true : false), // Default to true (OFF) for quiz
             // Assessment Specific Security
             disableCopy: board.disableCopy ?? true,
             blurOtherPosts: board.blurOtherPosts ?? true,

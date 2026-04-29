@@ -29,9 +29,46 @@ export const StudentGame: React.FC<StudentGameProps> = ({
     const [localSelectedIdx, setLocalSelectedIdx] = React.useState<number | null>(null);
     const [revealMessage, setRevealMessage] = React.useState('');
 
+    // Zoom Logic
+    const [zoomScale, setZoomScale] = React.useState(1);
+    const [zoomPos, setZoomPos] = React.useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = React.useState(false);
+    const dragStartPos = React.useRef({ x: 0, y: 0 });
+
+    const handleZoom = (delta: number) => {
+        setZoomScale(prev => Math.min(Math.max(prev + delta, 0.5), 3));
+    };
+
+    const handleDragStart = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        dragStartPos.current = { x: e.clientX - zoomPos.x, y: e.clientY - zoomPos.y };
+    };
+
+    React.useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging) return;
+            setZoomPos({
+                x: e.clientX - dragStartPos.current.x,
+                y: e.clientY - dragStartPos.current.y
+            });
+        };
+        const handleMouseUp = () => setIsDragging(false);
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
+
     // Reset local selection when question changes
     React.useEffect(() => {
         setLocalSelectedIdx(null);
+        setZoomScale(1);
+        setZoomPos({ x: 0, y: 0 });
     }, [currentQ?.id]);
 
     React.useEffect(() => {
@@ -133,100 +170,126 @@ export const StudentGame: React.FC<StudentGameProps> = ({
         }
 
         return (
-            <div className="h-full flex flex-col bg-[#0a0a0a] p-4 md:p-8 gap-6 relative overflow-hidden font-sans text-white">
+            <div className="h-full flex flex-col bg-[#0a0a0a] relative overflow-hidden font-sans text-white">
                 {/* Background Decoration */}
                 <div className="absolute inset-0 z-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20"></div>
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse [animation-delay:2s]"></div>
-
-                {/* Status Bar */}
-                <div className="flex justify-between items-center z-20 relative px-2">
+                
+                {/* Status Bar - Fixed at top */}
+                <div className="flex justify-between items-center z-20 relative p-4 bg-black/40 backdrop-blur-md border-b border-white/5">
                     <div className="flex items-center gap-3">
                         {myStreak > 1 && (
-                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-600 px-5 py-2.5 rounded-2xl text-white shadow-2xl ring-4 ring-orange-500/20 animate-bounce">
-                                <Flame size={20} className="fill-white" />
-                                <span className="text-xl font-black tracking-tighter">{myStreak}</span>
+                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-600 px-3 py-1.5 rounded-xl text-white shadow-lg animate-bounce">
+                                <Flame size={16} className="fill-white" />
+                                <span className="text-sm font-black tracking-tighter">{myStreak}</span>
                             </div>
                         )}
-                        <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Question {(board.currentQuestionIndex ?? 0) + 1}</div>
+                        <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-[8px] font-black uppercase tracking-widest text-white/50">Q{(board.currentQuestionIndex ?? 0) + 1}</div>
                     </div>
 
-                    <div className="flex gap-3 scale-110 origin-right">
-                        <div className={`px-6 py-2.5 rounded-2xl font-black text-2xl shadow-2xl backdrop-blur-xl border-2 transition-all ${timeLeft <= 5 ? 'bg-red-600 border-red-400 text-white animate-pulse scale-110' : 'bg-black/40 border-white/10 text-white'}`}>
+                    <div className="flex gap-2">
+                        <div className={`px-4 py-1.5 rounded-xl font-black text-lg shadow-lg backdrop-blur-xl border transition-all ${timeLeft <= 5 ? 'bg-red-600 border-red-400 text-white animate-pulse' : 'bg-white/5 border-white/10 text-white'}`}>
                             {timeLeft}s
                         </div>
                         <SoundControl />
                     </div>
                 </div>
 
-                {/* Question Area */}
-                {board.showQuestionOnStudentDevice && (
-                    <div className="relative z-10 text-center animate-in slide-in-from-top-6 duration-500 px-2">
-                        <h2 className="text-2xl lg:text-4xl font-black text-white leading-tight drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                            {currentQ?.question}
-                        </h2>
-                    </div>
-                )}
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10 p-3 pb-24">
+                    <div 
+                        className="flex flex-col gap-4 max-w-2xl mx-auto transition-transform duration-300 ease-out"
+                        style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center' }}
+                    >
+                        {/* Question Area */}
+                        <div className="text-center animate-in slide-in-from-top-6 duration-500">
+                            <h2 className="text-[clamp(1rem,3vw,1.8rem)] font-black text-white leading-tight drop-shadow-2xl px-2">
+                                {currentQ?.question}
+                            </h2>
+                        </div>
 
-                {/* Media Area (Prominent) */}
-                {board.showQuestionOnStudentDevice && currentQ?.mediaUrl && (
-                    <div className="relative z-10 w-full flex-1 max-h-[35vh] min-h-[20vh] bg-white/5 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group">
-                        {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
-                            <iframe
-                                src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                                className="w-full h-full border-0"
-                            />
-                        ) : (
-                            <img
-                                src={currentQ.mediaUrl}
-                                alt="Media"
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                    (e.target as any).style.display = 'none';
-                                    (e.target as any).nextSibling.style.display = 'flex';
-                                }}
-                            />
+                        {/* Media Area */}
+                        {currentQ?.mediaUrl && (
+                            <div className="w-full max-h-[30vh] aspect-video bg-white/5 rounded-2xl overflow-hidden border border-white/10 shadow-2xl shrink-0">
+                                {currentQ.mediaUrl.includes('youtube.com') || currentQ.mediaUrl.includes('youtu.be') ? (
+                                    <iframe
+                                        src={currentQ.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                                        className="w-full h-full border-0 min-h-[150px]"
+                                    />
+                                ) : (
+                                    <img
+                                        src={currentQ.mediaUrl}
+                                        alt="Media"
+                                        className="w-full h-full object-contain max-h-[30vh]"
+                                        onError={(e) => {
+                                            (e.target as any).style.display = 'none';
+                                        }}
+                                    />
+                                )}
+                            </div>
                         )}
-                        <div className="hidden absolute inset-0 items-center justify-center text-gray-500 font-bold text-xs italic bg-white/5">
-                            Unsupported Media
+
+                        {/* Answer Grid */}
+                        <div className="grid grid-cols-2 gap-2 lg:gap-4">
+                            {currentQ?.options.map((opt, idx) => {
+                                const isSelected = localSelectedIdx === idx;
+                                const isDisabled = isSubmitting || hasAnswered;
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onPointerDown={() => handleAnswer(idx)}
+                                        disabled={isDisabled}
+                                        className={`
+                                            relative min-h-[80px] lg:min-h-[140px] rounded-xl lg:rounded-3xl flex flex-col items-center justify-center p-2 lg:p-6 transition-[transform,background-color,border-color] duration-150 active:scale-95 border-t-2 border-x-2 border-b-4 lg:border-b-8 group touch-none select-none
+                                            ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/60' : 'bg-[#e21b3c] border-[#9a1229]') :
+                                                idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/60' : 'bg-[#1368ce] border-[#0a4182]') :
+                                                    idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/60' : 'bg-[#d89e00] border-[#8c6a00]') :
+                                                        (isSelected ? 'bg-[#26890c] border-white/60' : 'bg-[#26890c] border-[#144a06]')}
+                                            ${isDisabled && !isSelected ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'}
+                                            ${isSelected ? 'translate-y-0.5 border-b-2 brightness-110 ring-2 ring-white/30' : 'translate-y-0 active:translate-y-1 active:border-b-2'}
+                                        `}
+                                    >
+                                        <div className="absolute top-1 left-1 lg:top-4 lg:left-4 text-sm lg:text-2xl opacity-40 font-black text-white pointer-events-none">
+                                            {SHAPES[idx % 4]}
+                                        </div>
+
+                                        <span className={`relative z-10 font-black text-white text-center leading-tight break-words w-full px-2 transition-all pointer-events-none ${opt.length > 40 ? 'text-[8px] lg:text-sm' : opt.length > 20 ? 'text-[10px] lg:text-lg' : 'text-xs lg:text-2xl'}`}>
+                                            {isSelected && isSubmitting ? '...' : opt || SHAPES[idx]}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-                )}
+                </div>
 
-                {/* Large Answer Tiles - Modern Grid (Expanded Hit-Box) */}
-                <div className="relative z-10 grid grid-cols-2 gap-3 lg:gap-6 flex-1 min-h-0 pb-4">
-                    {currentQ?.options.map((opt, idx) => {
-                        const isSelected = localSelectedIdx === idx;
-                        const isDisabled = isSubmitting || hasAnswered;
-
-                        return (
-                            <button
-                                key={idx}
-                                onClick={() => handleAnswer(idx)}
-                                disabled={isDisabled}
-                                className={`
-                                    relative rounded-[1.5rem] lg:rounded-[2.5rem] flex flex-col items-center justify-center p-4 lg:p-8 transition-all duration-75 active:scale-[0.98] border-t-2 border-x-2 border-b-8 group touch-manipulation select-none
-                                    ${idx === 0 ? (isSelected ? 'bg-[#e21b3c] border-white/60 shadow-[0_4px_20px_rgba(226,27,60,0.4)]' : 'bg-[#e21b3c] border-[#9a1229] active:border-white/20') :
-                                        idx === 1 ? (isSelected ? 'bg-[#1368ce] border-white/60 shadow-[0_4px_20px_rgba(19,104,206,0.4)]' : 'bg-[#1368ce] border-[#0a4182] active:border-white/20') :
-                                            idx === 2 ? (isSelected ? 'bg-[#d89e00] border-white/60 shadow-[0_4px_20px_rgba(216,158,0,0.4)]' : 'bg-[#d89e00] border-[#8c6a00] active:border-white/20') :
-                                                (isSelected ? 'bg-[#26890c] border-white/60 shadow-[0_4px_20px_rgba(38,137,12,0.4)]' : 'bg-[#26890c] border-[#144a06] active:border-white/20')}
-                                    ${isDisabled && !isSelected ? 'opacity-30 grayscale pointer-events-none' : 'opacity-100'}
-                                    ${isSelected ? 'translate-y-1 border-b-2 brightness-110 ring-4 ring-white/30' : 'translate-y-0 active:translate-y-1 active:border-b-4'}
-                                `}
-                            >
-                                <div className={`absolute top-4 left-4 lg:top-8 lg:left-8 text-2xl lg:text-4xl opacity-50 font-black pointer-events-none text-white drop-shadow-lg`}>
-                                    {SHAPES[idx % 4]}
-                                </div>
-
-                                <span className={`relative z-10 font-black text-white text-center leading-tight drop-shadow-lg break-words w-full pointer-events-none transition-all ${opt.length > 50 ? 'text-sm lg:text-lg' : opt.length > 20 ? 'text-lg lg:text-2xl' : 'text-2xl lg:text-4xl'}`}>
-                                    {isSelected && isSubmitting ? '...' : opt || SHAPES[idx]}
-                                </span>
-
-                                {/* Ripple Effect Overlay */}
-                                <div className="absolute inset-0 bg-white/20 opacity-0 group-active:opacity-100 transition-opacity rounded-[inherit]"></div>
-                            </button>
-                        );
-                    })}
+                {/* Draggable Floating Zoom Controls */}
+                <div 
+                    className="fixed top-20 right-4 z-[200] flex items-center gap-3 select-none"
+                    style={{ 
+                        transform: `translate(${zoomPos.x}px, ${zoomPos.y}px)`,
+                        transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                    }}
+                >
+                    <div className="flex items-center gap-1 bg-black/80 backdrop-blur-2xl border border-white/20 rounded-full pl-1 pr-2 py-1 shadow-2xl ring-1 ring-white/10 group">
+                        <div 
+                            onMouseDown={handleDragStart}
+                            className="p-2 cursor-grab active:cursor-grabbing text-white/20 hover:text-white/60 transition-colors"
+                        >
+                            <span className="text-xs">⠿</span>
+                        </div>
+                        <button onClick={() => handleZoom(-0.1)} className="p-2 text-white/60 hover:text-white transition-colors" title="Zoom Out">
+                            -
+                        </button>
+                        <div className="h-4 w-px bg-white/10 mx-1"></div>
+                        <span className="text-[10px] font-black text-white/40 w-10 text-center uppercase tracking-tighter tabular-nums">
+                            {Math.round(zoomScale * 100)}%
+                        </span>
+                        <div className="h-4 w-px bg-white/10 mx-1"></div>
+                        <button onClick={() => handleZoom(0.1)} className="p-2 text-white/60 hover:text-white transition-colors" title="Zoom In">
+                            +
+                        </button>
+                    </div>
                 </div>
             </div>
         );
