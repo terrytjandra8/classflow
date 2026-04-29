@@ -30,11 +30,12 @@ interface NoteHeaderProps {
     onUpdate?: (id: string, updates: Partial<Note>) => void;
     canManageBoard?: boolean;
     commentsEnabled?: boolean;
+    onPrivateFeedback?: () => void;
 }
 
 export const NoteHeader: React.FC<NoteHeaderProps> = ({
     note, canDelete, canEdit, onDelete, onEdit, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, isStickyNote, isTransparent, isSectionAnonymous,
-    showMenu, setShowMenu, showUpdatedAt, onUpdate, canManageBoard, commentsEnabled
+    showMenu, setShowMenu, showUpdatedAt, onUpdate, canManageBoard, commentsEnabled, onPrivateFeedback
 }) => {
     const { board, isStudent, userId, isPresentationMode, username } = useBoard();
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -157,6 +158,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                                 onMove={onMove}
                                 onClose={() => setShowMenu(false)}
                                 isTeacher={!isStudent}
+                                onPrivateFeedback={onPrivateFeedback}
                             />
                         )}
                     </div>

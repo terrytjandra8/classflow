@@ -7,6 +7,7 @@ import { Tooltip } from '../../Tooltip';
 import { useBoard } from '../BoardContext';
 import { Note } from '../../../types';
 import { BoardRules } from '../../../utils/boardRules';
+import { UserRules } from '../../../utils/userRules';
 import { AssignStudentsModal } from '../AssignStudentsModal';
 import { ConfirmationModal } from '../../ui/ConfirmationModal';
 
@@ -23,7 +24,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
         board, notes, updateBoard, openAddNote, canManageBoard,
         summarizeSection, sectionIdFilter, embeddedMode, updateNote, isStudent: contextIsStudent,
         toggleSectionLock, toggleSectionContentBlur, toggleSectionVisibility, toggleSectionAnonymous, toggleSectionRearrange,
-        deleteNote, likeNote, addComment, userId, students
+        deleteNote, likeNote, addComment, userId, students, isPresentationMode
     } = useBoard();
 
     const [assigningSection, setAssigningSection] = useState<string | null>(null);
@@ -136,7 +137,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
     return (
         <div className={`mx-auto p-6 space-y-12 ${embeddedMode ? 'w-full pt-4' : 'pt-4 pb-20 max-w-[95%]'}`}>
             {sections.map(section => {
-                if (section.isHidden && isStudent) return null;
+                if (BoardRules.isHidden(section.isHidden, !!isStudent, !!isPresentationMode)) return null;
 
                 const sectionNotes = sectionIdFilter 
                     ? localNotes.filter((n: any) => n.sectionId === section.id) 
@@ -144,17 +145,18 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                 
                 const isSectionLocked = section.locked;
                 
-                // NEW: Check if student can post in this specific section
-                const canPostInSection = BoardRules.canPostInSection(board, section.id, userId, !!isStudent);
-                const canAddToSection = canManageBoard || (!isLocked && !isSectionLocked && canPostInSection);
+                // Permission Context
+                const { isSimulatingStudent: simStudent } = useBoard();
+                const fullCtx = { userId, board, isStudent: !!contextIsStudent && !simStudent, isSimulatingStudent: !!simStudent };
+
+                const canAddToSection = UserRules.canAddPost(fullCtx, section.id);
+                const canDragInSection = UserRules.canDragNote(fullCtx, undefined, !!sectionCanDrag);
                 
                 const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
                 const isHidden = section.isHidden;
                 const commentsOn = section.commentsEnabled !== undefined ? section.commentsEnabled : board.commentsEnabled;
                 
-                // Permission Check
                 const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
-                const canDragInSection = canManageBoard || (sectionCanDrag && !isLocked && !isSectionLocked);
 
                 return (
                     <div key={section.id} className="animate-fade-in relative">
@@ -167,7 +169,6 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                         
                                         <EditableInput 
                                             disabled={!canManageBoard || embeddedMode}
-                                            // Updated: Removed text-gray-500 and opacity-80 when locked to ensure visibility
                                             className={`font-bold text-xl bg-transparent border border-transparent hover:border-white/20 rounded px-2 py-1 min-w-[200px] focus:bg-white/10 outline-none transition-all ${!canManageBoard ? 'cursor-not-allowed' : ''} text-slate-800 dark:text-white placeholder-gray-400`}
                                             value={section.title} 
                                             onSave={(val) => renameSection(section.id, val)}
@@ -212,7 +213,6 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                             <button onClick={() => deleteSection(section.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><X size={16} /></button>
                                         </Tooltip>
                                         
-                                        {/* NEW: Assign Students Button */}
                                         <Tooltip content="Assign Students">
                                             <button 
                                                 onClick={() => setAssigningSection(section.id)} 
@@ -243,7 +243,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                 <div 
                                     key={note.id}
                                     id={`grid-note-${note.id}`}
-                                    draggable={canDragInSection}
+                                    draggable={UserRules.canEditNote(fullCtx, note)}
                                     onDragStart={(e) => onDragStart(e, note.id)}
                                     onDragEnter={(e) => onDragEnterNote(e, note.id)}
                                     onDragEnd={onDragEnd}
@@ -255,7 +255,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                         onAddBefore={() => handleAddRelative(note.id, 'before')}
                                         onAddAfter={() => handleAddRelative(note.id, 'after')}
                                         onMoveNote={handleMoveNote}
-                                        canDrag={canDragInSection}
+                                        canDrag={UserRules.canEditNote(fullCtx, note)}
                                         isSectionAnonymous={section.isAnonymous}
                                         isContentBlurred={isContentBlurred} 
                                         commentsEnabled={commentsOn}
@@ -264,23 +264,27 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                                         onLike={likeNote}
                                         onAddComment={addComment}
                                         onUpdate={updateNote}
+                                        isLocked={!UserRules.canEditNote(fullCtx, note)}
                                     />
                                 </div>
                             ))}
                             
-                            {canAddToSection && (
+                            {!isPresentationMode && (
                                 <button 
-                                    onClick={() => openAddNote(section.id)}
+                                    onClick={() => canAddToSection && openAddNote(section.id)}
+                                    disabled={!canAddToSection}
                                     className={`
                                         flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group
                                         break-inside-avoid w-full aspect-auto min-h-[150px] shadow-sm hover:shadow-md backdrop-blur-sm
-                                        bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50
+                                        ${!canAddToSection ? 'border-2 border-dashed border-red-500/20 text-red-400 cursor-not-allowed bg-red-500/5' : 'bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500/50'}
                                     `}
                                     >
-                                    <div className={`p-3 rounded-full bg-pink-500 text-white group-hover:scale-110 transition-transform shadow-lg`}>
-                                        <Plus size={24} />
+                                    <div className={`p-3 rounded-full ${!canAddToSection ? 'bg-gray-400' : 'bg-pink-500'} text-white group-hover:scale-110 transition-transform shadow-lg`}>
+                                        {canAddToSection ? <Plus size={24} /> : <Lock size={24} />}
                                     </div>
-                                    <span className="text-sm font-bold text-slate-600 dark:text-white mt-1">Add Post</span>
+                                    <span className={`text-sm font-bold mt-1 ${!canAddToSection ? 'text-gray-400' : 'text-slate-600 dark:text-white'}`}>
+                                        {canAddToSection ? 'Add Post' : 'Locked'}
+                                    </span>
                                 </button>
                             )}
                         </div>
@@ -298,6 +302,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
                     </button>
                 </div>
             )}
+            
             {/* Assignment Modal */}
             {assigningSection && (
                 <AssignStudentsModal

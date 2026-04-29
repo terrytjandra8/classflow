@@ -5,6 +5,7 @@ import { Tooltip } from '../../Tooltip';
 import { useBoard } from '../BoardContext';
 import { Note } from '../../../types';
 import { BoardRules } from '../../../utils/boardRules';
+import { UserRules } from '../../../utils/userRules';
 import { IconLock, IconHidden, IconPlus } from '../../Icons';
 import { GitMerge, UserCheck } from 'lucide-react';
 import { AssignStudentsModal } from '../AssignStudentsModal';
@@ -322,11 +323,17 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         const repliesOn = section.repliesEnabled !== undefined ? section.repliesEnabled : (board.repliesEnabled !== false);
         const isContentBlurred = section.isContentBlurred !== undefined ? section.isContentBlurred : section.isTitleBlurred;
         const sectionCanDrag = section.studentsCanDrag !== undefined ? section.studentsCanDrag : (board.studentsCanDrag ?? false);
-        const canDragNotes = canManageBoard || (sectionCanDrag && !isLocked && !section.locked);
+        const userCtx = { userId, board, isStudent: !!contextIsStudent, isSimulatingStudent: !!board.isSimulatingStudent || false };
+        // UserRules expects ctx: { userId, board, isStudent, isSimulatingStudent }
+        // Wait, contextIsStudent might already include isSimulatingStudent in some places, 
+        // but let's be explicit based on BoardContext's actual props.
+        
+        // Let's get the real values from useBoard
+        const { isSimulatingStudent: simStudent } = useBoard();
+        const fullCtx = { userId, board, isStudent: !!contextIsStudent && !simStudent, isSimulatingStudent: !!simStudent };
 
-        // Check if student can post in this specific section
-        const canPostInSection = BoardRules.canPostInSection(board, section.id, userId, !!isStudent);
-        const canAdd = canManageBoard || (!isLocked && !section.locked && canPostInSection);
+        const canAdd = UserRules.canAddPost(fullCtx, section.id);
+        const canDragNotes = UserRules.canDragNote(fullCtx, undefined, !!sectionCanDrag);
         const showControls = canManageBoard || !commentsOn || !repliesOn || section.locked || isContentBlurred || section.isHidden || section.isAnonymous || sectionCanDrag || section.disableCopy;
         const isSelected = selectedForMerge.has(section.id);
 
@@ -384,7 +391,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                 )}
 
                 {/* Add Post button — outside scroll area so it stays visible */}
-                {canAdd && !isMergeMode && (
+                {!isMergeMode && (
                     <button onClick={() => canAdd && openAddNote(section.id)} disabled={!canAdd}
                         className={`w-full py-2 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-sm hover:shadow-md backdrop-blur-sm mb-1 shrink-0 text-sm ${!canAdd ? 'border-2 border-dashed border-red-500/20 text-red-400 cursor-not-allowed bg-red-500/5' : 'bg-white/50 dark:bg-white/5 border border-transparent hover:border-pink-500/50 text-slate-600 dark:text-white font-bold'}`}>
                         {canAdd ? <><div className="bg-pink-500 text-white rounded-full p-0.5"><IconPlus size={12} className="group-hover:scale-110 transition-transform" /></div> Add Post</> : <><IconLock size={12} /> Locked</>}
@@ -401,7 +408,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                     {sectionNotes.map((note: any) => (
                         <div key={note.id} id={`note-${note.id}`}
                             className={`note-card-wrapper transition-transform duration-200 ease-out ${draggingId === note.id ? 'opacity-40' : ''}`}
-                            draggable={canDragNotes} onDragStart={(e) => onDragStart(e, note.id, 'NOTE')}
+                            draggable={UserRules.canEditNote(fullCtx, note)} onDragStart={(e) => onDragStart(e, note.id, 'NOTE')}
                             onDragOver={(e) => onDragOverNote(e, note.id, section.id)} onDragEnd={onDragEnd}>
                             <NoteCard
                                 key={note.id}
@@ -412,7 +419,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                                 onAddComment={addComment}
                                 onUpdate={updateNote}
                                 isStudent={isStudent}
-                                isLocked={section.locked || isLocked}
+                                isLocked={!UserRules.canEditNote(fullCtx, note)}
                                 commentsEnabled={commentsOn}
                                 reactionsEnabled={board.reactionsEnabled}
                                 contentTextColor={board.contentTextColor}

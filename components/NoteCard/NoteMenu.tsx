@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Edit3, Palette, Pin, ArrowUp, ArrowDown, Link as LinkIcon, Layers, MoveUp, MoveDown, Check, CameraOff } from 'lucide-react';
+import { Trash2, Edit3, Palette, Pin, ArrowUp, ArrowDown, Link as LinkIcon, Layers, MoveUp, MoveDown, Check, CameraOff, MessageSquare } from 'lucide-react';
 import { Note, NoteColor } from '../../types';
 import { getColorName } from '../../utils/theme';
 import { supabase } from '../../services/supabaseClient';
@@ -20,11 +20,12 @@ interface NoteMenuProps {
     onMove?: (direction: 'up' | 'down') => void;
     onClose: () => void;
     triggerRef: React.RefObject<HTMLButtonElement>;
-    isTeacher?: boolean; // New Prop
+    isTeacher?: boolean; 
+    onPrivateFeedback?: () => void;
 }
 
 export const NoteMenu: React.FC<NoteMenuProps> = ({
-    note, canEdit, canDelete, onEdit, onDelete, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, onClose, triggerRef, isTeacher
+    note, canEdit, canDelete, onEdit, onDelete, onColorChange, onPin, onDuplicate, onAddBefore, onAddAfter, onMove, onClose, triggerRef, isTeacher, onPrivateFeedback
 }) => {
     const [position, setPosition] = useState({ top: 0, left: 0 });
     const menuRef = useRef<HTMLDivElement>(null);
@@ -108,6 +109,15 @@ export const NoteMenu: React.FC<NoteMenuProps> = ({
                 >
                     <LinkIcon size={14} /> Copy link to post
                 </button>
+                
+                {isTeacher && onPrivateFeedback && (
+                    <button 
+                        onClick={() => { onPrivateFeedback(); onClose(); }}
+                        className="w-full text-left px-3 py-2 text-xs font-bold hover:bg-blue-500/10 text-blue-400 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                        <MessageSquare size={14} /> Personal Feedback
+                    </button>
+                )}
 
                 {canEdit && (
                     <>

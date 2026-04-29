@@ -46,10 +46,10 @@ export const BoardRules = {
         isStudent: boolean, 
         isBoardLocked: boolean
     ): boolean => {
-        if (isBoardLocked) return false; // Global lock overrides everything
-        
-        // Teachers can edit any note
-        if (!isStudent) return true; 
+        // Teachers NOT simulating student view always have full bypass
+        if (!isStudent) return true;
+
+        if (isBoardLocked) return false; // Global lock overrides for students
         
         // Students can only edit their own notes
         return !!userId && note.author_id === userId;
@@ -64,10 +64,10 @@ export const BoardRules = {
         isStudent: boolean, 
         isBoardLocked: boolean
     ): boolean => {
+        // Teachers NOT simulating student view always have full bypass
+        if (!isStudent) return true;
+
         if (isBoardLocked) return false;
-        
-        // Teachers can delete any note
-        if (!isStudent) return true; 
         
         // Students can only delete their own notes
         return !!userId && note.author_id === userId;
@@ -152,21 +152,25 @@ export const BoardRules = {
         return isGlobalBlur || isColumnExplicitBlur || isAssignmentBlur;
     },
 
-    /**
-     * Determines if a user can post a note in a specific column/section.
-     */
     canPostInSection: (
         board: Board,
         sectionId: string | undefined,
         userId: string | undefined,
         isStudent: boolean
     ): boolean => {
-        // Teachers can always post everywhere
+        // Teachers NOT simulating student view always have full bypass
         if (!isStudent) return true;
+
+        // If board is read-only, nobody can post (except teachers handled above)
+        const isLocked = board.lockMode === 'readonly' || board.lockMode === 'comments_only';
+        if (isLocked) return false;
 
         if (!sectionId || !board.sections) return true;
         const section = board.sections.find(s => s.id === sectionId);
         
+        // If the column is explicitly locked
+        if (section?.locked) return false;
+
         // If the column has assignments, only allow assigned students
         if (section?.assignedStudentIds && section.assignedStudentIds.length > 0) {
             return !!userId && section.assignedStudentIds.includes(userId);

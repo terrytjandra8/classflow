@@ -6,7 +6,7 @@ interface DynamicTextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
     onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }
 
-export const DynamicTextarea: React.FC<DynamicTextareaProps> = ({ 
+export const DynamicTextarea = React.forwardRef<HTMLTextAreaElement, DynamicTextareaProps>(({ 
     value, 
     onChange, 
     className, 
@@ -16,16 +16,18 @@ export const DynamicTextarea: React.FC<DynamicTextareaProps> = ({
     onPaste,
     style,
     ...props 
-}) => {
-    const ref = useRef<HTMLTextAreaElement>(null);
+}, forwardedRef) => {
+    const internalRef = useRef<HTMLTextAreaElement>(null);
     const [localValue, setLocalValue] = useState(value);
+
+    React.useImperativeHandle(forwardedRef, () => internalRef.current!);
 
     useEffect(() => {
         setLocalValue(value);
     }, [value]);
 
     const resize = () => {
-        const el = ref.current;
+        const el = internalRef.current;
         if (el) {
             el.style.height = 'auto';
             el.style.height = `${el.scrollHeight}px`;
@@ -37,10 +39,10 @@ export const DynamicTextarea: React.FC<DynamicTextareaProps> = ({
     }, [localValue]);
 
     useEffect(() => {
-        if (autoFocus && ref.current) {
-            ref.current.focus();
-            const len = ref.current.value.length;
-            ref.current.setSelectionRange(len, len);
+        if (autoFocus && internalRef.current) {
+            internalRef.current.focus();
+            const len = internalRef.current.value.length;
+            internalRef.current.setSelectionRange(len, len);
         }
     }, [autoFocus]);
 
@@ -51,7 +53,7 @@ export const DynamicTextarea: React.FC<DynamicTextareaProps> = ({
 
     return (
         <textarea
-            ref={ref}
+            ref={internalRef}
             value={localValue}
             onChange={handleChange}
             className={`resize-none overflow-hidden block ${className}`}
@@ -63,4 +65,4 @@ export const DynamicTextarea: React.FC<DynamicTextareaProps> = ({
             {...props}
         />
     );
-};
+});

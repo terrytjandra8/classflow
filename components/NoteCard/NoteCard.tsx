@@ -147,6 +147,8 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const isDimmed = highlightedUserId && note.author_id !== highlightedUserId;
 
   // --- Handlers ---
+  const commentSectionRef = useRef<{ focus: () => void }>(null);
+
   const setRefs = (node: HTMLDivElement | null) => {
       localRef.current = node;
       if (domRef) domRef(node);
@@ -223,7 +225,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
       {!isTransparent && !isStickyNote && (
           <div className="relative z-10">
-            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={() => setShowDeleteConfirm(true)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} onUpdate={onUpdate} canManageBoard={canManageBoard} commentsEnabled={commentsEnabledBool} />
+            <NoteHeader note={note} canEdit={canEdit} canDelete={canDelete} onDelete={() => setShowDeleteConfirm(true)} onEdit={() => openEditNote(note)} onColorChange={(color) => onUpdate && onUpdate(note.id, { color })} onPin={canEdit && onUpdate ? (id) => onUpdate(id, { isPinned: !note.isPinned }) : undefined} onAddBefore={onAddBefore} onAddAfter={onAddAfter} onMove={onMoveNote ? (direction) => onMoveNote(note.id, direction) : undefined} isStickyNote={isStickyNote} isTransparent={isTransparent} isSectionAnonymous={isSectionAnonymousBool} showMenu={showMenu} setShowMenu={setShowMenu} showUpdatedAt={showUpdatedAt} onUpdate={onUpdate} canManageBoard={canManageBoard} commentsEnabled={commentsEnabledBool} onPrivateFeedback={() => commentSectionRef.current?.focus()} />
           </div>
       )}
 
@@ -253,10 +255,11 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
                         <span>{`Time to edit: ${Math.floor(remainingTime / 60)}m ${Math.floor(remainingTime % 60)}s`}</span>
                     </div>
                 )}
-              <NoteFooter note={note} userId={effectiveUserId} onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }} commentsEnabled={commentsEnabledBool} reactionsEnabled={reactionsEnabledBool} />
+              <NoteFooter note={note} userId={effectiveUserId} onLike={(e) => { e.stopPropagation(); if (onLike) onLike(note.id); }} commentsEnabled={commentsEnabledBool} reactionsEnabled={reactionsEnabledBool} canManageBoard={canManageBoard} isAuthor={isAuthor} isPresentationMode={isPresentationModeBool} />
 
-              {((commentsEnabledBool || canManageBoard) && !isBlurActive) && (
+              {((commentsEnabledBool || canManageBoard || isAuthor) && !isBlurActive) && (
                   <CommentSection 
+                      ref={commentSectionRef}
                       comments={note.comments || []} 
                       noteId={note.id} 
                       userId={effectiveUserId} 

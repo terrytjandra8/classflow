@@ -99,6 +99,88 @@ export const UserRules = {
     },
 
 
+    // ─── PERMISSIONS ────────────────────────────────────────────────
+    
+    /**
+     * Can this user add a post to a specific section?
+     */
+    canAddPost: (ctx: UserContext, sectionId?: string): boolean => {
+        // 1. Teachers NOT simulating student view always have full bypass
+        if (!UserRules.isProtectedUser(ctx)) return true;
+
+        // 2. Read-only mode prevents all posting
+        const isLocked = ctx.board.lockMode === 'readonly' || ctx.board.lockMode === 'comments_only';
+        if (isLocked) return false;
+
+        // 3. Section specific lock
+        if (sectionId && ctx.board.sections) {
+            const section = ctx.board.sections.find(s => s.id === sectionId);
+            if (section?.locked) return false;
+
+            // 4. Assignments check: If column is assigned, user MUST be in it
+            if (section.assignedStudentIds && section.assignedStudentIds.length > 0) {
+                return !!ctx.userId && section.assignedStudentIds.includes(ctx.userId);
+            }
+        }
+
+        return true;
+    },
+
+    /**
+     * Can this user edit or delete a specific note?
+     */
+    canEditNote: (ctx: UserContext, note?: Note): boolean => {
+        if (!note) return false;
+
+        // 1. Teachers NOT simulating student view always have full bypass
+        if (!UserRules.isProtectedUser(ctx)) return true;
+
+        // 2. Read-only mode prevents all editing
+        const isLocked = ctx.board.lockMode === 'readonly' || ctx.board.lockMode === 'comments_only';
+        if (isLocked) return false;
+
+        // 3. Section specific lock
+        if (note.sectionId && ctx.board.sections) {
+            const section = ctx.board.sections.find(s => s.id === note.sectionId);
+            if (section?.locked) return false;
+        }
+
+        // 4. Students/Simulators can only edit their own notes
+        return !!ctx.userId && note.author_id === ctx.userId;
+    },
+
+    /**
+     * Is the board effectively read-only for this user?
+     */
+    isReadOnly: (ctx: UserContext): boolean => {
+        // Teachers NOT simulating always bypass read-only
+        if (!UserRules.isProtectedUser(ctx)) return false;
+        
+        return ctx.board.lockMode === 'readonly' || ctx.board.lockMode === 'comments_only';
+    },
+
+    /**
+     * Can this user drag/rearrange a note?
+     */
+    canDragNote: (ctx: UserContext, note?: Note, sectionCanDrag?: boolean): boolean => {
+        // 1. Teachers NOT simulating always have full bypass
+        if (!UserRules.isProtectedUser(ctx)) return true;
+
+        // 2. Read-only mode prevents all dragging
+        if (UserRules.isReadOnly(ctx)) return false;
+
+        // 3. Section specific lock
+        if (note?.sectionId && ctx.board.sections) {
+            const section = ctx.board.sections.find(s => s.id === note.sectionId);
+            if (section?.locked) return false;
+        }
+
+        // 4. If note exists, only owner can drag? 
+        // Actually, for Classboards, "Rearrange" usually means anyone assigned can move.
+        // But if sectionCanDrag is false, students can't move.
+        return !!sectionCanDrag;
+    },
+
     // ─── VIOLATION TRACKING ──────────────────────────────────────────
 
     /**

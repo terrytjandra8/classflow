@@ -9,13 +9,40 @@ interface NoteFooterProps {
     onLike: (e: React.MouseEvent) => void;
     commentsEnabled: boolean;
     reactionsEnabled: boolean;
+    canManageBoard?: boolean;
+    isAuthor?: boolean;
+    isPresentationMode?: boolean;
 }
 
-export const NoteFooter: React.FC<NoteFooterProps> = ({ note, userId, onLike, commentsEnabled, reactionsEnabled }) => {
+export const NoteFooter: React.FC<NoteFooterProps> = ({ note, userId, onLike, commentsEnabled, reactionsEnabled, canManageBoard, isAuthor, isPresentationMode }) => {
     const hasLiked = userId && note.likedBy && note.likedBy.includes(userId);
-    const comments = note.comments || [];
+    
+    // Filter comments for count based on visibility rules
+    const visibleComments = React.useMemo(() => {
+        const comments = note.comments || [];
+        // Teacher sees everything in normal mode
+        if (canManageBoard && !isPresentationMode) return comments; 
+        
+        // Normal mode: public comments
+        if (commentsEnabled) return comments; 
 
-    if (!commentsEnabled && !reactionsEnabled) return null;
+        // Private Feedback Mode:
+        if (note.isFeedbackPublic) return comments; 
+        if (isAuthor) {
+            // AUTHOR ONLY sees Teacher comments + their own comments
+            return comments.filter(c => 
+                c.authorRole === 'teacher' || 
+                c.authorId === userId || 
+                c.author === 'Teacher'
+            );
+        }
+
+        return [];
+    }, [note.comments, canManageBoard, commentsEnabled, isAuthor, isPresentationMode, note.isFeedbackPublic]);
+
+    const showComments = commentsEnabled || (canManageBoard && !isPresentationMode);
+
+    if (!showComments && !reactionsEnabled) return null;
 
     // Adaptive Colors
     const isTransparent = note.color === NoteColor.TRANSPARENT;
@@ -46,12 +73,12 @@ export const NoteFooter: React.FC<NoteFooterProps> = ({ note, userId, onLike, co
                         <span>{note.likes}</span>
                 </button>
             )}
-            {commentsEnabled && (
+            {showComments && (
                 <button 
-                        className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${comments.length > 0 ? commentedColor : `${iconColor} hover:text-blue-500`}`}
+                        className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${visibleComments.length > 0 ? commentedColor : `${iconColor} hover:text-blue-500`}`}
                 >
-                        <MessageSquare size={16} fill={comments.length > 0 ? "currentColor" : "none"} />
-                        <span>{comments.length}</span>
+                        <MessageSquare size={16} fill={visibleComments.length > 0 ? "currentColor" : "none"} />
+                        <span>{visibleComments.length}</span>
                 </button>
             )}
         </div>

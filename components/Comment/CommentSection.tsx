@@ -26,12 +26,23 @@ interface CommentSectionProps {
     noteAuthorId?: string;
     isCommentsDisabled?: boolean;
     isFeedbackPublic?: boolean;
+    onFocus?: () => void;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId, userId, onAddComment, onUpdateNote, reactionsEnabled, noteColor, isStudent, disablePaste, repliesEnabled, isSectionAnonymous, isReadOnly, noteAuthorId, isCommentsDisabled, isFeedbackPublic }) => {
+export const CommentSection = React.forwardRef<{ focus: () => void }, CommentSectionProps>((
+    { comments, noteId, userId, onAddComment, onUpdateNote, reactionsEnabled, noteColor, isStudent, disablePaste, repliesEnabled, isSectionAnonymous, isReadOnly, noteAuthorId, isCommentsDisabled, isFeedbackPublic, onFocus },
+    ref
+) => {
     const { board, username, userAvatar: contextAvatar, canManageBoard, isPresentationMode } = useBoard();
     const allowLinks = board.allowLinks; 
 
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    React.useImperativeHandle(ref, () => ({
+        focus: () => {
+            inputRef.current?.focus();
+        }
+    }));
     // FILTER: If comments are disabled for the board/section, they act as private feedback.
     // Visible only to: Teacher, Note Author, OR Everyone if isFeedbackPublic is true.
     const visibleComments = React.useMemo(() => {
@@ -44,7 +55,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
         if (isFeedbackPublic) return comments; // Teacher released this feedback to everyone
 
         const isNoteAuthor = userId && noteAuthorId === userId;
-        if (isNoteAuthor) return comments; // Author sees the feedback
+        if (isNoteAuthor) {
+            // AUTHOR ONLY sees Teacher comments + their own comments
+            return comments.filter(c => 
+                c.authorRole === 'teacher' || 
+                c.authorId === userId || 
+                c.author === 'Teacher'
+            );
+        }
 
         return []; // Other students (and teacher in presentation mode) see nothing
     }, [comments, canManageBoard, isPresentationMode, isCommentsDisabled, userId, noteAuthorId, isFeedbackPublic]);
@@ -59,7 +77,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
     
     // Determine card background type for input contrast
     const isSolidCard = noteColor !== NoteColor.TRANSPARENT && noteColor !== NoteColor.WHITE;
-    const isTeacher = !isStudent;
+    const isTeacher = !!canManageBoard;
 
     const updateCommentInTree = (list: Comment[], targetId: string, updater: (c: Comment) => Comment | null): Comment[] => {
         return list.reduce((acc: Comment[], c) => {
@@ -234,7 +252,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
                 </div>
             )}
 
-            {!isReadOnly && (
+            {(!isReadOnly && (!isCommentsDisabled || canManageBoard || (userId && noteAuthorId === userId))) && (
                 <div className="relative w-full mt-2">
                     {/* Draft Attachment Preview */}
                     {draftAttachment && (
@@ -270,6 +288,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
 
                         <div className="flex-1 py-1">
                             <DynamicTextarea
+                                ref={inputRef}
                                 value={commentInput}
                                 onChange={(e) => setCommentInput(e.target.value)}
                                 onPaste={handlePaste}
@@ -331,4 +350,4 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ comments, noteId
             )}
         </div>
     );
-};
+});
