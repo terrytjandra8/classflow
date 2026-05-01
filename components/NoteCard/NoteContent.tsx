@@ -103,45 +103,7 @@ const decodeHtml = (html: string) => {
 // Helper: Check for HTML tags
 const isHtml = (text: string) => /<\/?[a-z][\s\S]*>/i.test(text);
 
-// SECURITY: Sanitize HTML to prevent XSS
-const sanitizeHtml = (input: string) => {
-    try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(input, 'text/html');
-        
-        // 1. Remove dangerous tags completely
-        const bannedTags = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'base', 'form', 'input', 'button', 'meta', 'applet'];
-        bannedTags.forEach(tag => {
-            const elements = doc.querySelectorAll(tag);
-            elements.forEach(el => el.remove());
-        });
-
-        // 2. Scan all remaining elements for dangerous attributes
-        const allElements = doc.querySelectorAll('*');
-        allElements.forEach(el => {
-            const attrs = Array.from(el.attributes);
-            attrs.forEach(attr => {
-                const name = attr.name.toLowerCase();
-                const value = attr.value.toLowerCase().trim();
-
-                // Remove event handlers (onclick, onmouseover, etc.)
-                if (name.startsWith('on')) {
-                    el.removeAttribute(name);
-                }
-
-                // Remove javascript: URIs in href/src
-                if ((name === 'href' || name === 'src') && value.startsWith('javascript:')) {
-                    el.removeAttribute(name);
-                }
-            });
-        });
-
-        return doc.body.innerHTML;
-    } catch (e) {
-        console.error("Failed to sanitize HTML", e);
-        return ""; // Fail safe
-    }
-};
+import { Sanitizer } from '../../utils/sanitizer';
 
 // Helper: Extract all unique URLs from text with cleanup
 const extractUrls = (text: string): string[] => {
@@ -312,7 +274,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
     const renderContent = () => {
         // If it starts with our ghost span or contains HTML, render as HTML
         if (processedContent.includes('<span') || isHtml(processedContent)) {
-            const safeHtml = sanitizeHtml(processedContent);
+            const safeHtml = Sanitizer.sanitize(processedContent);
             return <div dangerouslySetInnerHTML={{ __html: safeHtml }} className="rich-text-content" />;
         }
         
@@ -409,7 +371,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
                         {isExitTicket && <CheckSquare className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {note.type === 'drawing' && <PenTool className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {isWatermarkActive ? (
-                            <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(poisonText(note.title)) }} />
+                            <span dangerouslySetInnerHTML={{ __html: Sanitizer.sanitize(poisonText(note.title)) }} />
                         ) : note.title}
                         {isWatermarkActive && (
                             <div className="absolute -top-1 -right-1 opacity-0 group-hover/title:opacity-100 transition-opacity">

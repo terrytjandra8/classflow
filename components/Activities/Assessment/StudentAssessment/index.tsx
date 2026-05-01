@@ -6,6 +6,7 @@ import { ReportCard } from './ReportCard';
 import { StatusViews } from './StatusViews';
 import { ActiveTest } from './ActiveTest';
 import { Cloud, Loader2, AlertCircle } from 'lucide-react';
+import { Sanitizer } from '../../../../utils/sanitizer';
 
 interface StudentAssessmentProps {
     board: Board;
@@ -427,7 +428,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             if (parsed && typeof parsed === 'object' && 't' in parsed) text = parsed.t || '';
         } catch { /* plain string */ }
         // Strip HTML tags for accurate word counting
-        return text.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
+        return Sanitizer.stripHtml(text).replace(/&nbsp;/g, ' ');
     };
 
     const countWords = (text: string) => text ? text.trim().split(/\s+/).filter(w => w.length > 0).length : 0;

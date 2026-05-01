@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { Sanitizer } from '../utils/sanitizer';
 
 // --- Types ---
 export interface FormatState {
@@ -44,6 +45,8 @@ interface RichTextEditorProps {
     readOnly?: boolean;
 }
 
+export const stripHtml = Sanitizer.stripHtml;
+
 // --- Constants & Helpers ---
 const ALLOWED_PASTE_TAGS = ['B', 'I', 'U', 'STRONG', 'EM', 'P', 'BR', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4'];
 
@@ -61,53 +64,6 @@ export const getActiveFormat = (cmd: string, tags: string[] = []): boolean => {
         return node.closest(tags.join(',')) !== null;
     }
     return false;
-};
-
-export const stripHtml = (html: string) => {
-    if (!html) return '';
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-};
-
-const sanitizeHTML = (html: string): string => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Remove all script tags
-    doc.querySelectorAll('script').forEach(s => s.remove());
-    
-    const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT);
-    let node;
-    const toRemove: Element[] = [];
-    
-    while (node = walker.nextNode() as Element) {
-        if (!ALLOWED_PASTE_TAGS.includes(node.tagName)) {
-            toRemove.push(node);
-        } else {
-            // Clean styles but preserve alignment and basic text properties
-            const style = node.getAttribute('style');
-            if (style) {
-                const stylesToKeep = ['text-align', 'font-weight', 'font-style', 'text-decoration', 'color'];
-                const cleanedStyles = style.split(';').filter(s => {
-                    const prop = s.split(':')[0].trim().toLowerCase();
-                    return stylesToKeep.includes(prop);
-                }).join(';');
-                
-                if (cleanedStyles) node.setAttribute('style', cleanedStyles);
-                else node.removeAttribute('style');
-            }
-            node.removeAttribute('class');
-        }
-    }
-    
-    toRemove.forEach(el => {
-        const fragment = document.createDocumentFragment();
-        while (el.firstChild) fragment.appendChild(el.firstChild);
-        el.parentNode?.replaceChild(fragment, el);
-    });
-
-    return doc.body.innerHTML;
 };
 
 // --- Sub-components ---
@@ -341,7 +297,7 @@ const RichTextEditorComponent = forwardRef<RichTextEditorRef, RichTextEditorProp
         } else {
             const html = e.clipboardData.getData('text/html');
             const text = e.clipboardData.getData('text/plain');
-            if (html) document.execCommand('insertHTML', false, sanitizeHTML(html));
+            if (html) document.execCommand('insertHTML', false, Sanitizer.sanitize(html));
             else document.execCommand('insertText', false, text);
             handleUpdate();
         }

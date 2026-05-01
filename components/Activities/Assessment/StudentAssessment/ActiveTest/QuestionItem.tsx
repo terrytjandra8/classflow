@@ -4,6 +4,7 @@ import { Bold, Italic, Underline, List, ListOrdered, Subscript, Superscript, Min
 import { RichTextEditor, FormatState, getActiveFormat, RichTextEditorRef, DebouncedRichTextEditor, stripHtml } from '../../../../RichTextEditor';
 import { parseMath } from '../../../../../utils/mappers';
 import { countQualityWords } from '../../../../../utils/validation';
+import { Sanitizer } from '../../../../../utils/sanitizer';
 
 interface QuestionItemProps {
     q: AssessmentQuestion;
@@ -30,7 +31,7 @@ export const QuestionItem = memo(({
     if (q.type === 'section') {
         return (
             <div className="pt-8 pb-2 border-b border-white/10 mb-4">
-                <h3 className="text-2xl font-bold text-white uppercase tracking-tight" dangerouslySetInnerHTML={{ __html: parseMath(q.text) }} />
+                <h3 className="text-2xl font-bold text-white uppercase tracking-tight" dangerouslySetInnerHTML={{ __html: Sanitizer.sanitize(parseMath(q.text)) }} />
             </div>
         );
     }
@@ -128,13 +129,13 @@ export const QuestionItem = memo(({
             
             <div 
                 className="text-lg font-medium mb-4 leading-relaxed rich-text-content select-none"
-                dangerouslySetInnerHTML={{ __html: renderedText }}
+                dangerouslySetInnerHTML={{ __html: Sanitizer.sanitize(renderedText) }}
             />
 
             {renderedNotes && (
                 <div 
                     className="text-sm text-gray-400 mb-6 leading-relaxed rich-text-content select-none bg-black/20 p-4 rounded-lg border border-white/5"
-                    dangerouslySetInnerHTML={{ __html: renderedNotes }}
+                    dangerouslySetInnerHTML={{ __html: Sanitizer.sanitize(renderedNotes) }}
                 />
             )}
 
@@ -160,7 +161,7 @@ export const QuestionItem = memo(({
                                 className="hidden"
                                 disabled={isReadingMode || isReadOnly}
                             />
-                            <div className="text-gray-200 select-none" dangerouslySetInnerHTML={{__html: parseMath(opt)}} />
+                            <div className="text-gray-200 select-none" dangerouslySetInnerHTML={{__html: Sanitizer.sanitize(parseMath(opt))}} />
                         </label>
                     ))}
                 </div>
