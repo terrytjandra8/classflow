@@ -208,11 +208,19 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
                 
                 {isEditing ? (
-                    <div className="mt-2 animate-in fade-in">
+                    <div 
+                        className="mt-2 animate-in fade-in" 
+                        onDragStart={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
                         <DynamicTextarea 
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
-                            className={`w-full bg-white/50 dark:bg-black/20 rounded-xl p-3 text-sm outline-none border focus:border-blue-500 focus:bg-white dark:focus:bg-black/40 transition-all ${textClass} border-transparent shadow-inner`}
+                            onDragStart={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            draggable={false}
+                            className={`w-full bg-white dark:bg-slate-800 rounded-xl p-3 text-sm outline-none border focus:border-blue-500 transition-all text-slate-900 dark:text-white border-slate-200 dark:border-white/10 shadow-md`}
                             autoFocus
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {

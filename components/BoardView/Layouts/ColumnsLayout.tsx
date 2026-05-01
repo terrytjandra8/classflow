@@ -66,6 +66,38 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const dragItemRef = useRef<string | null>(null);
     const dragTypeRef = useRef<'NOTE' | 'COLUMN' | null>(null);
 
+    // ── PANNING STATE ──
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const isPanning = useRef(false);
+    const startX = useRef(0);
+    const scrollLeftStart = useRef(0);
+
+    const handlePanningMouseDown = (e: React.MouseEvent) => {
+        if (e.button === 1 && scrollContainerRef.current) {
+            isPanning.current = true;
+            startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
+            scrollLeftStart.current = scrollContainerRef.current.scrollLeft;
+            scrollContainerRef.current.style.cursor = 'grabbing';
+            scrollContainerRef.current.style.userSelect = 'none';
+            e.preventDefault();
+        }
+    };
+
+    const handlePanningMouseMove = (e: React.MouseEvent) => {
+        if (!isPanning.current || !scrollContainerRef.current) return;
+        const x = e.pageX - scrollContainerRef.current.offsetLeft;
+        const walk = (x - startX.current) * 1.5; // Adjusted speed
+        scrollContainerRef.current.scrollLeft = scrollLeftStart.current - walk;
+    };
+
+    const handlePanningMouseUp = () => {
+        if (isPanning.current && scrollContainerRef.current) {
+            isPanning.current = false;
+            scrollContainerRef.current.style.cursor = 'auto';
+            scrollContainerRef.current.style.userSelect = 'auto';
+        }
+    };
+
     if (sectionIdFilter) {
         return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;
     }
@@ -177,6 +209,17 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     // ── DRAG HANDLERS ──
 
     const onDragStart = (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => {
+        // Robust check: Prevent dragging if starting from an interactive element OR if one is already focused
+        const target = e.target as HTMLElement;
+        const activeEl = document.activeElement;
+        const isInteractive = (el: Element | null) => 
+            el && (el.closest('input, textarea, button, [contenteditable="true"]') || ['INPUT', 'TEXTAREA', 'BUTTON'].includes(el.tagName));
+
+        if (isInteractive(target) || isInteractive(activeEl) || (e as any).button === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         dragItemRef.current = id;
         dragTypeRef.current = type;
         e.dataTransfer.effectAllowed = 'move';
@@ -457,7 +500,14 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
             )}
 
             {/* ── BOARD COLUMNS ── */}
-            <div className="flex flex-1 overflow-x-auto gap-4 p-6 items-start pt-4">
+            <div 
+                ref={scrollContainerRef}
+                onMouseDown={handlePanningMouseDown}
+                onMouseMove={handlePanningMouseMove}
+                onMouseUp={handlePanningMouseUp}
+                onMouseLeave={handlePanningMouseUp}
+                className="flex flex-1 overflow-x-auto gap-4 p-6 items-start pt-4 custom-scrollbar select-none-during-pan"
+            >
 
                 {renderItems.map((item) => {
                     if (item.type === 'single') {
