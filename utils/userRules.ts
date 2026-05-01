@@ -100,7 +100,7 @@ export const UserRules = {
 
 
     // ─── PERMISSIONS ────────────────────────────────────────────────
-    
+
     /**
      * Can this user add a post to a specific section?
      */
@@ -155,7 +155,7 @@ export const UserRules = {
     isReadOnly: (ctx: UserContext): boolean => {
         // Teachers NOT simulating always bypass read-only
         if (!UserRules.isProtectedUser(ctx)) return false;
-        
+
         return ctx.board.lockMode === 'readonly' || ctx.board.lockMode === 'comments_only';
     },
 

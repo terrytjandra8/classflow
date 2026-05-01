@@ -335,7 +335,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         return (
             <div
                 key={section.id}
-                className={`w-80 shrink-0 flex flex-col gap-2 max-h-full transition-all duration-200 ${draggingId === section.id && draggingType === 'COLUMN' ? 'opacity-50 scale-95' : ''}`}
+                className={`w-[360px] shrink-0 flex flex-col gap-2 max-h-full transition-all duration-200 ${draggingId === section.id && draggingType === 'COLUMN' ? 'opacity-50 scale-95' : ''}`}
                 onDragOver={(e) => onDragOverColumn(e, section.id)}
                 onDrop={(e) => onDrop(e, section.id)}
             >
@@ -457,7 +457,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
             )}
 
             {/* ── BOARD COLUMNS ── */}
-            <div className="flex flex-1 overflow-x-auto gap-2 p-6 items-start pt-4">
+            <div className="flex flex-1 overflow-x-auto gap-4 p-6 items-start pt-4">
 
                 {renderItems.map((item) => {
                     if (item.type === 'single') {
