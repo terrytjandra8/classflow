@@ -18,6 +18,7 @@ import { MergeToolbar } from './Columns/MergeToolbar';
 import { ColumnHeader } from './Columns/ColumnHeader';
 import { GroupedColumnSubHeader } from './Columns/GroupedColumnSubHeader';
 import { ColumnGroup } from './Columns/ColumnGroup';
+import { usePanning } from './usePanning';
 
 interface ColumnsLayoutProps {
     isStudent?: boolean;
@@ -66,37 +67,8 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     const dragItemRef = useRef<string | null>(null);
     const dragTypeRef = useRef<'NOTE' | 'COLUMN' | null>(null);
 
-    // ── PANNING STATE ──
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const isPanning = useRef(false);
-    const startX = useRef(0);
-    const scrollLeftStart = useRef(0);
-
-    const handlePanningMouseDown = (e: React.MouseEvent) => {
-        if (e.button === 1 && scrollContainerRef.current) {
-            isPanning.current = true;
-            startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
-            scrollLeftStart.current = scrollContainerRef.current.scrollLeft;
-            scrollContainerRef.current.style.cursor = 'grabbing';
-            scrollContainerRef.current.style.userSelect = 'none';
-            e.preventDefault();
-        }
-    };
-
-    const handlePanningMouseMove = (e: React.MouseEvent) => {
-        if (!isPanning.current || !scrollContainerRef.current) return;
-        const x = e.pageX - scrollContainerRef.current.offsetLeft;
-        const walk = (x - startX.current) * 1.5; // Adjusted speed
-        scrollContainerRef.current.scrollLeft = scrollLeftStart.current - walk;
-    };
-
-    const handlePanningMouseUp = () => {
-        if (isPanning.current && scrollContainerRef.current) {
-            isPanning.current = false;
-            scrollContainerRef.current.style.cursor = 'auto';
-            scrollContainerRef.current.style.userSelect = 'auto';
-        }
-    };
+    const { handlePanningMouseDown, handlePanningMouseMove, handlePanningMouseUp } = usePanning(scrollContainerRef);
 
     if (sectionIdFilter) {
         return <div className="p-10 text-center">Column view not supported in single slide mode.</div>;

@@ -167,16 +167,7 @@ export const BoardLayout: React.FC<Partial<BoardProps> & { isPresentationMode?: 
 
                 <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isPresenting || effectivePresentationMode ? 'presentation-mode' : ''} ${embeddedMode ? '' : ''}`}>
                     <style>{`.presentation-mode { font-size: 1.25rem; } .presentation-mode .note-card-title { font-size: 1.5rem !important; } .presentation-mode .note-card-content { font-size: 1.1rem !important; }`}</style>
-                    
-                    {isLoadingNotes ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/5 backdrop-blur-[1px] z-20">
-                            <div className="bg-white/80 dark:bg-black/50 p-4 rounded-full shadow-lg border border-white/10 backdrop-blur-md">
-                                <Loader2 className="animate-spin text-pink-500" size={32} />
-                            </div>
-                        </div>
-                    ) : (
-                        renderContent()
-                    )}
+                    {renderContent()}
                 </div>
                 
                  {showFab && (

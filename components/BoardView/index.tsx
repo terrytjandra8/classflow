@@ -25,6 +25,7 @@ import { useViolationTracking } from './logic/useViolationTracking';
 import { useBoardSecurity } from './logic/useBoardSecurity';
 import { useBoardAutomations } from './logic/useBoardAutomations';
 import { useSectionManagement } from './logic/useSectionManagement';
+import { LoadingScreen } from '../ui/LoadingScreen';
 
 interface BoardViewProps {
     board: Board;
@@ -308,6 +309,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
         </BoardProvider>
     );
 
+    if (isLoadingNotes) return <LoadingScreen />;
+
     if (board.format === 'lesson') {
         return wrapProvider(
             <div className="h-screen w-full relative overflow-hidden" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
@@ -343,6 +346,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
             </div>
         );
     }
+
+    if (isLoadingNotes) return <LoadingScreen />;
 
     return wrapProvider(
         <div className={`h-screen w-full relative overflow-hidden ${board.disableCopy && (isStudent || isSimulatingStudent) ? 'select-none' : ''}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>

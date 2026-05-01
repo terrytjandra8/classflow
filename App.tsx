@@ -5,7 +5,7 @@ import { GuestNameModal } from './components/GuestNameModal';
 import { CreateBoardModal } from './components/CreateBoardModal';
 import { DuplicateModal } from './components/DuplicateModal';
 import { Board, BoardFormat, Note } from './types';
-import { Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Loader2, AlertTriangle, ShieldAlert, RefreshCw, Home } from 'lucide-react';
 import { boardService } from './services/boardService';
 import { profileService } from './services/profileService';
 import { noteService } from './services/noteService';
@@ -30,15 +30,10 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-    declare props: Readonly<ErrorBoundaryProps>;
     public state: ErrorBoundaryState = {
         hasError: false,
         error: null
     };
-
-    constructor(props: ErrorBoundaryProps) {
-        super(props);
-    }
 
     static getDerivedStateFromError(error: Error): ErrorBoundaryState {
         return { hasError: true, error };
@@ -51,25 +46,43 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen bg-[#111] text-white flex flex-col items-center justify-center p-4 text-center font-sans">
-                    <div className="bg-red-500/10 p-4 rounded-full mb-4">
-                        <AlertTriangle size={48} className="text-red-500" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Something went wrong</h1>
-                    <p className="text-gray-400 mb-6 max-w-md">The application encountered an unexpected error. Please try reloading.</p>
+                <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white font-sans">
+                    <div className="max-w-md w-full bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in duration-300">
+                        <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6 ring-1 ring-red-500/50">
+                            <AlertTriangle className="text-red-500" size={32} />
+                        </div>
+                        
+                        <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+                        <p className="text-slate-400 mb-8 leading-relaxed">
+                            The application encountered an unexpected error. Your progress is likely saved in the cloud.
+                        </p>
 
-                    <div className="bg-black/50 p-4 rounded-lg border border-white/10 text-left w-full max-w-2xl overflow-auto max-h-60 mb-6">
-                        <code className="text-xs text-red-300 font-mono">
-                            {this.state.error?.toString()}
-                        </code>
-                    </div>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="w-full py-4 bg-white text-black font-bold rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2 group"
+                            >
+                                <RefreshCw size={18} className="group-active:rotate-180 transition-transform duration-500" />
+                                Reload Application
+                            </button>
+                            
+                            <button
+                                onClick={() => window.location.href = '/'}
+                                className="w-full py-4 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Home size={18} />
+                                Back to Home
+                            </button>
+                        </div>
 
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition-colors"
-                    >
-                        Reload Application
-                    </button>
+                        {process.env.NODE_ENV === 'development' && (
+                            <div className="mt-8 p-4 bg-black/40 rounded-xl overflow-auto max-h-40 border border-white/5">
+                                <p className="text-xs font-mono text-red-400 whitespace-pre-wrap">
+                                    {this.state.error?.toString()}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             );
         }
@@ -78,12 +91,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
 }
 
-const LoadingScreen = () => (
-    <div className="h-screen bg-[#111] flex flex-col items-center justify-center text-white gap-4">
-        <Loader2 className="animate-spin text-pink-500" size={48} />
-        <p className="text-sm font-bold text-gray-500 animate-pulse">Loading Experience...</p>
-    </div>
-);
+import { LoadingScreen } from './components/ui/LoadingScreen';
 
 const APP_VERSION = '1.0.2'; // Force refresh for new security gates
 
