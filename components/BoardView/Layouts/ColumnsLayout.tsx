@@ -437,7 +437,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                 )}
 
                 {/* ── Notes area ── */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10 min-h-[100px] relative rounded-xl space-y-3" onDragOver={handleAutoScroll}>
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pt-4 pb-10 min-h-[100px] relative rounded-xl space-y-3" onDragOver={handleAutoScroll}>
                     {section.isHidden && (
                         <div className="bg-red-500/10 border border-red-500/20 p-2 mb-2 rounded text-[10px] text-red-400 font-bold uppercase tracking-wide flex items-center gap-2 justify-center">
                             <IconHidden size={12} /> Hidden from students
@@ -506,7 +506,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                 onMouseMove={handlePanningMouseMove}
                 onMouseUp={handlePanningMouseUp}
                 onMouseLeave={handlePanningMouseUp}
-                className="flex flex-1 overflow-x-auto gap-4 p-6 items-start pt-4 custom-scrollbar select-none-during-pan"
+                className="flex flex-1 overflow-x-auto gap-4 p-6 items-start pt-4 custom-scrollbar main-board-scrollbar select-none-during-pan"
             >
 
                 {renderItems.map((item) => {

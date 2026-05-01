@@ -70,10 +70,10 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 }) => {
     return (
         <div
-            className={`flex flex-col gap-3 p-3 rounded-xl border transition-all relative cursor-pointer group ${isMergeMode && isSelected
+            className={`flex flex-col gap-3 p-3 rounded-xl border transition-all relative cursor-pointer group backdrop-blur-md ${isMergeMode && isSelected
                     ? 'border-blue-400 bg-blue-500/20 ring-2 ring-blue-400/50'
                     : isMergeMode
-                        ? 'border-blue-500/40 hover:border-blue-400 hover:bg-blue-500/10 bg-black/5 dark:bg-white/5'
+                        ? 'border-blue-500/40 hover:border-blue-400 hover:bg-blue-500/10 bg-black/5 dark:bg-white/10'
                         : section.isHidden
                             ? 'border-dashed border-red-500/20 bg-red-500/5 cursor-default'
                             : 'border-transparent hover:border-white/10 bg-black/5 dark:bg-white/5 cursor-default'
