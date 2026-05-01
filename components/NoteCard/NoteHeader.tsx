@@ -95,7 +95,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
                         {note.isPinned && <Pin size={10} className="text-orange-500 rotate-45 ml-1 fill-orange-500" />}
 
                         {/* Focus Violation Flag (Visible to teachers and the student themselves) */}
-                        {((!isStudent) || (isStudent && isAuthor)) && (note.violation_count || 0) > 0 && (
+                        {((!isStudent) || (isStudent && isAuthor)) && !isTeacher && (note.violation_count || 0) > 0 && (
                             <div
                                 className="flex items-center gap-1 px-2 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-black shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-[pulse_1s_infinite] ml-1 border border-red-400/50"
                                 title={`${note.violation_count} focus violations`}

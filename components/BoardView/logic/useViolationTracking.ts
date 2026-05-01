@@ -104,9 +104,9 @@ export const useViolationTracking = ({
             return;
         }
 
-        // ─── Optimistic UI: update ALL student notes to the same count ───
+        // ─── Optimistic UI: update ALL student notes to the same count (strictly exclude teachers) ───
         setNotes((prev: Note[]) => prev.map((n: Note) => {
-            const isMine = n.author_id === userId || 
+            const isMine = (n.author_id === userId && n.authorRole !== 'teacher') || 
                 (!n.author_id && n.author?.trim().toLowerCase() === username?.trim().toLowerCase() && n.authorRole !== 'teacher');
             return isMine ? { ...n, violation_count: newCount } : n;
         }));
