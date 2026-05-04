@@ -180,7 +180,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   // --- Styles & Classes ---
   const containerClasses = useMemo(() => `
     ${isCanvasModeBool ? `absolute w-full sm:w-[300px] cursor-grab active:cursor-grabbing select-none` : 'break-inside-avoid mb-4 relative w-full'}
-    ${!isTransparent ? 'transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2 hover:scale-[1.02] hover:shadow-2xl' : ''}
+    ${!isTransparent ? 'transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2 hover:scale-[1.02] hover:shadow-2xl hover:z-50' : ''}
     ${!isTransparent && !isStickyNote ? 'shadow-sm rounded-xl sm:rounded-2xl' : ''}
     ${!isCustomColor ? note.color : ''} flex flex-col group animate-fade-in note-card
     ${isStickyNote ? 'overflow-hidden resize-both min-h-[150px] sm:min-h-[200px] rounded-none' : ''}
