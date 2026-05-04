@@ -128,7 +128,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   const sectionSuffix = activeSectionId ? `_${activeSectionId}` : '';
   const draftKey = `note_draft_${board?.id || 'global'}${sectionSuffix}`;
   
-  const { pasteWarning, onPaste: honeypotPasteHandler } = usePasteProtection({
+  const { pasteWarning, setPasteWarning, onPaste: honeypotPasteHandler } = usePasteProtection({
       isStudent,
       disablePaste,
       allowLinks,

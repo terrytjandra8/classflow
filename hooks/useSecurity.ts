@@ -11,7 +11,7 @@ interface PasteProtectionOptions {
 }
 
 // --- Advanced Paste Protection Hook (Honeypot Strategy) ---
-export const usePasteProtection = ({ isStudent, disablePaste, allowLinks, targetRef }: PasteProtectionOptions) => {
+export const usePasteProtection = ({ isStudent, disablePaste, allowLinks, targetRef, onBlock }: PasteProtectionOptions) => {
     const [pasteWarning, setPasteWarning] = useState(false);
 
     // The REAL paste handler - attached globally so it's hard to find
@@ -44,16 +44,16 @@ export const usePasteProtection = ({ isStudent, disablePaste, allowLinks, target
             
             if (onBlock) onBlock();
         };
-
+    
         // Attach the real listener to the document
         document.addEventListener('paste', handleGlobalPaste, true);
-
+    
         // Cleanup on unmount
         return () => {
             document.removeEventListener('paste', handleGlobalPaste, true);
         };
-
-    }, [isStudent, disablePaste, allowLinks, targetRef]);
+    
+    }, [isStudent, disablePaste, allowLinks, targetRef, onBlock]);
 
 
     // The DECOY paste handler - this is what the student will find and remove
@@ -74,6 +74,7 @@ export const usePasteProtection = ({ isStudent, disablePaste, allowLinks, target
 
     return {
         pasteWarning,
+        setPasteWarning,
         // Return the decoy handler to be placed on the element
         onPaste: honeypotPasteHandler
     };

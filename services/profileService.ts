@@ -206,7 +206,7 @@ export const profileService = {
         
         // Clean URL to avoid duplicates
         const cleanUrl = url.trim();
-        if (backgrounds.some(b => b.trim() === cleanUrl)) return;
+        if (backgrounds.some((b: string) => b.trim() === cleanUrl)) return;
 
         const { error } = await supabase
             .from('profiles')
