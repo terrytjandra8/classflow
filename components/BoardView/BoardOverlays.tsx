@@ -62,7 +62,11 @@ export const BoardOverlays: React.FC<BoardOverlaysProps> = ({
     return (
         <>
             {isAnyModalOpen && (
-                <div className={`fixed inset-0 z-40 transition-all duration-300 animate-in fade-in ${!board.settings?.disableModalBlur ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent'}`} />
+                <div className={`fixed inset-0 z-40 transition-all duration-300 animate-in fade-in ${
+                    board.settings?.disableModalBlur 
+                        ? 'pointer-events-none bg-black/20' 
+                        : 'bg-black/60 backdrop-blur-sm pointer-events-auto'
+                }`} />
             )}
 
             {/* Guide Sidebar */}

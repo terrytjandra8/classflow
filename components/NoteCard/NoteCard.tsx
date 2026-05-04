@@ -4,6 +4,7 @@ import { EyeOff, X, Clock } from 'lucide-react';
 import { Note, CommentAttachment, NoteColor, Board } from '../../types';
 import { useBoard } from '../BoardView/BoardContext';
 import { BoardRules } from '../../utils/boardRules';
+import { UserRules, UserContext } from '../../utils/userRules';
 
 // Modular Components
 import { NoteHeader } from './NoteHeader';
@@ -48,7 +49,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
     note, onDelete, onLike, onAddComment, onUpdate, isCanvasMode, isConnectMode, onConnectStart, isSelectedForConnection, onMouseDown, domRef, userId, isStudent, isLocked,
     commentsEnabled, reactionsEnabled, contentTextColor, isSectionAnonymous, isContentBlurred, onAddBefore, onAddAfter, onMoveNote, isWatermarked
 }) => {
-  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId, userRole } = useBoard();
+  const { board, isPresentationMode, openEditNote, userId: contextUserId, canManageBoard, highlightedUserId, userRole, isSimulatingStudent } = useBoard();
   
   const effectiveUserId = userId || contextUserId;
   const [showMenu, setShowMenu] = useState(false);
@@ -128,11 +129,18 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
   const disablePasteBool = !!board.disablePaste;
   const repliesEnabledBool = !!board.repliesEnabled;
 
-  // --- Logic & Permissions (using BoardRules) ---
-  const originalCanEdit = BoardRules.canEditNote(note, effectiveUserId, isStudentBool, isLockedBool);
-  const canEdit = originalCanEdit && isStillEditable;
-  const canDelete = BoardRules.canDeleteNote(note, effectiveUserId, isStudentBool, isLockedBool);
-  const canCopy = BoardRules.canCopyContent(board, note.sectionId, isStudentBool);
+  // --- Logic & Permissions (using UserRules) ---
+  const fullCtx: UserContext = useMemo(() => ({
+      userId: effectiveUserId,
+      userRole: userRole || (isStudentBool ? 'student' : 'teacher'),
+      isStudent: isStudentBool,
+      isSimulatingStudent: !!isSimulatingStudent,
+      board
+  }), [effectiveUserId, userRole, isStudentBool, isSimulatingStudent, board]);
+
+  const canEdit = UserRules.canEditNote(fullCtx, note) && isStillEditable;
+  const canDelete = UserRules.canEditNote(fullCtx, note); // canDelete usually follows canEdit rules in lock mode
+  const canCopy = !UserRules.isCopyDisabled(fullCtx);
   
   const isTransparent = note.color === NoteColor.TRANSPARENT;
   const isStickyNote = isCanvasModeBool && note.type === 'text' && !isTransparent;
@@ -140,7 +148,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
   const isAuthor = note.author_id === effectiveUserId;
   const isBlurActive = BoardRules.shouldBlurContent(board, isContentBlurredBool, note, effectiveUserId, isStudentBool, isPresentationModeBool) && !isAuthor;
-  const isReadOnly = (board.lockMode === 'readonly' && !canManageBoard);
+  const isReadOnly = UserRules.isReadOnly(fullCtx);
 
   // --- Highlighting Logic ---
   const isHighlighted = highlightedUserId && note.author_id === highlightedUserId;
