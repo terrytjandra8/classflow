@@ -5,6 +5,7 @@ import { Profile } from '../types';
 export interface UserPreferences {
     saved_colors: string[];
     saved_gradients: string[];
+    saved_backgrounds?: string[];
 }
 
 export const profileService = {
@@ -72,18 +73,19 @@ export const profileService = {
             .eq('id', user.id)
             .maybeSingle();
 
-        if (error || !data || !data.preferences) return { saved_colors: [], saved_gradients: [] };
+        if (error || !data || !data.preferences) return { saved_colors: [], saved_gradients: [], saved_backgrounds: [] };
         
         const prefs = data.preferences as any;
         return {
             saved_colors: Array.isArray(prefs.saved_colors) ? prefs.saved_colors : [],
-            saved_gradients: Array.isArray(prefs.saved_gradients) ? prefs.saved_gradients : []
+            saved_gradients: Array.isArray(prefs.saved_gradients) ? prefs.saved_gradients : [],
+            saved_backgrounds: Array.isArray(prefs.saved_backgrounds) ? prefs.saved_backgrounds : []
         };
     },
 
     async saveColor(color: string) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) throw new Error("Not authenticated");
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -96,7 +98,7 @@ export const profileService = {
         
         if (colors.includes(color)) return;
 
-        await supabase
+        const { error } = await supabase
             .from('profiles')
             .update({ 
                 preferences: { 
@@ -105,11 +107,13 @@ export const profileService = {
                 } 
             })
             .eq('id', user.id);
+            
+        if (error) throw error;
     },
 
     async deleteColor(color: string) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) throw new Error("Not authenticated");
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -120,7 +124,7 @@ export const profileService = {
         const currentPrefs = (profile?.preferences as any) || {};
         const colors = (Array.isArray(currentPrefs.saved_colors) ? currentPrefs.saved_colors : []).filter((c: string) => c !== color);
 
-        await supabase
+        const { error } = await supabase
             .from('profiles')
             .update({ 
                 preferences: { 
@@ -129,11 +133,13 @@ export const profileService = {
                 } 
             })
             .eq('id', user.id);
+            
+        if (error) throw error;
     },
 
     async saveGradient(gradient: string) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) throw new Error("Not authenticated");
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -146,7 +152,7 @@ export const profileService = {
         
         if (gradients.includes(gradient)) return;
 
-        await supabase
+        const { error } = await supabase
             .from('profiles')
             .update({ 
                 preferences: { 
@@ -155,11 +161,13 @@ export const profileService = {
                 } 
             })
             .eq('id', user.id);
+            
+        if (error) throw error;
     },
 
     async deleteGradient(gradient: string) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) throw new Error("Not authenticated");
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -170,7 +178,7 @@ export const profileService = {
         const currentPrefs = (profile?.preferences as any) || {};
         const gradients = (Array.isArray(currentPrefs.saved_gradients) ? currentPrefs.saved_gradients : []).filter((g: string) => g !== gradient);
 
-        await supabase
+        const { error } = await supabase
             .from('profiles')
             .update({ 
                 preferences: { 
@@ -179,5 +187,67 @@ export const profileService = {
                 } 
             })
             .eq('id', user.id);
+            
+        if (error) throw error;
+    },
+
+    async saveBackground(url: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const currentPrefs = (profile?.preferences as any) || {};
+        const backgrounds = Array.isArray(currentPrefs.saved_backgrounds) ? currentPrefs.saved_backgrounds : [];
+        
+        // Clean URL to avoid duplicates
+        const cleanUrl = url.trim();
+        if (backgrounds.some(b => b.trim() === cleanUrl)) return;
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({ 
+                preferences: { 
+                    ...currentPrefs, 
+                    saved_backgrounds: [cleanUrl, ...backgrounds]
+                } 
+            })
+            .eq('id', user.id);
+            
+        if (error) throw error;
+    },
+
+    async deleteBackground(url: string) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
+        const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        const currentPrefs = (profile?.preferences as any) || {};
+        const cleanUrl = url.trim();
+        const backgrounds = (Array.isArray(currentPrefs.saved_backgrounds) ? currentPrefs.saved_backgrounds : [])
+            .filter((b: string) => b.trim() !== cleanUrl);
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+                preferences: { 
+                    ...currentPrefs, 
+                    saved_backgrounds: backgrounds 
+                } 
+            })
+            .eq('id', user.id);
+            
+        if (updateError) throw updateError;
     }
-};
+};

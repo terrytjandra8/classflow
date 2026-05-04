@@ -22,7 +22,7 @@ const ALL_TABS = ['Heading', 'Appearance', 'Layout', 'Engagement', 'Grading', 'A
 
 export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board, isOpen, onClose, onUpdate, isStudent = false }) => {
   const [activeTab, setActiveTab] = useState('Heading');
-  const [prefs, setPrefs] = useState<UserPreferences>({ saved_colors: [], saved_gradients: [] });
+  const [prefs, setPrefs] = useState<UserPreferences>({ saved_colors: [], saved_gradients: [], saved_backgrounds: [] });
 
   useEffect(() => {
       if (isOpen) {
@@ -35,10 +35,11 @@ export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board,
       if (p) {
           setPrefs({
               saved_colors: p.saved_colors || [],
-              saved_gradients: p.saved_gradients || []
+              saved_gradients: p.saved_gradients || [],
+              saved_backgrounds: p.saved_backgrounds || []
           });
       } else {
-          setPrefs({ saved_colors: [], saved_gradients: [] });
+          setPrefs({ saved_colors: [], saved_gradients: [], saved_backgrounds: [] });
       }
   };
 

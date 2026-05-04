@@ -40,6 +40,17 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
         await loadPreferences();
     };
 
+    const handleDeleteBackground = async (url: string) => {
+        try {
+            // Removing confirm temporarily to see if it's being blocked by the browser
+            await profileService.deleteBackground(url);
+            await loadPreferences();
+        } catch (err: any) {
+            console.error("Delete failed:", err);
+            alert("Could not delete image: " + (err.message || "Unknown error"));
+        }
+    };
+
     const handleWallpaperUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -60,6 +71,10 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
                 .getPublicUrl(fileName);
 
             onUpdate({ wallpaper: `url('${publicUrl}')` });
+            
+            // Save to user's personal gallery for reuse
+            await profileService.saveBackground(publicUrl);
+            await loadPreferences();
         } catch (error: any) {
             console.error("Wallpaper upload failed:", error);
             alert(`Upload failed: ${error.message}`);
@@ -230,6 +245,40 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({ board, onU
                     {/* Pictures */}
                     <div className="space-y-3">
                         <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1"><Camera size={12}/> Gallery</label>
+                        
+                        {/* My Uploads Sub-section */}
+                        {prefs.saved_backgrounds && prefs.saved_backgrounds.length > 0 && (
+                            <div className="space-y-2 mb-4">
+                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">My Uploads</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {prefs.saved_backgrounds.map(url => {
+                                        const bgVal = `url('${url}')`;
+                                        return (
+                                            <div key={url} className="relative group">
+                                                <button 
+                                                    onClick={() => onUpdate({ wallpaper: bgVal })}
+                                                    className={`w-14 h-14 md:w-12 md:h-12 rounded-lg border border-white/5 bg-[#222] shadow-sm transition-all bg-cover bg-center ${board.wallpaper === bgVal ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[#1a1a1a]' : 'hover:scale-105'}`}
+                                                    style={{ backgroundImage: bgVal }}
+                                                />
+                                                <button 
+                                                    onClick={(e) => { 
+                                                        e.preventDefault();
+                                                        e.stopPropagation(); 
+                                                        handleDeleteBackground(url); 
+                                                    }}
+                                                    className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all z-20 hover:bg-red-700 hover:scale-110 shadow-lg"
+                                                    title="Delete from gallery"
+                                                >
+                                                    <Trash2 size={10} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="border-t border-white/5 pt-2"></div>
+                            </div>
+                        )}
+
                         <div className="flex flex-wrap gap-2">
                             {IMAGES.map(img => (
                                 <button 
