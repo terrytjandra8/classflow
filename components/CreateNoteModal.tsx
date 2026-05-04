@@ -8,7 +8,7 @@ import { RichTextEditor, DebouncedRichTextEditor } from './RichTextEditor';
 import { DrawingCanvas } from './ui/DrawingCanvas';
 import { getColorName } from '../utils/theme';
 import { useBoard } from './BoardView/BoardContext';
-import { usePasteProtection } from '../hooks/useSecurity';
+import { usePasteProtection, useAntiCheat, useCopyProtection } from '../hooks/useSecurity';
 
 // Props interface
 interface CreateNoteModalProps {
@@ -132,8 +132,23 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
       isStudent,
       disablePaste,
       allowLinks,
-      targetRef: contentRef
+      targetRef: contentRef,
+      onBlock: () => { setContent(''); setTitle(''); } // Clear on blatant paste
   });
+
+  // --- Anti-Cheat Velocity Check ---
+  // Detects auto-typers and script injection
+  useAntiCheat({
+      value: content,
+      enabled: isStudent && disablePaste,
+      onBlock: () => {
+          setContent('');
+          setPasteWarning(true);
+          setTimeout(() => setPasteWarning(false), 3000);
+      }
+  });
+
+  const { onContextMenu } = useCopyProtection(!!(isStudent && disablePaste));
 
   // --- Effects ---
 
@@ -373,6 +388,7 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
             height: size.height
         }}
         className={`fixed top-1/2 left-1/2 z-[1000] bg-[#121212] border border-white/10 md:rounded-3xl shadow-2xl flex flex-col md:max-h-[90vh] animate-in zoom-in-95 duration-300 transition-shadow overflow-hidden group`}
+        onContextMenu={onContextMenu}
       >
             <div className="absolute inset-0 pointer-events-none z-0 md:rounded-3xl overflow-hidden">
                 <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] animate-blob"></div>

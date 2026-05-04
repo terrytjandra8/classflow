@@ -7,6 +7,7 @@ interface PasteProtectionOptions {
     disablePaste?: boolean;
     allowLinks?: boolean;
     targetRef: RefObject<HTMLElement>; // Ref to the element to protect
+    onBlock?: () => void; // Optional callback when blocked
 }
 
 // --- Advanced Paste Protection Hook (Honeypot Strategy) ---
@@ -24,20 +25,24 @@ export const usePasteProtection = ({ isStudent, disablePaste, allowLinks, target
             const text = e.clipboardData?.getData('text/plain');
             if (!text) return;
 
+            // Allow short text (like 3 chars) to avoid false positives for keyboard shortcuts
+            if (text.length <= 3) return;
+
             if (allowLinks && isValidUrl(text)) {
                 return;
             }
 
             // The core protection logic
-            if (text.length > 50) {
-                console.warn('Pasting blocked by global paste protector.');
-                e.preventDefault();
-                e.stopPropagation();
+            // ROBUST: Block any significant paste, not just > 50 chars
+            console.warn('Pasting blocked by global paste protector.');
+            e.preventDefault();
+            e.stopPropagation();
 
-                // Flash the warning state
-                setPasteWarning(true);
-                setTimeout(() => setPasteWarning(false), 3000);
-            }
+            // Flash the warning state
+            setPasteWarning(true);
+            setTimeout(() => setPasteWarning(false), 3000);
+            
+            if (onBlock) onBlock();
         };
 
         // Attach the real listener to the document
@@ -169,4 +174,44 @@ export const useScreenshotProtection = (enabled: boolean) => {
             document.documentElement.style.filter = '';
         };
     }, [enabled]);
+};
+
+// --- Velocity Monitoring (Anti-Cheat) ---
+// Detects if text is added too fast (scripts/auto-typers)
+export const useAntiCheat = ({ 
+    value, 
+    onBlock, 
+    enabled = true,
+    thresholdChars = 10,
+    thresholdTimeMs = 50 
+}: { 
+    value: string, 
+    onBlock: () => void, 
+    enabled?: boolean,
+    thresholdChars?: number,
+    thresholdTimeMs?: number
+}) => {
+    const lastValueRef = React.useRef(value);
+    const lastTimeRef = React.useRef(Date.now());
+
+    useEffect(() => {
+        if (!enabled || !value) {
+            lastValueRef.current = value;
+            lastTimeRef.current = Date.now();
+            return;
+        }
+
+        const now = Date.now();
+        const deltaChars = value.length - lastValueRef.current.length;
+        const deltaTime = now - lastTimeRef.current;
+
+        // If more than X characters are added in less than Y ms, it's suspicious
+        if (deltaChars > thresholdChars && deltaTime < thresholdTimeMs) {
+            console.error('Anti-cheat: Script detection triggered!', { deltaChars, deltaTime });
+            onBlock();
+        }
+
+        lastValueRef.current = value;
+        lastTimeRef.current = now;
+    }, [value, onBlock, enabled, thresholdChars, thresholdTimeMs]);
 };
