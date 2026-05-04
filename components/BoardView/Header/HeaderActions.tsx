@@ -178,7 +178,7 @@ export const HeaderActions: React.FC = () => {
                         </Tooltip>
                     </>
                 )}
-                {!embeddedMode && (
+                {!embeddedMode && canManageBoard && (
                     <Tooltip content="Share">
                         <button onClick={openShare} className="p-2.5 rounded-xl text-white bg-gradient-to-tr from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 shadow-lg shadow-pink-900/20 transition-all transform hover:scale-105 active:scale-95">
                             <Share2 size={18} strokeWidth={2.5} />
@@ -189,9 +189,11 @@ export const HeaderActions: React.FC = () => {
 
             {/* --- Mobile Control Bar --- */}
             <div className="flex md:hidden items-center gap-2 bg-black/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 shadow-2xl">
-                <Tooltip content="Share">
-                    <button onClick={openShare} className="p-2.5 rounded-xl text-white bg-gradient-to-tr from-pink-600 to-purple-600"><Share2 size={18} strokeWidth={2.5} /></button>
-                </Tooltip>
+                {canManageBoard && (
+                    <Tooltip content="Share">
+                        <button onClick={openShare} className="p-2.5 rounded-xl text-white bg-gradient-to-tr from-pink-600 to-purple-600"><Share2 size={18} strokeWidth={2.5} /></button>
+                    </Tooltip>
+                )}
                 <div className="relative">
                      <Tooltip content="More options">
                         <button onClick={() => setIsMoreMenuOpen(true)} className="p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors"><MoreVertical size={18} /></button>

@@ -176,7 +176,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         fetchData();
     }, [isStudent, isPresentationMode]);
 
-    const canManageBoard = !isStudent;
+    const canManageBoard = !isStudent && !isSimulatingStudent;
 
     const sortedNotes = useMemo(() => {
         let filtered = notes;

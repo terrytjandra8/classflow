@@ -44,9 +44,21 @@ export const UserRules = {
      */
     isBoardManager: (ctx: UserContext): boolean => {
         if (!ctx.userId) return false;
+        
+        // ROBUST: In simulation mode, you are NOT a manager for interaction purposes
+        if (ctx.isSimulatingStudent) return false;
+
         const isOwner = ctx.board.owner_id === ctx.userId;
         const isCollaborator = ctx.board.collaborators?.includes(ctx.userId);
         return isOwner || !!isCollaborator;
+    },
+
+    /**
+     * Should administrative UI (settings, share, etc.) be hidden?
+     * TRUE if user is a student OR a teacher simulating a student.
+     */
+    shouldHideAdminUI: (ctx: UserContext): boolean => {
+        return UserRules.isProtectedUser(ctx);
     },
 
 
