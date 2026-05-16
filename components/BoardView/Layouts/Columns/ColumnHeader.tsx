@@ -89,7 +89,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                 ) : (
                     canDragColumns && (
                         <div className="text-gray-400 p-1 cursor-grab active:cursor-grabbing hover:text-white transition-colors shrink-0"
-                            draggable={true} onDragStart={(e) => onDragStart(e, section.id, 'COLUMN')} title="Drag to reorder">
+                            data-drag-handle draggable={true} onDragStart={(e) => onDragStart(e, section.id, 'COLUMN')} title="Drag to reorder">
                             <IconDrag size={16} />
                         </div>
                     )

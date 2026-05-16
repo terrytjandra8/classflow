@@ -140,9 +140,11 @@ export const CreateNoteModal: React.FC<CreateNoteModalProps> = memo(({ isOpen, o
   // Detects auto-typers and script injection
   useAntiCheat({
       value: content,
-      enabled: isStudent && disablePaste,
+      enabled: !!(isStudent && disablePaste),
+      ignoreBurst: hasDraftRestored, // Bypass when restoring system-level draft
       onBlock: () => {
           setContent('');
+          setTitle('');
           setPasteWarning(true);
           setTimeout(() => setPasteWarning(false), 3000);
       }

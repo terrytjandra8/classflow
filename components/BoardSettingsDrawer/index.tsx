@@ -63,7 +63,11 @@ export const BoardSettingsDrawer: React.FC<BoardSettingsDrawerProps> = ({ board,
       {/* Overlay Backdrop */}
       {isOpen && (
         <div 
-          className={`fixed inset-0 z-[999] transition-all duration-300 animate-in fade-in ${!board.settings?.disableModalBlur ? 'bg-black/40 backdrop-blur-[2px]' : 'bg-transparent'}`} 
+          className={`fixed inset-0 z-[999] transition-all duration-300 animate-in fade-in ${
+            !board.settings?.disableModalBlur 
+              ? 'bg-black/40 backdrop-blur-[2px] pointer-events-auto' 
+              : 'bg-transparent pointer-events-none'
+          }`} 
           onClick={onClose}
         />
       )}

@@ -187,7 +187,7 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
 
   // --- Styles & Classes ---
   const containerClasses = useMemo(() => `
-    ${isCanvasModeBool ? `absolute w-full sm:w-[300px] cursor-grab active:cursor-grabbing select-none` : 'break-inside-avoid mb-4 relative w-full'}
+    ${isCanvasModeBool ? `absolute w-full sm:w-[300px] cursor-grab active:cursor-grabbing` : 'break-inside-avoid mb-4 relative w-full'}
     ${!isTransparent ? 'transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2 hover:scale-[1.02] hover:shadow-2xl hover:z-50' : ''}
     ${!isTransparent && !isStickyNote ? 'shadow-sm rounded-xl sm:rounded-2xl' : ''}
     ${!isCustomColor ? note.color : ''} flex flex-col group animate-fade-in note-card
@@ -216,7 +216,16 @@ const NoteCardComponent: React.FC<NoteCardProps> = ({
         data-author-id={note.author_id}
         className={containerClasses} 
         style={style}
-        onMouseDown={(e) => isCanvasModeBool && onMouseDown && onMouseDown(e, note.id)}
+        onMouseDown={(e) => {
+            if (isCanvasModeBool && onMouseDown) {
+                const target = e.target as HTMLElement;
+                // Don't start drag if clicking on interactive elements or selectable text
+                const isInteractive = target.closest('button, a, input, [role="button"], .select-text');
+                if (!isInteractive) {
+                    onMouseDown(e, note.id);
+                }
+            }
+        }}
         onMouseUp={handleMouseUp}
         onDoubleClick={handleDoubleClick}
         onContextMenu={preventAction}

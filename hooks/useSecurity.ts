@@ -183,12 +183,14 @@ export const useAntiCheat = ({
     value, 
     onBlock, 
     enabled = true,
+    ignoreBurst = false,
     thresholdChars = 10,
     thresholdTimeMs = 50 
 }: { 
     value: string, 
     onBlock: () => void, 
     enabled?: boolean,
+    ignoreBurst?: boolean,
     thresholdChars?: number,
     thresholdTimeMs?: number
 }) => {
@@ -196,7 +198,7 @@ export const useAntiCheat = ({
     const lastTimeRef = React.useRef(Date.now());
 
     useEffect(() => {
-        if (!enabled || !value) {
+        if (!enabled || !value || ignoreBurst) {
             lastValueRef.current = value;
             lastTimeRef.current = Date.now();
             return;

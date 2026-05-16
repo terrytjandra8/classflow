@@ -364,10 +364,14 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
                     ...copyStyle,
                     ...interferenceStyle
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
                 onContextMenu={onContextMenu}
             >
                 {note.title && (
-                    <div className={`font-bold mb-3 leading-tight break-words whitespace-pre-wrap ${isTransparent ? 'text-xl' : 'text-lg'} relative group/title`}>
+                    <div 
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className={`font-bold mb-3 leading-tight break-words whitespace-pre-wrap ${isTransparent ? 'text-xl' : 'text-lg'} relative group/title`}
+                    >
                         {isExitTicket && <CheckSquare className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {note.type === 'drawing' && <PenTool className="text-slate-700 shrink-0 inline mr-2" size={16} />}
                         {isWatermarkActive ? (

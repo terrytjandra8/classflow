@@ -181,15 +181,12 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     // ── DRAG HANDLERS ──
 
     const onDragStart = (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => {
-        // Robust check: Prevent dragging if starting from an interactive element OR if one is already focused
         const target = e.target as HTMLElement;
-        const activeEl = document.activeElement;
-        const isInteractive = (el: Element | null) => 
-            el && (el.closest('input, textarea, button, [contenteditable="true"]') || ['INPUT', 'TEXTAREA', 'BUTTON'].includes(el.tagName));
 
-        if (isInteractive(target) || isInteractive(activeEl) || (e as any).button === 1) {
+        // Only allow drag if it started from a designated drag handle area
+        const isDragHandle = target.closest('[data-drag-handle]');
+        if (!isDragHandle) {
             e.preventDefault();
-            e.stopPropagation();
             return;
         }
         dragItemRef.current = id;
@@ -220,7 +217,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
         if (dragTypeRef.current === 'COLUMN') {
             const draggedId = dragItemRef.current;
             if (!draggedId || draggedId === targetSectionId) return;
-            
+
             setLocalSections(prev => {
                 const sections = [...prev];
                 const fi = sections.findIndex(s => s.id === draggedId);
@@ -365,29 +362,29 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                         />
                     ) : (
                         <ColumnHeader
-                        section={section}
-                        isMergeMode={isMergeMode}
-                        isSelected={isSelected}
-                        canManageBoard={canManageBoard}
-                        canDragColumns={!!canDragColumns}
-                        groupTextColor={board.groupTextColor}
-                        commentsOn={!!commentsOn}
-                        repliesOn={!!repliesOn}
-                        isContentBlurred={!!isContentBlurred}
-                        sectionCanDrag={!!sectionCanDrag}
-                        showControls={!!showControls}
-                        onDragStart={onDragStart}
-                        renameSection={renameSection}
-                        toggleSelectForMerge={toggleSelectForMerge}
-                        toggleSectionLock={toggleSectionLock}
-                        toggleSectionComments={toggleSectionComments}
-                        toggleSectionReplies={toggleSectionReplies}
-                        toggleSectionRearrange={toggleSectionRearrange}
-                        toggleSectionContentBlur={toggleSectionContentBlur}
-                        toggleSectionVisibility={toggleSectionVisibility}
-                        toggleSectionAnonymous={toggleSectionAnonymous}
-                        toggleSectionCopy={toggleSectionCopy}
-                        toggleSectionWatermark={toggleSectionWatermark}
+                            section={section}
+                            isMergeMode={isMergeMode}
+                            isSelected={isSelected}
+                            canManageBoard={canManageBoard}
+                            canDragColumns={!!canDragColumns}
+                            groupTextColor={board.groupTextColor}
+                            commentsOn={!!commentsOn}
+                            repliesOn={!!repliesOn}
+                            isContentBlurred={!!isContentBlurred}
+                            sectionCanDrag={!!sectionCanDrag}
+                            showControls={!!showControls}
+                            onDragStart={onDragStart}
+                            renameSection={renameSection}
+                            toggleSelectForMerge={toggleSelectForMerge}
+                            toggleSectionLock={toggleSectionLock}
+                            toggleSectionComments={toggleSectionComments}
+                            toggleSectionReplies={toggleSectionReplies}
+                            toggleSectionRearrange={toggleSectionRearrange}
+                            toggleSectionContentBlur={toggleSectionContentBlur}
+                            toggleSectionVisibility={toggleSectionVisibility}
+                            toggleSectionAnonymous={toggleSectionAnonymous}
+                            toggleSectionCopy={toggleSectionCopy}
+                            toggleSectionWatermark={toggleSectionWatermark}
                             deleteSection={deleteSection}
                             setAssigningSection={setAssigningSection}
                         />
@@ -476,7 +473,7 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
             )}
 
             {/* ── BOARD COLUMNS ── */}
-            <div 
+            <div
                 ref={scrollContainerRef}
                 onMouseDown={handlePanningMouseDown}
                 onMouseMove={handlePanningMouseMove}
@@ -558,8 +555,8 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
                         }}
                     />
                 )}
-                
-                <ConfirmationModal 
+
+                <ConfirmationModal
                     isOpen={!!sectionToDelete}
                     onClose={() => setSectionToDelete(null)}
                     onConfirm={confirmDeleteSection}

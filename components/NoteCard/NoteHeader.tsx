@@ -78,7 +78,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
     }
 
     return (
-        <div className={`p-4 pb-2 flex items-start justify-between relative ${isTransparent ? 'pl-0' : ''}`}>
+        <div data-drag-handle className={`p-4 pb-2 flex items-start justify-between relative cursor-grab active:cursor-grabbing ${isTransparent ? 'pl-0' : ''}`}>
             <div className="flex items-center gap-3">
                 <Avatar
                     src={displayAvatar}
