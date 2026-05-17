@@ -181,10 +181,10 @@ export const ColumnsLayout: React.FC<ColumnsLayoutProps> = ({ isStudent: propIsS
     // ── DRAG HANDLERS ──
 
     const onDragStart = (e: React.DragEvent, id: string, type: 'NOTE' | 'COLUMN') => {
-        const target = e.target as HTMLElement;
-
-        // Only allow drag if it started from a designated drag handle area
-        const isDragHandle = target.closest('[data-drag-handle]');
+        // e.target is always the draggable wrapper, so use elementFromPoint
+        // to check what's actually under the cursor
+        const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+        const isDragHandle = elementUnderCursor?.closest('[data-drag-handle]');
         if (!isDragHandle) {
             e.preventDefault();
             return;

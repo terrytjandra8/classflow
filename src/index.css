@@ -96,6 +96,16 @@ div.main-board-scrollbar::-webkit-scrollbar-thumb:hover {
   font-size: smaller;
 }
 
+/* Copy Shield: prevents text highlighting inside note content for students */
+.copy-shield,
+.copy-shield * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
 /* --- Premium Custom Tooltip System --- */
 
 [data-tooltip] {

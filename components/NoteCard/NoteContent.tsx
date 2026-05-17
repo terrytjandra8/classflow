@@ -357,7 +357,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ note, contentTextColor
                     px-4 pb-2 text-base leading-relaxed whitespace-pre-wrap break-words flex-1 
                     ${isTransparent ? 'p-0 text-slate-900 dark:text-white' : 'text-slate-800'} 
                     ${isStickyNote ? 'p-5 flex flex-col justify-start overflow-hidden' : ''}
-                    ${isCopyDisabled ? 'select-none' : 'select-text'}
+                    ${isCopyDisabled ? 'copy-shield' : 'select-text'}
                 `} 
                 style={{ 
                     color: !isTransparent && contentTextColor ? contentTextColor : undefined,

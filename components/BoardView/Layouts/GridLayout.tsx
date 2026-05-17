@@ -49,9 +49,8 @@ export const GridLayout: React.FC<GridLayoutProps> = ({ gridClass, isStudent: pr
 
     // Drag Handlers - Check board setting as fallback for generic starts
     const onDragStart = (e: React.DragEvent, id: string) => {
-        const target = e.target as HTMLElement;
-        // Only allow drag if it started from a designated drag handle area
-        const isDragHandle = target.closest('[data-drag-handle]');
+        const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+        const isDragHandle = elementUnderCursor?.closest('[data-drag-handle]');
         if (!isDragHandle) {
             e.preventDefault();
             return;
