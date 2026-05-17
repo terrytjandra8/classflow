@@ -23,7 +23,7 @@ const SaveStatusIndicator: React.FC<{ status: 'saved' | 'saving' | 'error' | 'id
     if (status === 'idle') return null;
 
     return (
-        <div className="absolute top-4 right-6 z-50 transition-opacity duration-300">
+        <div className="absolute top-20 right-6 z-50 transition-opacity duration-300">
             {status === 'saving' && (
                 <div className="flex items-center gap-2 text-yellow-500 bg-black/80 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/10 shadow-lg">
                     <Loader2 size={12} className="animate-spin" /> Saving...
@@ -58,8 +58,10 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
     const submissionIdRef = useRef<string | null>(null);
     const answersRef = useRef<Record<string, string>>({});
     const violationCountRef = useRef(0);
+    const focusViolationCountRef = useRef(0);
     const saveTimeoutRef = useRef<any>(null);
     const isCreatingRef = useRef(false);
+    const [focusViolationCount, setFocusViolationCount] = useState(0);
 
     const [submissionData, setSubmissionData] = useState<any>(null);
     const submissionDataRef = useRef(submissionData);
@@ -115,6 +117,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
         let finalAnswers = {};
         let finalViolations = 0;
+        let finalFocusViolations = 0;
         let finalData: any = {};
         let dbId = null;
 
@@ -153,6 +156,8 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                     setAnswers(finalData.answers || {});
                     answersRef.current = finalData.answers || {};
                     setViolationCount(finalData.violations || 0);
+                    setFocusViolationCount(finalData.focusViolations || 0);
+                    focusViolationCountRef.current = finalData.focusViolations || 0;
                     
                     const retries = finalData.retryQuestions || [];
                     setRetryQuestions(retries);
@@ -173,6 +178,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
 
                 finalAnswers = finalData.answers || {};
                 finalViolations = finalData.violations || 0;
+                finalFocusViolations = finalData.focusViolations || 0;
             }
         }
 
@@ -187,6 +193,8 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 answersRef.current = finalAnswers;
                 setViolationCount(finalViolations);
                 violationCountRef.current = finalViolations;
+                focusViolationCountRef.current = localBackup.focusViolations || finalFocusViolations;
+                setFocusViolationCount(focusViolationCountRef.current);
                 return;
             }
 
@@ -205,6 +213,8 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         answersRef.current = finalAnswers;
         setViolationCount(finalViolations);
         violationCountRef.current = finalViolations;
+        focusViolationCountRef.current = finalFocusViolations;
+        setFocusViolationCount(finalFocusViolations);
         setIsDisqualified(false);
         setSubmitted(false);
 
@@ -235,7 +245,9 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             setIsDisqualified(false);
             setRetryQuestions([]);
             violationCountRef.current = 0;
+            focusViolationCountRef.current = 0;
             setViolationCount(0);
+            setFocusViolationCount(0);
             // Re-fetch from DB to get the latest state for this new mode
             if (!isPreviewMode) fetchSubmission();
         }
@@ -291,6 +303,7 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
             ...submissionDataRef.current,
             answers: currentAnswers,
             violations: currentViolations,
+            focusViolations: focusViolationCountRef.current,
             score: autoScore,
             submitted: isFinalSubmit || disqualified, 
             disqualified: disqualified,
@@ -352,11 +365,24 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
         await persistToDB(answersRef.current, newCount, true, true);
     }, [isPracticeMode, isTestActive, isReadingMode, submitted, isDisqualified, saveToBackup, persistToDB]);
 
+    const handleFocusViolation = useCallback(() => {
+        if (isPreviewMode) return;
+        const newCount = focusViolationCountRef.current + 1;
+        focusViolationCountRef.current = newCount;
+        setFocusViolationCount(newCount);
+        saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, focusViolations: newCount, status: 'active' });
+        // Debounced persist — don't spam DB on rapid violations
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+            persistToDB(answersRef.current, violationCountRef.current, false, false);
+        }, 2000);
+    }, [isPreviewMode, saveToBackup, persistToDB]);
+
     const handleAnswerChange = useCallback((qId: string, value: string, immediate = false) => {
         if (isDisqualified || submitted || isClosed || isReadingMode) return;
         answersRef.current = { ...answersRef.current, [qId]: value };
         setAnswers(prev => ({ ...prev, [qId]: value }));
-        saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, status: 'active' });
+        saveToBackup({ answers: answersRef.current, violations: violationCountRef.current, focusViolations: focusViolationCountRef.current, status: 'active' });
         
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         setSaveStatus('saving');
@@ -473,6 +499,10 @@ export const StudentAssessment: React.FC<StudentAssessmentProps> = ({ board, que
                 isPracticeMode={isPracticeMode}
                 retryQuestions={retryQuestions}
                 onViolation={handleViolation}
+                violationCount={violationCount}
+                onFocusViolation={handleFocusViolation}
+                focusViolationCount={focusViolationCount}
+                showFocusViolations={board.showFocusViolations}
             />
         </div>
     );

@@ -3,7 +3,14 @@ import { useEffect, useRef, useCallback } from 'react';
 
 /**
  * Security hook for the active assessment test.
- * Detects: tab switches, window focus loss, devtools shortcuts, screenshot attempts.
+ * 
+ * TWO LAYERS:
+ * 1. Focus Tracking (always active in both Practice + Test):
+ *    Counts tab switches and window blur events as "focus violations."
+ *    These are displayed on the student's header and the teacher's live monitor.
+ * 
+ * 2. Security Enforcement (only in Test mode — isSecure = true):
+ *    Fullscreen enforcement, keyboard blocking, disqualification on violation.
  * 
  * BLUR GRACE PERIOD: Focus losses shorter than 2 seconds are ignored.
  * This prevents false positives from:
@@ -12,130 +19,146 @@ import { useEffect, useRef, useCallback } from 'react';
  *   - OS permission prompts (mic, camera, notifications)
  *   - Password manager autofill popups
  * 
- * TAB SWITCH (visibilitychange) is always immediate — that's unambiguous cheating.
+ * TAB SWITCH (visibilitychange) is always immediate — that's unambiguous.
  */
-export const useGuard = (isActive: boolean, onViolation: () => void, isDrawingOpen = false) => {
+export const useGuard = (
+    isSecure: boolean,
+    onDisqualify: () => void,
+    isDrawingOpen: boolean,
+    onFocusViolation?: () => void,
+) => {
 
     const violationDebounceRef = useRef(false);
-    const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleViolation = useCallback(() => {
+    // --- Disqualification handler (test mode only) ---
+    const handleDisqualify = useCallback(() => {
         if (violationDebounceRef.current) return;
-        if (isDrawingOpen) return; // drawing modal has its own focus — safe to ignore
+        if (isDrawingOpen) return;
         violationDebounceRef.current = true;
-        onViolation();
+        onDisqualify();
         setTimeout(() => { violationDebounceRef.current = false; }, 1000);
-    }, [onViolation, isDrawingOpen]);
+    }, [onDisqualify, isDrawingOpen]);
 
+    // --- Focus violation handler (always active) ---
+    const focusDebounceRef = useRef(false);
+    const handleFocusViolation = useCallback(() => {
+        if (focusDebounceRef.current) return;
+        if (isDrawingOpen) return;
+        focusDebounceRef.current = true;
+        onFocusViolation?.();
+        setTimeout(() => { focusDebounceRef.current = false; }, 2000);
+    }, [onFocusViolation, isDrawingOpen]);
+
+    // --- Layer 1: Focus Tracking (Practice + Test) ---
     useEffect(() => {
-        if (!isActive) return;
-
-        // --- 1. Fullscreen exit ---
-        // Any fullscreen exit during an active guard session = violation.
-        // The student is expected to remain in fullscreen during the test.
-        const handleFullscreenChange = () => {
-            if (document.fullscreenElement) {
-                // Entered fullscreen — mark it for context
-            } else {
-                // Exited fullscreen during active test = violation
-                handleViolation();
-            }
-        };
-
-        // --- 2. Tab switch (unambiguous) — immediate violation ---
+        // Tab switch — unambiguous
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                handleViolation();
+                handleFocusViolation();
+                // In secure (test) mode, also disqualify
+                if (isSecure) handleDisqualify();
             }
         };
 
-        // --- 3. Window blur and Mouse Leave — immediate violation ---
-        // As requested: trigger immediately when cursor is out or focus is lost.
+        // Window blur
         const handleBlur = () => {
             if (document.activeElement?.tagName.toLowerCase() === 'iframe') return;
             if (document.hasFocus()) return;
-            
-            handleViolation();
+            handleFocusViolation();
+            if (isSecure) handleDisqualify();
         };
 
+        // Mouse leaving the window
         const handleMouseLeave = (e: MouseEvent) => {
             if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
-                handleViolation();
+                handleFocusViolation();
+                if (isSecure) handleDisqualify();
             }
         };
 
-        // --- 4. Watchdog Interval (Anti-Bypass) ---
-        // Even if students maliciously delete the event listeners above via DevTools,
-        // this interval constantly verifies the window's focus and visibility state.
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+        document.addEventListener('mouseleave', handleMouseLeave);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            document.removeEventListener('mouseleave', handleMouseLeave);
+        };
+    }, [isSecure, handleFocusViolation, handleDisqualify, isDrawingOpen]);
+
+    // --- Layer 2: Security Enforcement (Test mode only) ---
+    useEffect(() => {
+        if (!isSecure) return;
+
+        // Fullscreen exit
+        const handleFullscreenChange = () => {
+            if (!document.fullscreenElement) {
+                handleDisqualify();
+            }
+        };
+
+        // Watchdog Interval (Anti-Bypass)
         const watchdogInterval = setInterval(() => {
             if (document.hidden) {
-                handleViolation();
+                handleFocusViolation();
+                handleDisqualify();
                 return;
             }
             if (document.activeElement?.tagName.toLowerCase() !== 'iframe' && !document.hasFocus()) {
-                handleViolation();
+                handleFocusViolation();
+                handleDisqualify();
             }
         }, 1000);
 
-        // --- 4. Keyboard shortcuts ---
+        // Keyboard shortcuts
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
 
-            // Block DevTools: F12, Ctrl+Shift+I/J/C, Cmd+Opt+I/J/C
+            // Block DevTools: F12, Ctrl+Shift+I/J/C
             if (key === 'f12') {
                 e.preventDefault();
-                handleViolation();
+                handleDisqualify();
                 return;
             }
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c'].includes(key)) {
                 e.preventDefault();
-                handleViolation();
+                handleDisqualify();
                 return;
             }
 
             // Block window switching: Alt+Tab, Cmd+Tab
             if ((e.altKey && key === 'tab') || (e.metaKey && key === 'tab')) {
                 e.preventDefault();
-                handleViolation();
+                handleDisqualify();
                 return;
             }
 
-            // Block PrintScreen (Windows/Linux)
+            // Block PrintScreen
             if (key === 'printscreen') {
                 e.preventDefault();
-                // Brief hide to defeat screenshot — content will restore on focus
                 document.body.style.opacity = '0';
                 setTimeout(() => { document.body.style.opacity = ''; }, 300);
-                return; // Not a violation — just block it silently
+                return;
             }
 
-            // Block Chromebook screenshot shortcuts:
-            // Ctrl+Show Windows key (F5) = full screenshot
-            // Ctrl+Shift+Show Windows key (F5) = partial screenshot  
-            // Show Windows = either F5 (mapped) or MediaTrackNext on some models
+            // Block Chromebook screenshot shortcuts
             if (e.ctrlKey && (key === 'f5' || key === 'mediaplaypause' || key === 'mediatracknext')) {
                 e.preventDefault();
                 document.body.style.opacity = '0';
                 setTimeout(() => { document.body.style.opacity = ''; }, 300);
-                return; // Block silently
+                return;
             }
         };
 
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('blur', handleBlur);
-        document.addEventListener('mouseleave', handleMouseLeave);
         window.addEventListener('keydown', handleKeyDown, true);
 
         return () => {
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('blur', handleBlur);
-            document.removeEventListener('mouseleave', handleMouseLeave);
             window.removeEventListener('keydown', handleKeyDown, true);
             clearInterval(watchdogInterval);
         };
-
-    }, [isActive, handleViolation, isDrawingOpen]);
+    }, [isSecure, handleDisqualify, handleFocusViolation]);
 
 };

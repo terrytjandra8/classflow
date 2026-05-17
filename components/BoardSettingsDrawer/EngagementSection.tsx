@@ -228,6 +228,23 @@ export const EngagementSection: React.FC<EngagementSectionProps> = ({ board, onU
                             <div className={`w-4 h-4 bg-white rounded-full transition-transform ${!board.disableFocusGuard ? 'translate-x-6' : 'translate-x-0'}`}></div>
                         </div>
                     </div>
+
+                    {/* Show Focus Violations Counter to Students */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-500/10 text-orange-400 rounded-lg"><EyeOff size={18}/></div>
+                            <div>
+                                <div className="text-sm font-bold text-gray-200">Show Focus Violations</div>
+                                <div className="text-xs text-gray-500">Show tab-switch counter to students</div>
+                            </div>
+                        </div>
+                        <div 
+                            onClick={() => onUpdate({ showFocusViolations: !board.showFocusViolations })}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${board.showFocusViolations ? 'bg-orange-500' : 'bg-white/20 hover:bg-white/30'}`}
+                        >
+                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${board.showFocusViolations ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ANONYMITY MODE */}

@@ -25,10 +25,14 @@ interface ActiveTestProps {
     isPracticeMode?: boolean;
     retryQuestions?: string[];
     onViolation: () => void;
+    violationCount: number;
+    onFocusViolation: () => void;
+    focusViolationCount: number;
+    showFocusViolations?: boolean;
 }
 
-export const ActiveTest: React.FC<ActiveTestProps> = ({ 
-    boardTitle, questions, config, timeLeft, answers, onAnswerChange, onSubmit, onManualSync, meetsRequirements, isPreviewMode, onExitPreview, isReadingMode, isPracticeMode, retryQuestions, onViolation
+export const ActiveTest: React.FC<ActiveTestProps> = ({
+    boardTitle, questions, config, timeLeft, answers, onAnswerChange, onSubmit, onManualSync, meetsRequirements, isPreviewMode, onExitPreview, isReadingMode, isPracticeMode, retryQuestions, onViolation, violationCount, onFocusViolation, focusViolationCount, showFocusViolations
 }) => {
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -42,8 +46,9 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
     const isRevision = retryQuestions && retryQuestions.length > 0;
     const isSecureMode = !isPreviewMode && !isPracticeMode;
 
-    // Replace useFocusMode with our new, dedicated security hook
-    useGuard(isSecureMode, onViolation, isDrawingOpen);
+    // The guard always runs for focus tracking (practice + test).
+    // Disqualification only fires in secure mode (test, not preview/practice).
+    useGuard(isSecureMode, onViolation, isDrawingOpen, onFocusViolation);
 
     const handleConfirmSubmit = () => {
         setShowSubmitModal(false);
@@ -69,6 +74,9 @@ export const ActiveTest: React.FC<ActiveTestProps> = ({
                 isReadingMode={isReadingMode}
                 isPracticeMode={isPracticeMode}
                 isRevision={isRevision}
+                violationCount={violationCount}
+                focusViolationCount={focusViolationCount}
+                showFocusViolations={showFocusViolations}
             />
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 relative">

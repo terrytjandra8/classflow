@@ -250,6 +250,7 @@ export interface Board {
   disableCopy?: boolean; // NEW: Global disable text selection
   blockScreenshots?: boolean; // NEW: Watermark & Blur on focus lost
   disableFocusGuard?: boolean; // NEW: Only show watermark, don't blur on focus loss
+  showFocusViolations?: boolean; // NEW: Show focus violation counter to students in assessments
   collaborators?: string[]; // NEW: List of User IDs
   
   // Appearance

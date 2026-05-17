@@ -105,6 +105,7 @@ export const TeacherMonitor: React.FC<TeacherMonitorProps> = ({
                 name: sub.author,
                 role: sub.authorRole || 'student',
                 violations: data?.violations || 0,
+                focusViolations: data?.focusViolations || 0,
                 score: score,
                 status: status,
                 progress: answeredCount / totalQuestions,

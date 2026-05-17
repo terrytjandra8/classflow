@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, BookOpen, AlertCircle, RefreshCcw, Clock, Rocket } from 'lucide-react';
+import { Eye, BookOpen, AlertCircle, RefreshCcw, Clock, Rocket, AlertTriangle, EyeOff } from 'lucide-react';
 import { formatTime } from './utils';
 import { AssessmentConfig } from '../../../../../types';
 
@@ -14,9 +14,12 @@ interface TestHeaderProps {
     isReadingMode: boolean;
     isPracticeMode?: boolean;
     isRevision?: boolean;
+    violationCount?: number;
+    focusViolationCount?: number;
+    showFocusViolations?: boolean;
 }
 
-export const TestHeader: React.FC<TestHeaderProps> = ({ boardTitle, config, timeLeft, isSyncing, onSync, isPreviewMode, onExitPreview, isReadingMode, isPracticeMode, isRevision }) => {
+export const TestHeader: React.FC<TestHeaderProps> = ({ boardTitle, config, timeLeft, isSyncing, onSync, isPreviewMode, onExitPreview, isReadingMode, isPracticeMode, isRevision, violationCount = 0, focusViolationCount = 0, showFocusViolations }) => {
     return (
         <>
             {isPreviewMode && (
@@ -42,11 +45,11 @@ export const TestHeader: React.FC<TestHeaderProps> = ({ boardTitle, config, time
                     <button 
                         onClick={onSync}
                         disabled={isSyncing}
-                        className={`p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 ${isSyncing ? 'animate-spin text-blue-400' : ''}`}
+                        className={`p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 ${isSyncing ? 'text-blue-400' : ''}`}
                         data-tooltip="Sync & Save answers manually"
                         data-tooltip-placement="bottom"
                     >
-                        <RefreshCcw size={14} />
+                        <RefreshCcw size={14} className={isSyncing ? 'animate-spin' : ''} />
                     </button>
                     {config.autoLockTime && !isPracticeMode && (
                         <div className="text-xs text-red-300 font-bold flex items-center gap-1 bg-red-900/20 px-2 py-1 rounded border border-red-500/20 shadow-sm">
@@ -76,6 +79,22 @@ export const TestHeader: React.FC<TestHeaderProps> = ({ boardTitle, config, time
                     ) : (
                         <div className="flex items-center gap-2 bg-green-500 text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg">
                             <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div> Active
+                        </div>
+                    )}
+                    {violationCount > 0 && (
+                        <div className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-red-500/30 animate-pulse">
+                            <AlertTriangle size={14} />
+                            <span>{violationCount}</span>
+                        </div>
+                    )}
+                    {showFocusViolations && (
+                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                            focusViolationCount > 0 
+                                ? 'bg-orange-500/20 text-orange-300 border-orange-500/30 shadow-lg shadow-orange-500/20' 
+                                : 'bg-white/5 text-gray-400 border-white/10'
+                        }`} title={`${focusViolationCount} focus violation(s) detected`}>
+                            <EyeOff size={14} />
+                            <span>{focusViolationCount}</span>
                         </div>
                     )}
                 </div>
