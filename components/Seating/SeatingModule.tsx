@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Armchair, Shuffle, Sliders, Edit3, Plus, Layout, RotateCcw, Users, Check } from 'lucide-react';
+import { Armchair, Shuffle, Sliders, Edit3, Plus, Layout, RotateCcw, Users, Check, UserPlus } from 'lucide-react';
 import { Seat, SeatingLayout, StudentSeatingData, SeatingConstraint } from '../../types/seating';
 import { seatingService } from '../../services/seatingService';
 import { profileService } from '../../services/profileService';
@@ -7,6 +7,7 @@ import { SeatingCanvas } from './SeatingCanvas';
 import { StudentDetailPopover } from './StudentDetailPopover';
 import { SeatingConfigModal } from './SeatingConfigModal';
 import { SeatingConstraintsModal } from './SeatingConstraintsModal';
+import { StudentRosterModal } from './StudentRosterModal';
 
 interface SeatingModuleProps {
   theme: 'light' | 'dark';
@@ -16,47 +17,37 @@ interface SeatingModuleProps {
 export const SeatingModule: React.FC<SeatingModuleProps> = ({ theme }) => {
   // State
   const [students, setStudents] = useState<StudentSeatingData[]>(seatingService.getDefaultStudents());
+  const [registeredStudents, setRegisteredStudents] = useState<any[]>([]);
   const [layout, setLayout] = useState<SeatingLayout>(() => 
     seatingService.createLayout('Classroom Layout A', 'Grade 10-A', 'rows_cols', 4, 4, true)
   );
   const [constraints, setConstraints] = useState<SeatingConstraint[]>([]);
   const [assignment, setAssignment] = useState<Record<string, string>>({});
 
-  // Fetch real students from Supabase profiles table
+  // Modals & Panels
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isConstraintsOpen, setIsConstraintsOpen] = useState(false);
+  const [isRosterOpen, setIsRosterOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedSeat, setSelectedSeat] = useState<{ seat: Seat; student?: StudentSeatingData } | null>(null);
+
+  // Fetch real signed up students for quick selection
   useEffect(() => {
     const loadRealStudents = async () => {
       try {
         const realProfiles = await profileService.getRelevantStudents();
         if (realProfiles && realProfiles.length > 0) {
-          const mappedStudents: StudentSeatingData[] = realProfiles.map((p: any, idx) => ({
-            id: p.id,
-            name: p.full_name || p.email?.split('@')[0] || `Student ${idx + 1}`,
-            avatar: p.avatar_url,
-            gender: 'other',
-            participationScore: Math.floor(Math.random() * 6) + 3,
-            assignmentsCompleted: Math.floor(Math.random() * 4) + 7,
-            totalAssignments: 10,
-            lastAssessmentScore: Math.floor(Math.random() * 25) + 75,
-          }));
-          setStudents(mappedStudents);
-          setAssignment(seatingService.randomizeAssignments(layout.seats, mappedStudents, constraints));
-        } else {
-          setAssignment(seatingService.randomizeAssignments(layout.seats, students, constraints));
+          setRegisteredStudents(realProfiles);
         }
+        setAssignment(seatingService.randomizeAssignments(layout.seats, students, constraints));
       } catch (err) {
-        console.error("Error loading real student profiles for seating:", err);
+        console.error("Error loading profiles for seating:", err);
         setAssignment(seatingService.randomizeAssignments(layout.seats, students, constraints));
       }
     };
 
     loadRealStudents();
   }, []);
-
-  // Modals & Panels
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isConstraintsOpen, setIsConstraintsOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedSeat, setSelectedSeat] = useState<{ seat: Seat; student?: StudentSeatingData } | null>(null);
 
   // Handlers
   const handleRandomize = () => {
@@ -138,6 +129,17 @@ export const SeatingModule: React.FC<SeatingModuleProps> = ({ theme }) => {
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsRosterOpen(true)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${
+              theme === 'light' 
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
+                : 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/10'
+            }`}
+          >
+            <Users size={15} /> Students ({students.length})
+          </button>
+
+          <button
             onClick={() => setIsConfigOpen(true)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${
               theme === 'light' 
@@ -200,6 +202,19 @@ export const SeatingModule: React.FC<SeatingModuleProps> = ({ theme }) => {
           student={selectedSeat.student}
           onClose={() => setSelectedSeat(null)}
           onIncrementParticipation={handleIncrementParticipation}
+        />
+      )}
+
+      {isRosterOpen && (
+        <StudentRosterModal
+          theme={theme}
+          students={students}
+          registeredStudents={registeredStudents}
+          onClose={() => setIsRosterOpen(false)}
+          onUpdateRoster={(updatedStudents) => {
+            setStudents(updatedStudents);
+            setAssignment(seatingService.randomizeAssignments(layout.seats, updatedStudents, constraints));
+          }}
         />
       )}
 
