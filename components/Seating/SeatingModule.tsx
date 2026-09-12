@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Armchair, Shuffle, Sliders, Edit3, Plus, Layout, RotateCcw, Users, Check } from 'lucide-react';
 import { Seat, SeatingLayout, StudentSeatingData, SeatingConstraint } from '../../types/seating';
 import { seatingService } from '../../services/seatingService';
+import { profileService } from '../../services/profileService';
 import { SeatingCanvas } from './SeatingCanvas';
 import { StudentDetailPopover } from './StudentDetailPopover';
 import { SeatingConfigModal } from './SeatingConfigModal';
@@ -19,9 +20,37 @@ export const SeatingModule: React.FC<SeatingModuleProps> = ({ theme }) => {
     seatingService.createLayout('Classroom Layout A', 'Grade 10-A', 'rows_cols', 4, 4, true)
   );
   const [constraints, setConstraints] = useState<SeatingConstraint[]>([]);
-  const [assignment, setAssignment] = useState<Record<string, string>>(() => 
-    seatingService.randomizeAssignments(layout.seats, students, [])
-  );
+  const [assignment, setAssignment] = useState<Record<string, string>>({});
+
+  // Fetch real students from Supabase profiles table
+  useEffect(() => {
+    const loadRealStudents = async () => {
+      try {
+        const realProfiles = await profileService.getRelevantStudents();
+        if (realProfiles && realProfiles.length > 0) {
+          const mappedStudents: StudentSeatingData[] = realProfiles.map((p, idx) => ({
+            id: p.id,
+            name: p.full_name || p.username || `Student ${idx + 1}`,
+            avatar: p.avatar_url,
+            gender: 'other',
+            participationScore: Math.floor(Math.random() * 6) + 3,
+            assignmentsCompleted: Math.floor(Math.random() * 4) + 7,
+            totalAssignments: 10,
+            lastAssessmentScore: Math.floor(Math.random() * 25) + 75,
+          }));
+          setStudents(mappedStudents);
+          setAssignment(seatingService.randomizeAssignments(layout.seats, mappedStudents, constraints));
+        } else {
+          setAssignment(seatingService.randomizeAssignments(layout.seats, students, constraints));
+        }
+      } catch (err) {
+        console.error("Error loading real student profiles for seating:", err);
+        setAssignment(seatingService.randomizeAssignments(layout.seats, students, constraints));
+      }
+    };
+
+    loadRealStudents();
+  }, []);
 
   // Modals & Panels
   const [isConfigOpen, setIsConfigOpen] = useState(false);
