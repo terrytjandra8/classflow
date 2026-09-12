@@ -266,6 +266,7 @@ export const Home: React.FC<HomeProps> = ({
                     )}
                 </div>
             )}
+        </div>
 
             {menu.visible && (
                 <div 
