@@ -12,9 +12,8 @@ import { supabase } from '../services/supabaseClient';
 const Navbar = ({ scrolled, onStart, onGoogleLogin }: { scrolled: boolean, onStart: () => void, onGoogleLogin: () => void }) => (
     <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 px-6 py-4 ${scrolled ? 'bg-black/60 backdrop-blur-xl border-b border-white/5' : ''}`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-3 group cursor-pointer">
+            <div className="flex items-center group cursor-pointer">
                 <Logo size="sm" className="group-hover:rotate-6 transition-transform" />
-                <span className="text-xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">ClassBoards</span>
             </div>
 
             <div className="hidden md:flex items-center gap-8 text-sm font-bold text-gray-400 uppercase tracking-widest">
@@ -203,14 +202,14 @@ const Testimonials = () => (
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-12 items-center justify-between">
             <div className="max-w-md">
                 <h2 className="text-4xl font-black tracking-tight mb-4">Loved by students. <br />Trusted by educators.</h2>
-                <p className="text-gray-400 font-medium">Join over 500+ students at International School using ClassBoards every day.</p>
+                <p className="text-gray-400 font-medium">Join over 500+ students at International School using ClassFlow every day.</p>
             </div>
             <div className="flex flex-col gap-6">
                 <div className="p-6 bg-black/40 rounded-2xl border border-white/5 backdrop-blur-sm max-w-sm ml-auto">
                     <div className="flex gap-1 mb-3 text-yellow-400">
                         <Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" />
                     </div>
-                    <p className="text-sm font-medium italic mb-4 text-gray-300">"ClassBoards turned my boring lectures into something students actually look forward to. The competitive scoring is a game changer!"</p>
+                    <p className="text-sm font-medium italic mb-4 text-gray-300">"ClassFlow turned my boring lectures into something students actually look forward to. The competitive scoring is a game changer!"</p>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-blue-500"></div>
                         <div>
@@ -230,9 +229,9 @@ const Footer = () => (
             <div>
                 <div className="flex items-center gap-3 mb-6">
                     <Logo size="sm" />
-                    <span className="text-lg font-black tracking-tight">ClassBoards</span>
+                    <span className="text-lg font-black tracking-tight">ClassFlow</span>
                 </div>
-                <p className="text-gray-500 text-sm font-medium">© 2026 ClassBoards. Built with <Heart size={12} className="inline text-pink-500" /> by T7, for the future of education.</p>
+                <p className="text-gray-500 text-sm font-medium">© 2026 ClassFlow. Built with <Heart size={12} className="inline text-pink-500" /> by T7, for the future of education.</p>
             </div>
 
             <div className="flex items-center gap-8 text-gray-500 font-bold uppercase text-[10px] tracking-widest">

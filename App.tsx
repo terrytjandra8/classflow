@@ -91,6 +91,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
 }
 
+import { SUPER_ADMIN_EMAIL } from './components/Dashboard/constants';
+
 import { LoadingScreen } from './components/ui/LoadingScreen';
 
 const APP_VERSION = '1.0.2'; // Force refresh for new security gates
@@ -125,7 +127,7 @@ function AppContent() {
     // Access Check State for Guests
     const [accessCheckStatus, setAccessCheckStatus] = useState<'idle' | 'checking' | 'allowed' | 'denied'>('idle');
 
-    const isSuperAdmin = session?.user?.email?.trim().toLowerCase() === 'terry.tjandra@integrated.ipeka.sch.id';
+    const isSuperAdmin = session?.user?.email?.trim().toLowerCase() === SUPER_ADMIN_EMAIL.trim().toLowerCase();
     const isStudent = !isGuest && userRole === 'student';
 
     // Keep track of active board ID for realtime updates without breaking useEffect dependencies

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Loader2, Heart, Sparkles, School, ShieldCheck, User, ArrowRight, X } from 'lucide-react';
+import { Loader2, Heart, Sparkles, School, User, ArrowRight, X } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface AuthPageProps {
@@ -181,10 +181,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
           <div className="relative inline-block mb-4">
              <Logo size="lg" className="mx-auto" />
           </div>
-          
-          <h1 className="text-5xl font-extrabold mb-3 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-gray-400 drop-shadow-sm">
-            ClassBoards
-          </h1>
           <p className="text-lg text-gray-400 font-medium max-w-xs mx-auto leading-relaxed">
             The interactive classroom wall for creative minds.
           </p>
@@ -218,9 +214,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
                 <School size={20} className="text-pink-400" /> 
                 Student Login
               </h2>
-              <div className="inline-flex items-center gap-1.5 bg-pink-500/10 border border-pink-500/30 px-3 py-1 rounded-full text-[10px] font-bold text-pink-300 uppercase tracking-wide">
-                  <ShieldCheck size={10} /> IPEKA Integrated School
-              </div>
           </div>
           
           {error && (
@@ -269,8 +262,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, initialError
             </button>
             
             <div className="bg-black/20 rounded-lg p-3 text-center border border-white/5">
-                 <p className="text-xs text-gray-400 mb-1 font-medium">Please use your school email:</p>
-                 <code className="text-xs text-pink-400 font-mono bg-black/30 px-2 py-1 rounded">@integrated.ipeka.sch.id</code>
+                 <p className="text-xs text-gray-400 font-medium">Please use your school account</p>
             </div>
           </div>
 

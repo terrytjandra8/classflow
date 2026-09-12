@@ -5,7 +5,7 @@ import { AiRecipe, Section, BoardGuide } from '../../types';
 // ----------------------------------------------------------------------
 // 🚨 SUPER ADMIN CONFIGURATION 🚨
 // ----------------------------------------------------------------------
-export const SUPER_ADMIN_EMAIL = 'terry.tjandra@integrated.ipeka.sch.id'; 
+export const SUPER_ADMIN_EMAIL = 'terrytjandra8@gmail.com'; 
 // ----------------------------------------------------------------------
 
 // AI Recipes Disabled to prevent costs

@@ -96,9 +96,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className={`h-16 border-b shrink-0 flex items-center justify-between px-4 md:px-6 relative z-50 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#161616] border-white/5'}`}>
         
         <div className="flex items-center gap-3 md:gap-4">
-            <div onClick={() => setActiveTab('home')} className="cursor-pointer flex items-center gap-3 group shrink-0">
-                <Logo size="sm" className="group-hover:scale-105 transition-transform" />
-                <h1 className={`font-bold text-lg md:text-xl tracking-tight hidden sm:block ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>ClassBoards</h1>
+            <div onClick={() => setActiveTab('home')} className="cursor-pointer flex items-center group shrink-0">
+                <Logo size="sm" theme={theme} className="group-hover:scale-105 transition-transform" />
             </div>
 
             {!isStudent && (

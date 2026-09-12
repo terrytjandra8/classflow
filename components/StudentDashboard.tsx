@@ -387,7 +387,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     
                     <div className="flex items-center gap-2">
                         <Logo size="sm" />
-                        <span className="font-bold text-lg text-slate-800 dark:text-white tracking-tight">ClassBoards</span>
                     </div>
 
                     <div className="relative" ref={profileMenuRef}>

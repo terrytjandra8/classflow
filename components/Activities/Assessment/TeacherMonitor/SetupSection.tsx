@@ -17,7 +17,7 @@ const SettingsIcon = () => (
 );
 
 export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConfig }) => {
-    
+
     // Helper to handle the local timezone shift for datetime-local input
     const getLocalISOString = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -36,7 +36,7 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     <label className="text-sm font-bold text-white flex items-center gap-2">
                         <Timer size={16} className="text-green-500" /> Test Duration (Minutes)
                     </label>
-                    <DebouncedInput 
+                    <DebouncedInput
                         type="number"
                         value={config.durationMinutes}
                         onChange={(val) => onUpdateConfig({ durationMinutes: parseInt(val) || 60 })}
@@ -48,7 +48,7 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     <label className="text-sm font-bold text-white flex items-center gap-2">
                         <BookOpen size={16} className="text-blue-500" /> Reading Time (Minutes)
                     </label>
-                    <DebouncedInput 
+                    <DebouncedInput
                         type="number"
                         value={config.readingMinutes}
                         onChange={(val) => onUpdateConfig({ readingMinutes: parseInt(val) || 0 })}
@@ -57,22 +57,22 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                     />
                     <p className="text-[10px] text-gray-500">Students can view questions but cannot answer.</p>
                 </div>
-                
+
                 {/* Auto Live Date */}
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-white flex items-center gap-2">
                         <Radio size={16} className="text-green-500" /> Scheduled Start (Auto-Live)
                     </label>
                     <div className="flex gap-2 items-center">
-                        <input 
+                        <input
                             type="datetime-local"
                             value={config.autoLiveTime ? getLocalISOString(config.autoLiveTime) : ''}
                             onChange={(e) => onUpdateConfig({ autoLiveTime: e.target.value ? new Date(e.target.value).getTime() : null })}
                             className="flex-1 bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-green-500 outline-none text-sm font-mono"
                         />
                         {config.autoLiveTime && (
-                            <button 
-                                onClick={() => onUpdateConfig({ autoLiveTime: null })} 
+                            <button
+                                onClick={() => onUpdateConfig({ autoLiveTime: null })}
                                 className="text-xs text-red-400 hover:text-white px-3 py-2 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
                             >
                                 Clear
@@ -90,15 +90,15 @@ export const SetupSection: React.FC<SetupSectionProps> = ({ config, onUpdateConf
                         <CalendarClock size={16} className="text-red-500" /> Scheduled End (Auto-Close)
                     </label>
                     <div className="flex gap-2 items-center">
-                        <input 
+                        <input
                             type="datetime-local"
                             value={config.autoLockTime ? getLocalISOString(config.autoLockTime) : ''}
                             onChange={(e) => onUpdateConfig({ autoLockTime: e.target.value ? new Date(e.target.value).getTime() : null })}
                             className="flex-1 bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-red-500 outline-none text-sm font-mono"
                         />
                         {config.autoLockTime && (
-                            <button 
-                                onClick={() => onUpdateConfig({ autoLockTime: null })} 
+                            <button
+                                onClick={() => onUpdateConfig({ autoLockTime: null })}
                                 className="text-xs text-red-400 hover:text-white px-3 py-2 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-colors border border-red-500/20"
                             >
                                 Clear
