@@ -107,7 +107,7 @@ export const Home: React.FC<HomeProps> = ({
     return (
         <div className="flex h-full flex-col md:flex-row relative overflow-hidden">
             {/* Desktop Sidebar */}
-            {!isStudent && (
+            {!isStudent && sidebarFilter !== 'seating' && (
                 <div className={`w-64 shrink-0 flex-col py-6 pr-4 pl-6 hidden md:flex border-r h-full ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[#111111] border-white/5'}`}>
                     <Sidebar 
                         username={username}
@@ -149,7 +149,13 @@ export const Home: React.FC<HomeProps> = ({
                 )}
 
                 {sidebarFilter === 'seating' ? (
-                    <SeatingModule theme={theme} />
+                    <SeatingModule 
+                      theme={theme} 
+                      classes={classes} 
+                      selectedClass={selectedClass} 
+                      isFullScreen={true}
+                      onExitFullScreen={() => setSidebarFilter('recents')}
+                    />
                 ) : (
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
