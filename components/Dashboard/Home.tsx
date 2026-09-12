@@ -7,6 +7,7 @@ import { ConfirmModal } from '../ConfirmModal';
 import { WALLPAPERS_MAP } from '../../utils/theme';
 import { Sidebar } from './Sidebar';
 import { useBoardBrowser } from './logic/useBoardBrowser';
+import { SeatingModule } from '../Seating/SeatingModule';
 
 interface HomeProps {
     boards: Board[];
@@ -147,7 +148,10 @@ export const Home: React.FC<HomeProps> = ({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10">
+                {sidebarFilter === 'seating' ? (
+                    <SeatingModule theme={theme} />
+                ) : (
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
                         <div>
                             <h2 className={`text-3xl font-bold mb-1 capitalize ${theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
@@ -261,7 +265,7 @@ export const Home: React.FC<HomeProps> = ({
                         </div>
                     )}
                 </div>
-            </div>
+            )}
 
             {menu.visible && (
                 <div 
