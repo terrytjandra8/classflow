@@ -28,9 +28,9 @@ export const SeatingModule: React.FC<SeatingModuleProps> = ({ theme }) => {
       try {
         const realProfiles = await profileService.getRelevantStudents();
         if (realProfiles && realProfiles.length > 0) {
-          const mappedStudents: StudentSeatingData[] = realProfiles.map((p, idx) => ({
+          const mappedStudents: StudentSeatingData[] = realProfiles.map((p: any, idx) => ({
             id: p.id,
-            name: p.full_name || p.username || `Student ${idx + 1}`,
+            name: p.full_name || p.email?.split('@')[0] || `Student ${idx + 1}`,
             avatar: p.avatar_url,
             gender: 'other',
             participationScore: Math.floor(Math.random() * 6) + 3,
